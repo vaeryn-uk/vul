@@ -6,6 +6,33 @@ A collection of generic, utility functionality for my personal projects in Unrea
 
 This library is intended to be checked out as a git submodule in your project's `Source` directory.
 
+```
+git submodule add github.com/vaeryn-uk/vul Source/Vul
+```
+
+Then add this to your project's `.uproject` file:
+
+```
+// ...
+  "Modules": [
+    // ...
+    {
+        "Name": "VulRuntime",
+        "Type": "Runtime",
+        "LoadingPhase": "Default"
+    }
+  ]
+// ...
+```
+
+And `<MyProject>.Target.cs` & `<MyProject>Editor.Target.cs`:
+
+```csharp
+    // ...
+    ExtraModuleNames.AddRange(new string[] { "VulRuntime" });
+    // ...
+```
+
 ## New projects
 
 ### Git
