@@ -76,3 +76,4 @@ DerivedDataCache/*
 # IDEs
 .idea
 .vsconfig
+*.sln.DotSettings.user
