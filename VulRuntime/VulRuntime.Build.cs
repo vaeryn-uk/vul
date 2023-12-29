@@ -1,8 +1,8 @@
 ﻿using UnrealBuildTool;
 
-public class Vul : ModuleRules
+public class VulRuntime : ModuleRules
 {
-    public Vul(ReadOnlyTargetRules Target) : base(Target)
+    public VulRuntime(ReadOnlyTargetRules Target) : base(Target)
     {
         PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 
