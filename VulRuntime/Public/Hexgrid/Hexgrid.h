@@ -242,7 +242,7 @@ struct TVulHexgrid
 		return Result;
 	}
 
-	int Size() const { return (FMath::CeilToInt(FMath::Sqrt(static_cast<float>(TileCount()))) - 1) / 2; };
+	int Size() const { return FMath::RoundToInt((FMath::CeilToInt(FMath::Sqrt(static_cast<float>(TileCount()))) - 1) / 2.0); };
 	int TileCount() const { return Tiles.Num(); };
 
 	TArray<TVulTile> GetTiles() const
@@ -250,6 +250,12 @@ struct TVulHexgrid
 		TArray<TVulTile> Out;
 		Tiles.GenerateValueArray(Out);
 		return Out;
+	}
+
+	void SetTileData(const FVulHexAddr& Addr, const TileData& Data)
+	{
+		// TODO: Do we destruct properly here?
+		Tiles[Addr] = TVulTile(Addr, Data);
 	}
 
 private:

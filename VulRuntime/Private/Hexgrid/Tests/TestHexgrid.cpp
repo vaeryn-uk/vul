@@ -14,7 +14,6 @@ TestGrid MakeGrid(int Size)
 	return TestGrid(Size, [](const FVulHexAddr& Addr)
 	{
 		return Addr.ToString();
-
 	});
 }
 
@@ -51,18 +50,18 @@ void TestPath(
 	TestCase->TestEqual("Path Found", Result.Complete, ExpectedDistanceFromGoal == 0);
 
 	const auto Tiles = Result.Tiles;
-	TestCase->TestEqual("Best Path Length", Tiles.Num(), ExpectedLength);
-	TestCase->TestEqual("Best Path Cost", Result.Cost, ExpectedLength);
+	TestCase->TestEqual("Path Length", Tiles.Num(), ExpectedLength);
+	TestCase->TestEqual("Path Cost", Result.Cost, ExpectedLength);
 
 	for (int I = 1; I < ExpectedLength; I++)
 	{
-		auto What = FString::Printf(TEXT("Best Path #%d"), I-1);
-		TestCase->TestEqual("Best Path #%d", true, Tiles[I-1].Addr.AdjacentTo(Tiles[I].Addr));
+		auto What = FString::Printf(TEXT("Path #%d"), I-1);
+		TestCase->TestEqual("Path #%d", true, Tiles[I-1].Addr.AdjacentTo(Tiles[I].Addr));
 	}
 
 	if (Result.Tiles.Num() > 0)
 	{
-		TestCase->TestEqual("Best Path End", ExpectedDistanceFromGoal, Tiles.Last().Addr.Distance(Goal));
+		TestCase->TestEqual("Path End Distance", Tiles.Last().Addr.Distance(Goal), ExpectedDistanceFromGoal);
 	}
 }
 
@@ -115,6 +114,15 @@ bool TestHexgrid::RunTest(const FString& Parameters)
 
 	// Null path check. When From == To.
 	TestPath(this, 3, FVulHexAddr(0, 0), FVulHexAddr(0, 0), 0);
+
+
+	TestPath(
+		this,
+		5,
+		FVulHexAddr(5, 0),
+		FVulHexAddr(0, 5),
+		5
+	);
 
 	return true;
 }

@@ -1,12 +1,17 @@
 ﻿#pragma once
 
+#include "Addr.generated.h"
+
 /**
  * The address of a single tile in a 2D hexgrid.
  *
  * Uses a cube coordinate system.
  */
+USTRUCT(BlueprintType)
 struct VULRUNTIME_API FVulHexAddr
 {
+	GENERATED_BODY()
+
 	FVulHexAddr() = default; // Required for some containers.
 
 	FVulHexAddr(const int InQ, const int InR) : Q(InQ), R(InR), S(-InR - InQ)
@@ -14,8 +19,11 @@ struct VULRUNTIME_API FVulHexAddr
 		EnsureValid();
 	}
 
+	UPROPERTY(EditAnywhere)
 	int Q;
+	UPROPERTY(EditAnywhere)
 	int R;
+	UPROPERTY(EditAnywhere)
 	int S;
 
 	FString ToString() const;
