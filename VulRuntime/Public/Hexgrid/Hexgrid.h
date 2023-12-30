@@ -1,66 +1,16 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "Hexgrid/Addr.h"
 #include "Containers/VulPriorityQueue.h"
+#include "vector"
 #include "UObject/Object.h"
 
-/**
- * The address of a single tile in a 2D hexgrid.
- *
- * Uses a cube coordinate system.
- */
-struct VULRUNTIME_API FVulHexAddr
+template <typename S>
+struct TTest
 {
-	FVulHexAddr() = default; // Required for some containers.
-
-	FVulHexAddr(const int InQ, const int InR) : Q(InQ), R(InR), S(-InR - InQ)
-	{
-		EnsureValid();
-	}
-
-	int Q;
-	int R;
-	int S;
-
-	FString ToString() const;
-
-	/**
-	 * All the addresses that are adjacent to this address on a hexgrid.
-	 *
-	 * Note that the addresses returned may not be valid for a given grid due to its boundaries.
-	 */
-	TArray<FVulHexAddr> Adjacent() const;
-
-	/**
-	 * True if this tile is adjacent to (a neighbor of) Other.
-	 */
-	bool AdjacentTo(const FVulHexAddr& Other) const;
-
-	/**
-	 * Returns the distance between this and another grid address.
-	 *
-	 * As the crow flies.
-	 */
-	int Distance(const FVulHexAddr& Other) const;
-
-	bool operator==(const FVulHexAddr& Other) const
-	{
-		return Other.Q == Q && Other.R == R && Other.S == S;
-	}
-
-	static TArray<int> GenerateSequenceForRing(const int Ring);
-
-	bool IsValid() const;
-
-private:
-	void EnsureValid() const;
+	TArray<S> Foo;
 };
-
-// For using as a key in maps.
-FORCEINLINE uint32 GetTypeHash(const FVulHexAddr& Addr)
-{
-	return FCrc::MemCrc32(&Addr, sizeof(FVulHexAddr));
-}
 
 /**
  * A 2D hexgrid using a cube-based 3D coordinate system.
@@ -78,20 +28,24 @@ FORCEINLINE uint32 GetTypeHash(const FVulHexAddr& Addr)
  *                   (-2 +2  0)        (-1 +2 -1)        ( 0 +2 -2)
  *
  * Templated to allow arbitrary data structures to be stored at each tile in the grid.
+ *
+ * VULRUNTIME_API applied here causes linker errors when using this from a different module.
+ * Unsure why, as supposedly this is how you signify cross-module exports?
  */
 template <typename TileData>
-struct VULRUNTIME_API TVulHexgrid
+struct TVulHexgrid
 {
 	typedef TFunction<TileData (const FVulHexAddr& Addr)> FVulTileAllocator;
 
-	struct VULRUNTIME_API TVulTile
+	struct TVulTile
 	{
+		TVulTile() = default;
 		TVulTile(const FVulHexAddr& InAddr, const TileData& InData) : Addr(InAddr), Data(InData) {};
 		FVulHexAddr Addr;
 		TileData Data;
 	};
 
-	TVulHexgrid() {}
+	TVulHexgrid() = default;
 
 	/**
 	 * Creates a grid extending Size in positive and negative.
@@ -290,6 +244,13 @@ struct VULRUNTIME_API TVulHexgrid
 
 	int Size() const { return (FMath::CeilToInt(FMath::Sqrt(static_cast<float>(TileCount()))) - 1) / 2; };
 	int TileCount() const { return Tiles.Num(); };
+
+	TArray<TVulTile> GetTiles() const
+	{
+		TArray<TVulTile> Out;
+		Tiles.GenerateValueArray(Out);
+		return Out;
+	}
 
 private:
 

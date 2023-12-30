@@ -1,6 +1,6 @@
 # Vaeryn's Unreal Library
 
-A collection of generic, utility functionality for my personal projects in Unreal Engine 5.
+A collection of generic, utility functionality & useful info for my personal projects in Unreal Engine 5.
 
 ## Installation
 
@@ -34,6 +34,10 @@ And `<MyProject>.Target.cs` & `<MyProject>Editor.Target.cs`:
 ```
 
 ## New projects
+
+### Style Guide
+
+The widely followed style guide by Allar that I recommend: https://github.com/Allar/ue5-style-guide
 
 ### Git
 

@@ -1,9 +1,9 @@
-﻿#include "Hexgrid/VulHexgrid.h"
+﻿#include "Hexgrid/Hexgrid.h"
 #include "Misc/AutomationTest.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	TestHexgrid,
-	"Vul.Private.Hexgrid.Tests.TestHexgrid",
+	"Vul.VulRuntime.Private.Hexgrid.Tests.TestHexgrid",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter
 )
 
@@ -14,6 +14,7 @@ TestGrid MakeGrid(int Size)
 	return TestGrid(Size, [](const FVulHexAddr& Addr)
 	{
 		return Addr.ToString();
+
 	});
 }
 

@@ -3,7 +3,7 @@
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	PriorityQueueTest,
-	"Vul.Private.Containers.Tests.PriorityQueueTest",
+	"Vul.VulRuntime.Private.Containers.Tests.PriorityQueueTest",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter
 )
 

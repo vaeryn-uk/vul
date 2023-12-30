@@ -14,4 +14,4 @@ void FVulRuntimeModule::ShutdownModule()
 
 #undef LOCTEXT_NAMESPACE
     
-IMPLEMENT_MODULE(FVulRuntimeModule, Vul)
+IMPLEMENT_MODULE(FVulRuntimeModule, VulRuntime)

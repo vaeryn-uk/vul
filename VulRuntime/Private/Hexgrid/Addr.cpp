@@ -1,4 +1,4 @@
-﻿#include "Hexgrid/VulHexgrid.h"
+﻿#include "Hexgrid/Addr.h"
 
 FString FVulHexAddr::ToString() const
 {
@@ -25,6 +25,18 @@ bool FVulHexAddr::AdjacentTo(const FVulHexAddr& Other) const
 int FVulHexAddr::Distance(const FVulHexAddr& Other) const
 {
 	return (FMath::Abs(Other.Q - Q) + FMath::Abs(Other.R - R) + FMath::Abs(Other.S - S)) / 2;
+}
+
+FVector FVulHexAddr::Project(const float HexSize) const
+{
+	const auto XUnit = FMath::Sqrt(FMath::Square(HexSize) - FMath::Square(HexSize / 2));
+	const auto YUnit = HexSize * 1.5;
+
+	return FVector(
+		2 * XUnit * Q + (XUnit * R),
+		(YUnit * -R),
+		0
+	);
 }
 
 TArray<int> FVulHexAddr::GenerateSequenceForRing(const int Ring)
