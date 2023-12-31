@@ -54,8 +54,7 @@ struct TVulHexgrid
 	 */
 	explicit TVulHexgrid(const int InSize, const FVulTileAllocator& Allocator)
 	{
-		checkf(Size > 0, TEXT("Hexgrid Size must be a greater than 0"))
-
+		checkf(InSize > 0, TEXT("Hexgrid Size must be a greater than 0"))
 		Size = InSize;
 
 		AddTile(FVulHexAddr(0, 0), Allocator);
