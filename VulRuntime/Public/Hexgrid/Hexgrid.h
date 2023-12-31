@@ -52,9 +52,11 @@ struct TVulHexgrid
 	 *
 	 * Result is a hexagonal grid.
 	 */
-	explicit TVulHexgrid(const int Size, const FVulTileAllocator& Allocator)
+	explicit TVulHexgrid(const int InSize, const FVulTileAllocator& Allocator)
 	{
 		checkf(Size > 0, TEXT("Hexgrid Size must be a greater than 0"))
+
+		Size = InSize;
 
 		AddTile(FVulHexAddr(0, 0), Allocator);
 
@@ -242,7 +244,10 @@ struct TVulHexgrid
 		return Result;
 	}
 
-	int Size() const { return FMath::RoundToInt((FMath::CeilToInt(FMath::Sqrt(static_cast<float>(TileCount()))) - 1) / 2.0); };
+	/**
+	 * Returns the size of this grid, that is the number of tiles from the center to an edge.
+	 */
+	int GetSize() const { return Size; }
 	int TileCount() const { return Tiles.Num(); };
 
 	TArray<TVulTile> GetTiles() const
@@ -264,9 +269,9 @@ private:
 	{
 		auto Addresses = To.Adjacent().FilterByPredicate([this](const FVulHexAddr& Adjacent)
 		{
-			return FMath::IsWithinInclusive(Adjacent.Q, Size() * -1, Size())
-				&& FMath::IsWithinInclusive(Adjacent.R, Size() * -1, Size())
-				&& FMath::IsWithinInclusive(Adjacent.S, Size() * -1, Size());
+			return FMath::IsWithinInclusive(Adjacent.Q, Size * -1, Size)
+				&& FMath::IsWithinInclusive(Adjacent.R, Size * -1, Size)
+				&& FMath::IsWithinInclusive(Adjacent.S, Size * -1, Size);
 		});
 
 		TArray<TVulTile> Out;
@@ -279,6 +284,7 @@ private:
 		return Out;
 	}
 
+	int Size;
 	TMap<FVulHexAddr, TVulTile> Tiles;
 
 	void AddTile(const FVulHexAddr& Addr, const FVulTileAllocator& Allocator)

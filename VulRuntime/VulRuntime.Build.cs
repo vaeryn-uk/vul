@@ -19,7 +19,8 @@ public class VulRuntime : ModuleRules
                 "CoreUObject",
                 "Engine",
                 "Slate",
-                "SlateCore"
+                "SlateCore",
+                "VulTest",
             }
         );
     }

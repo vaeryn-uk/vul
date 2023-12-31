@@ -1,4 +1,5 @@
-﻿#include "Hexgrid/Hexgrid.h"
+﻿#include "TestCase.h"
+#include "Hexgrid/Hexgrid.h"
 #include "Misc/AutomationTest.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -6,6 +7,8 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	"Vul.VulRuntime.Private.Hexgrid.Tests.TestHexgrid",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter
 )
+
+using namespace VulTest;
 
 typedef TVulHexgrid<FString> TestGrid;
 
@@ -65,19 +68,25 @@ void TestPath(
 	}
 }
 
-void TestConstruction(TestHexgrid* TestCase, const int Size, const int ExpectedTileCount)
+void TestConstruction(TestHexgrid* TestCase)
 {
-	auto Grid = MakeGrid(Size);
+	struct Data { int Size; int ExpectedTileCount; };
+	auto Ddt = DDT<Data>(TestCase, TEXT("Construction"), [](TC Test, Data Case)
+	{
+		auto Grid = MakeGrid(Case.Size);
 
-	TestCase->TestEqual("Size", Grid.Size(), Size);
-	TestCase->TestEqual("TileCount", Grid.TileCount(), ExpectedTileCount);
+		Test.Equal(Grid.GetSize(), Case.Size, TEXT("Size"));
+		Test.Equal(Grid.TileCount(), Case.ExpectedTileCount, TEXT("TileCount"));
+	});
+
+	Ddt.Run(TEXT("1"), {1, 7});
+	Ddt.Run(TEXT("2"), {2, 19});
+	Ddt.Run(TEXT("3"), {3, 37});
 }
 
 bool TestHexgrid::RunTest(const FString& Parameters)
 {
-	TestConstruction(this, 1, 7);
-	TestConstruction(this, 2, 19);
-	TestConstruction(this, 3, 37);
+	TestConstruction(this);
 
 	TestTileDistance(this, FVulHexAddr(0, 0), FVulHexAddr(1, -1), 1);
 	TestTileDistance(this, FVulHexAddr(0, 0), FVulHexAddr(3, -1), 3);
@@ -114,7 +123,6 @@ bool TestHexgrid::RunTest(const FString& Parameters)
 
 	// Null path check. When From == To.
 	TestPath(this, 3, FVulHexAddr(0, 0), FVulHexAddr(0, 0), 0);
-
 
 	TestPath(
 		this,

@@ -52,18 +52,6 @@ struct VULRUNTIME_API FVulHexAddr
 		return Other.Q == Q && Other.R == R && Other.S == S;
 	}
 
-	/**
-	 * Returns the center of the position of this hex as applied on a grid starting at (0, 0, 0).
-	 *
-	 * This assumes a top-down view, so the returned vector extends in X and Y coordinates.
-	 *
-	 * HexSize is the length of one side of each hex and we assume all hexes are regular hexagons
-	 * of equal size.
-	 *
-	 * Any further transformation (offset, rotation etc), is left to the caller.
-	 */
-	FVector Project(const float HexSize) const;
-
 	static TArray<int> GenerateSequenceForRing(const int Ring);
 
 	bool IsValid() const;
