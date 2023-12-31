@@ -59,5 +59,22 @@ bool TestUtil::RunTest(const FString& Parameters)
 		});
 	}
 
+	{
+		struct Data{ int HexSize; FVector WorldPos; FVulHexAddr Expected; };
+
+		auto Ddt = DDT<Data>(this, TEXT("Deproject"), [](TC Test, Data Case)
+		{
+			Test.Equal(
+				VulRuntime::Hexgrid::Deproject(Case.WorldPos, Case.HexSize).ToString(),
+				Case.Expected.ToString()
+			);
+		});
+
+		Ddt.Run(TEXT("Origin"), {6, FVector(0, 0, 0), FVulHexAddr(0, 0)});
+		Ddt.Run(TEXT("2, 2"), {6, FVector(2, 2, 0), FVulHexAddr(0, 0)});
+		Ddt.Run(TEXT("-2, -2"), {6, FVector(-2, -2, 0), FVulHexAddr(0, 0)});
+		Ddt.Run(TEXT("2, 8"), {6, FVector(2, 8, 0), FVulHexAddr(1, -1)});
+	}
+
 	return true;
 }
