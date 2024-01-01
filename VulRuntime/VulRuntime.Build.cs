@@ -21,6 +21,7 @@ public class VulRuntime : ModuleRules
                 "Slate",
                 "SlateCore",
                 "VulTest",
+                "DeveloperSettings",
             }
         );
     }
