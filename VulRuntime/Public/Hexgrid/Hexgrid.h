@@ -256,10 +256,27 @@ struct TVulHexgrid
 		return Out;
 	}
 
+	TOptional<TVulTile> Find(const FVulHexAddr& Addr) const
+	{
+		if (!IsValidAddr(Addr))
+		{
+			return {};
+		}
+
+		return Tiles.FindChecked(Addr);
+	}
+
 	void SetTileData(const FVulHexAddr& Addr, const TileData& Data)
 	{
 		// TODO: Do we destruct properly here?
 		Tiles[Addr] = TVulTile(Addr, Data);
+	}
+
+	bool IsValidAddr(const FVulHexAddr& Addr) const
+	{
+		return FMath::IsWithinInclusive(Addr.Q, Size * -1, Size)
+			&& FMath::IsWithinInclusive(Addr.R, Size * -1, Size)
+			&& FMath::IsWithinInclusive(Addr.S, Size * -1, Size);
 	}
 
 private:
@@ -268,9 +285,7 @@ private:
 	{
 		auto Addresses = To.Adjacent().FilterByPredicate([this](const FVulHexAddr& Adjacent)
 		{
-			return FMath::IsWithinInclusive(Adjacent.Q, Size * -1, Size)
-				&& FMath::IsWithinInclusive(Adjacent.R, Size * -1, Size)
-				&& FMath::IsWithinInclusive(Adjacent.S, Size * -1, Size);
+			return IsValidAddr(Adjacent);
 		});
 
 		TArray<TVulTile> Out;
