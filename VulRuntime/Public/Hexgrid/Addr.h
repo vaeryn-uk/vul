@@ -20,11 +20,11 @@ struct VULRUNTIME_API FVulHexAddr
 	}
 
 	UPROPERTY(EditAnywhere)
-	int Q;
+	int Q = 0;
 	UPROPERTY(EditAnywhere)
-	int R;
+	int R = 0;
 	UPROPERTY(EditAnywhere)
-	int S;
+	int S = 0;
 
 	FString ToString() const;
 
