@@ -1,0 +1,30 @@
+﻿{
+  "FileVersion" : 3,
+  "Version" : 1,
+  "VersionName" : "0.1",
+  "FriendlyName" : "Vaeryn's Unreal Library",
+  "Description" : "A collection of generic functionality used in my personal projects.",
+  "CreatedBy" : "Vaeryn",
+  "EnabledByDefault" : true,
+  "CanContainContent" : false,
+  "IsBetaVersion" : false,
+  "Installed" : false,
+  "Modules" :
+  [
+    {
+      "Name" : "VulRuntime",
+      "Type" : "Default",
+      "LoadingPhase" : "Default"
+    },
+    {
+      "Name" : "VulEditor",
+      "Type" : "Editor",
+      "LoadingPhase" : "Default"
+    },
+    {
+      "Name" : "VulTest",
+      "Type" : "Editor",
+      "LoadingPhase" : "Default"
+    }
+  ]
+}
