@@ -2,35 +2,53 @@
 
 A collection of generic, utility functionality & useful info for my personal projects in Unreal Engine 5.
 
+Code is currently implemented in a series of Unreal modules, all provided under one plugin.
+If any single piece of functionality proves to be useful and worth making standalone, it may
+be moved to its own plugin & module in the future.
+
 ## Installation
 
-This library is intended to be checked out as a git submodule in your project's `Source` directory.
+Clone this repository in to your Plugin's directory
 
 ```
-git submodule add github.com/vaeryn-uk/vul Source/Vul
+git submodule add github.com/vaeryn-uk/vul Plugins/Vul
 ```
 
 Then add this to your project's `.uproject` file:
 
 ```
 // ...
-  "Modules": [
-    // ...
+  "Plugins": [
+    // ...,
     {
-        "Name": "VulRuntime",
-        "Type": "Runtime",
-        "LoadingPhase": "Default"
+        "Name": "Vul",
+        "Enabled": true
     }
   ]
 // ...
 ```
 
-And `<MyProject>.Target.cs` & `<MyProject>Editor.Target.cs`:
+### `UnrealYAML`
 
-```csharp
-    // ...
-    ExtraModuleNames.AddRange(new string[] { "VulRuntime" });
-    // ...
+You will also need the UnrealYAML project: https://github.com/jwindgassen/UnrealYAML
+
+```
+git submodule add https://github.com/jwindgassen/UnrealYAML Plugins/UnrealYAML
+```
+
+_Note: extra functionality we need is currently added to this library in 
+a fork: https://github.com/vaeryn-uk/UnrealYAML._
+
+`.uproject` file:
+
+```
+    {
+        "Name": "UnrealYAML",
+        "Enabled": true,
+        "TargetAllowList": [
+            "Editor"
+        ]
+    },
 ```
 
 ## New projects
@@ -46,3 +64,24 @@ The included `.gitattributes` and `.gitignore` files are a useful starting point
 The ignore files prevents committing big/unintended files, such as as engine cache files or built binaries.
 
 The attributes file configures asset files, such as images or models, to be tracked by Git LFS to reduce storage requirements.
+
+## Functionality
+
+### Data table sources
+
+Data table sources allow for importing files into Unreal's Data Tables. This offers the following
+features over & above native UE data table functionality:
+
+* YAML data files, which tend to be more user-friendly & more concise than JSON.
+* Support for multiple files feeding in to one data table, rather than needing a huge, single JSON file.
+* Test operation to verify what will happen before performing a real import.
+* [TODO] Automated triggering of imports on project start/preview start/cook etc.
+* [TODO] Automatic population of row name references (below)
+
+### Data table rows
+
+* [TODO] A data table row base class that always includes its RowName
+* [TODO] Data table wrapper to coordinate access to data table rows.
+  * [TODO] Only ever need one allocation for a single row, rather than copying data everywhere.  
+* [TODO] A RowReference type in row structs that allow for convenient access to other rows. 
+  * [TODO] The reference has enough information to fetch the referenced row itself.

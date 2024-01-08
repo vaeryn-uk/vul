@@ -13,7 +13,7 @@
   [
     {
       "Name" : "VulRuntime",
-      "Type" : "Default",
+      "Type" : "Runtime",
       "LoadingPhase" : "Default"
     },
     {
@@ -25,6 +25,16 @@
       "Name" : "VulTest",
       "Type" : "Editor",
       "LoadingPhase" : "Default"
+    }
+  ],
+  "Plugins": [
+    {
+      "Name": "EditorScriptingUtilities",
+      "Enabled": true
+    },
+    {
+      "Name": "UnrealYAML",
+      "Enabled": true
     }
   ]
 }

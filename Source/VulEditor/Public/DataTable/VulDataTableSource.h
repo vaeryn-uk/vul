@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Object.h"
+#include "UnrealYAML/Public/Node.h"
 #include "DataTable/VulDataTableRow.h"
 #include "VulDataTableSource.generated.h"
 
@@ -61,11 +62,16 @@ public:
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 
 private:
+	void ParseAndBuildRows(TArray<TPair<FName, FTableRowBase*>>& Rows);
+
 	bool EnsureConfigured(const bool ShowDialog) const;
 
-	bool ParseFile(const FString& Path, FString& Error, TMap<FString, TSharedPtr<FJsonValue>>& Out);
+	bool ParseFile(const FString& Path, FString& Error, TMap<FString, YAML::Node>& Out);
 
-	bool BuildStructRows(const TMap<FString, TSharedPtr<FJsonValue>>& Data, FString& Error, TArray<FVulDataTableRow>& Out);
+	bool BuildStructRows(
+		const TMap<FString, YAML::Node>& Data,
+		struct FVulDataTableSourceImportFileResult& Result,
+		TArray<TPair<FName, FTableRowBase*>>& Rows);
 
 	UPROPERTY()
 	class UVulDataTableSourceImportResult* ImportResults;
@@ -80,16 +86,16 @@ struct FVulDataTableSourceImportFileResult
 	bool Ok = false;
 
 	UPROPERTY(VisibleAnywhere)
-	int NumberOfRows = 0;
+	int OkRows = 0;
+
+	UPROPERTY(VisibleAnywhere)
+	int FailedRows = 0;
 
 	UPROPERTY(VisibleAnywhere)
 	FString PatternMatched;
 
 	UPROPERTY(VisibleAnywhere)
-	int NumberOfDuplicates = 0;
-
-	UPROPERTY(VisibleAnywhere)
-	FString Error;
+	TArray<FString> Errors;
 };
 
 UCLASS()
@@ -102,8 +108,13 @@ public:
 	TMap<FString, FVulDataTableSourceImportFileResult> Files;
 
 	UPROPERTY(VisibleAnywhere)
-	int RowsDeleted = 0;
+	int RowCountWouldBeDeleted = 0;
+
+	UPROPERTY(VisibleAnywhere)
+	int RowCountActuallyDeleted = 0;
 
 	UPROPERTY(VisibleAnywhere)
 	FString Error;
+
+	bool AllFilesOk() const;
 };
