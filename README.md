@@ -8,7 +8,7 @@ be moved to its own plugin & module in the future.
 
 ## Installation
 
-Clone this repository in to your Plugin's directory
+Clone this repository in to your `Plugins` directory
 
 ```
 git submodule add github.com/vaeryn-uk/vul Plugins/Vul
@@ -28,7 +28,7 @@ Then add this to your project's `.uproject` file:
 // ...
 ```
 
-### `UnrealYAML`
+### UnrealYAML
 
 You will also need the UnrealYAML project: https://github.com/jwindgassen/UnrealYAML
 
@@ -66,6 +66,8 @@ The ignore files prevents committing big/unintended files, such as as engine cac
 The attributes file configures asset files, such as images or models, to be tracked by Git LFS to reduce storage requirements.
 
 ## Functionality
+
+An overview of some of the functionality provided by this plugin.
 
 ### Data table sources
 
