@@ -7,7 +7,7 @@ using namespace VulTest;
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	TestUtil,
-	"Vul.VulRuntime.Private.Hexgrid.Tests.TestUtil",
+	"VulRuntime.Hexgrid.TestUtil",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter
 )
 

@@ -4,7 +4,7 @@
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	TestHexgrid,
-	"Vul.VulRuntime.Private.Hexgrid.Tests.TestHexgrid",
+	"VulRuntime.Hexgrid.TestHexgrid",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter
 )
 

@@ -7,7 +7,12 @@
 #include "VulDataTableSource.generated.h"
 
 /**
+ * Enhanced functionality for importing data in to data tables.
  *
+ *   * YAML data file support
+ *   * Merge multiple files in to one data table
+ *   * Strict validation against data table structures with detailed error reporting.
+ *   * Test files before importing.
  */
 UCLASS()
 class VULEDITOR_API UVulDataTableSource : public UObject

@@ -83,7 +83,7 @@ features over & above native UE data table functionality:
 ### Data table rows
 
 * [TODO] A data table row base class that always includes its RowName
-* [TODO] Data table wrapper to coordinate access to data table rows.
-  * [TODO] Only ever need one allocation for a single row, rather than copying data everywhere.  
-* [TODO] A RowReference type in row structs that allow for convenient access to other rows. 
-  * [TODO] The reference has enough information to fetch the referenced row itself.
+* Data table wrapper to coordinate access to data table rows, see `UVulDataRepository`.
+* A reference type in row structs that allow for convenient access to other rows, see `UVulDataRef`.
+  These references are initialized with enough information to fetch the referenced row without needing
+  to go back through the repository.
