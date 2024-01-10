@@ -87,3 +87,8 @@ features over & above native UE data table functionality:
 * A reference type in row structs that allow for convenient access to other rows, see `UVulDataRef`.
   These references are initialized with enough information to fetch the referenced row without needing
   to go back through the repository.
+
+### Variable Stat & Measure
+
+`TVulMeasure` and `TVariableStat` provide functionality for representing and modifying numeric
+values in game logic, such as health and stats in an RPG system.
