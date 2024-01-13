@@ -24,19 +24,20 @@ public:
 		USceneComponent* Parent   = nullptr,
 		UActorComponent* Template = nullptr)
 	{
-		auto Spawned = NewObject<T>(Owner, Name, RF_NoFlags, Template);
-
-		if (Parent == nullptr)
-		{
-			Parent = Owner->GetRootComponent();
-		}
-
-		Spawned->RegisterComponent();
-		Spawned->AttachToComponent(Parent, FAttachmentTransformRules(EAttachmentRule::KeepRelative, false));
-		Owner->AddInstanceComponent(Spawned);
-
-		return Spawned;
+		return Cast<T>(SpawnDynamicComponent(T::StaticClass(), Owner, Name, Parent, Template));
 	}
+
+	/**
+	 * @overload
+	 *
+	 * For a dynamic component class.
+	 */
+	static UActorComponent* SpawnDynamicComponent(
+		const TSubclassOf<UActorComponent> ComponentClass,
+		AActor* Owner,
+		const FName& Name,
+		USceneComponent* Parent   = nullptr,
+		UActorComponent* Template = nullptr);
 
 	/**
 	 * Creates a component that will be attached to the provided component, or attached as root if Parent
