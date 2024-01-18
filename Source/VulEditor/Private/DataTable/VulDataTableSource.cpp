@@ -4,6 +4,7 @@
 #include "VulEditorUtil.h"
 #include "UnrealYAML/Public/Parsing.h"
 #include "HAL/FileManagerGeneric.h"
+#include "UObject/PropertyIterator.h"
 
 void UVulDataTableSource::Import()
 {
@@ -192,6 +193,15 @@ bool UVulDataTableSource::BuildStructRows(
 			ParseResult,
 			FYamlParseIntoOptions::Strict()
 		);
+
+		// Check-for and apply row name.
+		for (TFieldIterator<FProperty> It(DataTable->RowStruct); It; ++It)
+		{
+			if (auto NameProp = CastField<FNameProperty>(*It); NameProp && It->HasMetaData(RowNameMetaSpecifier))
+			{
+				NameProp->SetPropertyValue(It->ContainerPtrToValuePtr<void>(RowData), FName(RowName));
+			}
+		}
 
 		if (!ParseResult.Success())
 		{

@@ -3,7 +3,6 @@
 #include "CoreMinimal.h"
 #include "UObject/Object.h"
 #include "UnrealYAML/Public/Node.h"
-#include "DataTable/VulDataTableRow.h"
 #include "VulDataTableSource.generated.h"
 
 /**
@@ -20,6 +19,11 @@ class VULEDITOR_API UVulDataTableSource : public UObject
 	GENERATED_BODY()
 
 public:
+	/**
+	 * We look for this metadata in UPROPERTY and apply the row name if present.
+	 */
+	inline static FName RowNameMetaSpecifier = FName("VulRowName");
+
 	/**
 	 * The directory in which we look for data files.
 	 *

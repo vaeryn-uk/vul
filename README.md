@@ -77,12 +77,13 @@ features over & above native UE data table functionality:
 * YAML data files, which tend to be more user-friendly & more concise than JSON.
 * Support for multiple files feeding in to one data table, rather than needing a huge, single JSON file.
 * Test operation to verify what will happen before performing a real import.
+* Specify `meta="VulRowName"` in a `UPROPERTY` to have the import automatically populate the row name
+  in to the struct directly. Useful for identity/equality checks on row structs.
 * [TODO] Automated triggering of imports on project start/preview start/cook etc.
 * [TODO] Automatic population of row name references (below)
 
-### Data table rows
+### Data table refs
 
-* [TODO] A data table row base class that always includes its RowName
 * Data table wrapper to coordinate access to data table rows, see `UVulDataRepository`.
 * A reference type in row structs that allow for convenient access to other rows, see `UVulDataRef`.
   These references are initialized with enough information to fetch the referenced row without needing
