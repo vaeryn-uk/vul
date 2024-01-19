@@ -49,9 +49,29 @@ public:
 	UDataTable* DataTable;
 
 	/**
+	 * If specified, will only process records under this root-level key.
+	 *
+	 * This can be used to have a single YAML file containing different struct types that each want importing
+	 * via their own sources. Allowing a semantic-grouping of YAML elements, rather than strictly a struct ->
+	 * file mapping. E.g., instead of having separate files:
+	 *   - characters.yaml
+	 *   - weapons.yaml
+	 *   - pickups.yaml
+	 *
+	 * You might want to instead define YAML files by some game-specific concept, such as level or character:
+	 *   - level01.yaml
+	 *   - level02.yaml
+	 * Where each file contains the relevant weapons, pickups and characters within that level.
+	 *
+	 * If specified and a matching file does not contain this root-level key, that file is silently skipped.
+	 */
+	UPROPERTY(EditAnywhere)
+	FString TopLevelKey;
+
+	/**
 	 * The name of the row struct our import files should match.
 	 *
-	 * Read-only: derived fro the connected data table.
+	 * Read-only: derived from the connected data table.
 	 */
 	UPROPERTY(VisibleAnywhere)
 	FTopLevelAssetPath RowClassName;

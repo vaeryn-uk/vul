@@ -1,0 +1,11 @@
+﻿character:
+  john:
+    hp: 50
+    strength: 5
+weapon:
+  sword:
+    damage: 5
+    minStrength: 3
+  bow:
+    damage: 3
+    minStrength: 1

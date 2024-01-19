@@ -1,10 +1,7 @@
 ﻿#include "DataTable/VulDataTableSource.h"
-
-#include "EditorAssetLibrary.h"
 #include "VulEditorUtil.h"
 #include "UnrealYAML/Public/Parsing.h"
 #include "HAL/FileManagerGeneric.h"
-#include "UObject/PropertyIterator.h"
 
 void UVulDataTableSource::Import()
 {
@@ -166,6 +163,11 @@ bool UVulDataTableSource::ParseFile(const FString& Path, FString& Error, TMap<FS
 	{
 		Error = FString::Printf(TEXT("YAML did not contain a root-level map"));
 		return false;
+	}
+
+	if (!TopLevelKey.IsEmpty())
+	{
+		Root = Root[TopLevelKey];
 	}
 
 	Out = Root.As<TMap<FString, YAML::Node>>();

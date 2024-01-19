@@ -76,6 +76,8 @@ features over & above native UE data table functionality:
 
 * YAML data files, which tend to be more user-friendly & more concise than JSON.
 * Support for multiple files feeding in to one data table, rather than needing a huge, single JSON file.
+  * Also support for a single file feeding in to to different data tables, allowing for game-semantic structuring
+    of YAML files.
 * Test operation to verify what will happen before performing a real import.
 * Specify `meta="VulRowName"` in a `UPROPERTY` to have the import automatically populate the row name
   in to the struct directly. Useful for identity/equality checks on row structs.
