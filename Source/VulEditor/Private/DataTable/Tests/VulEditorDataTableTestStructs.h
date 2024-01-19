@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "DataTable/VulDataRepository.h"
 #include "UObject/Object.h"
 #include "VulEditorDataTableTestStructs.generated.h"
 
@@ -41,4 +42,13 @@ struct FTestWeapon : public FTableRowBase
 
 	UPROPERTY()
 	int MinStrength;
+};
+
+USTRUCT()
+struct FTestDataRef : public FTableRowBase
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	FVulDataRef Ref;
 };

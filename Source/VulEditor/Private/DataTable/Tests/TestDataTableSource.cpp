@@ -10,12 +10,14 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 void TestAutoPopulateRowName(TestDataTableSource* TestCase);
 void TestMultiStructImport(TestDataTableSource* TestCase);
+void TestDataRefParsing(TestDataTableSource* TestCase);
 UVulDataTableSource* CreateSource(const TCHAR* FilePattern, UDataTable* DataTable);
 
 bool TestDataTableSource::RunTest(const FString& Parameters)
 {
 	TestAutoPopulateRowName(this);
 	TestMultiStructImport(this);
+	TestDataRefParsing(this);
 
 	return !HasAnyErrors();
 }
@@ -74,6 +76,23 @@ void TestMultiStructImport(TestDataTableSource* TestCase)
 		TestCase->TestEqual("MultiStruct Weapons: row #1 minStrength", WeaponRows[0]->MinStrength, 3);
 		TestCase->TestEqual("MultiStruct Weapons: row #2 damage", WeaponRows[1]->Damage, 3);
 		TestCase->TestEqual("MultiStruct Weapons: row #2 minStrength", WeaponRows[1]->MinStrength, 1);
+	}
+}
+
+void TestDataRefParsing(TestDataTableSource* TestCase)
+{
+	auto Table = NewObject<UDataTable>();
+	Table->RowStruct = FTestDataRef::StaticStruct();
+
+	auto Source = CreateSource(TEXT("data_ref_parsing.yaml"), Table);
+
+	Source->Import();
+
+	TArray<FTestDataRef*> Rows;
+	Table->GetAllRows(TEXT("MultiStruct test"), Rows);
+	if (TestCase->TestEqual("Data ref row count", Rows.Num(), 1))
+	{
+		TestCase->TestEqual("Data Ref parsed", Rows[0]->Ref.RowName.ToString(), "somevalue");
 	}
 }
 

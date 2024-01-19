@@ -40,7 +40,15 @@ struct VULRUNTIME_API FVulDataRef
 	 * or this reference has not been initialized correctly.
 	 */
 	template <typename RowType>
-	RowType* FindChecked() const;
+	const RowType* FindChecked() const;
+
+	/**
+	 * Converts an array of references to an array of typed data rows.
+	 *
+	 * Creates a new array, so use with caution.
+	 */
+	template <typename RowType>
+	static TArray<const RowType*> FindChecked(const TArray<FVulDataRef>& Refs);
 
 	friend class UVulDataRepository;
 
@@ -103,10 +111,23 @@ private:
 };
 
 template <typename RowType>
-RowType* FVulDataRef::FindChecked() const
+const RowType* FVulDataRef::FindChecked() const
 {
 	checkf(Repository != nullptr, TEXT("Repository not set"));
 	return Repository->FindChecked<RowType>(TableName, RowName);
+}
+
+template <typename RowType>
+TArray<const RowType*> FVulDataRef::FindChecked(const TArray<FVulDataRef>& Refs)
+{
+	TArray<const RowType*> Out;
+
+	for (const auto Ref : Refs)
+	{
+		Out.Add(Ref.FindChecked<RowType>());
+	}
+
+	return Out;
 }
 
 template <typename RowType>

@@ -1,5 +1,6 @@
 ﻿#include "DataTable/VulDataTableSource.h"
 #include "VulEditorUtil.h"
+#include "DataTable/VulDataRepository.h"
 #include "UnrealYAML/Public/Parsing.h"
 #include "HAL/FileManagerGeneric.h"
 
@@ -187,13 +188,33 @@ bool UVulDataTableSource::BuildStructRows(
 
 		uint8* RowData = (uint8*)FMemory::Malloc(DataTable->RowStruct->GetStructureSize());
 		DataTable->RowStruct->InitializeDefaultValue(RowData);
+
+		auto Options = FYamlParseIntoOptions::Strict();
+		Options.TypeHandlers.Add("FVulDataRef", [](
+			const FYamlNode& Node,
+			const UScriptStruct* ScriptStruct,
+			void* Value,
+			FYamlParseIntoCtx& Ctx
+		) {
+			if (!Node.CanConvertTo<FString>())
+			{
+				// TODO and test.
+			}
+
+			auto Str = Node.As<FString>();
+
+			FVulDataRef Ref;
+			Ref.RowName = FName(Str);
+			*static_cast<FVulDataRef*>(Value) = Ref;
+		});
+
 		FYamlParseIntoCtx ParseResult;
 		ParseNodeIntoStruct(
 			FYamlNode(Entry.Value),
 			DataTable->RowStruct,
 			RowData,
 			ParseResult,
-			FYamlParseIntoOptions::Strict()
+			Options
 		);
 
 		// Check-for and apply row name.
