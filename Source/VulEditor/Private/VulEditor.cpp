@@ -1,5 +1,7 @@
 ﻿#include "VulEditor.h"
 
+#include "AssetIntegration/VulEditorCommands.h"
+
 #define LOCTEXT_NAMESPACE "FVulEditorModule"
 
 void FVulEditorModule::StartupModule()
@@ -9,6 +11,8 @@ void FVulEditorModule::StartupModule()
 
 	DataRepositoryAssetTypeActions = MakeShared<FVulDataRepositoryAssetTypeActions>();
 	FAssetToolsModule::GetModule().Get().RegisterAssetTypeActions(DataRepositoryAssetTypeActions.ToSharedRef());
+
+	FVulEditorCommands::Register();
 }
 
 void FVulEditorModule::ShutdownModule()

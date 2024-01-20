@@ -13,8 +13,6 @@ public class VulEditor : ModuleRules
             }
         );
 
-        // IncludeUnrealYaml();
-
         PrivateDependencyModuleNames.AddRange(
             new string[]
             {
@@ -23,7 +21,7 @@ public class VulEditor : ModuleRules
                 "Slate",
                 "SlateCore",
                 "UnrealEd", "EditorScriptingUtilities",
-                "VulRuntime", "Json", "UnrealYAML"
+                "VulRuntime", "Json", "UnrealYAML", "ToolMenus", "Blutility",
             }
         );
     }

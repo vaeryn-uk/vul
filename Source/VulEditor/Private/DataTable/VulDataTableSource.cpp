@@ -4,11 +4,11 @@
 #include "UnrealYAML/Public/Parsing.h"
 #include "HAL/FileManagerGeneric.h"
 
-void UVulDataTableSource::Import()
+bool UVulDataTableSource::Import(const bool ShowDetails)
 {
 	if (!EnsureConfigured(true))
 	{
-		return;
+		return false;
 	}
 
 	ImportResults = NewObject<UVulDataTableSourceImportResult>(this, UVulDataTableSourceImportResult::StaticClass(), FName(TEXT("Data import")));
@@ -27,16 +27,21 @@ void UVulDataTableSource::Import()
 		}
 	}
 
-	GEditor->GetEditorSubsystem<UAssetEditorSubsystem>()->CloseAllEditorsForAsset(DataTable);
-	GEditor->GetEditorSubsystem<UAssetEditorSubsystem>()->OpenEditorForAsset(DataTable);
+	if (ShowDetails)
+	{
+		GEditor->GetEditorSubsystem<UAssetEditorSubsystem>()->CloseAllEditorsForAsset(DataTable);
+		GEditor->GetEditorSubsystem<UAssetEditorSubsystem>()->OpenEditorForAsset(DataTable);
 
-	FVulEditorUtil::Output(
-		INVTEXT("Data Import"),
-		INVTEXT("Import completed"),
-		ImportResults->Error.IsEmpty() ? EAppMsgCategory::Success : EAppMsgCategory::Error,
-		true,
-		ImportResults
-	);
+		FVulEditorUtil::Output(
+			INVTEXT("Data Import"),
+			INVTEXT("Import completed"),
+			ImportResults->Error.IsEmpty() ? EAppMsgCategory::Success : EAppMsgCategory::Error,
+			true,
+			ImportResults
+		);
+	}
+
+	return ImportResults->Error.IsEmpty();
 }
 
 void UVulDataTableSource::Test()

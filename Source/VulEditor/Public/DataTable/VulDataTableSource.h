@@ -80,7 +80,7 @@ public:
 	 * Performs the import, clearing any existing data in the connected data table.
 	 */
 	UFUNCTION(CallInEditor, Category="Actions")
-	void Import();
+	bool Import(bool ShowDetails = true);
 
 	/**
 	 * Runs a test, reporting what will happen on import.

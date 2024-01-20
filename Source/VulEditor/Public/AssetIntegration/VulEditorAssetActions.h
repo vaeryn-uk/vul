@@ -7,10 +7,13 @@
 class FVulDataRepositoryAssetTypeActions : public FAssetTypeActions_Base
 {
 public:
+	virtual void GetActions(const TArray<UObject*>& InObjects, FToolMenuSection& Section) override;
 	virtual UClass* GetSupportedClass() const override;
 	virtual FText GetName() const override;
 	virtual FColor GetTypeColor() const override;
 	virtual uint32 GetCategories() override;
+
+	void ImportAllConnectedSources();
 };
 
 class FVulDataTableSourceAssetTypeActions : public FAssetTypeActions_Base
