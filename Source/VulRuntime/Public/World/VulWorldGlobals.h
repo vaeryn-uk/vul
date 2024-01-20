@@ -11,13 +11,13 @@ namespace VulRuntime::WorldGlobals
 	/**
 	 * Gets a UWorld from the given UObject, checking that it exists/is valid.
 	 */
-	VULRUNTIME_API UWorld* GetWorldChecked(UObject* Object);
+	VULRUNTIME_API UWorld* GetWorldChecked(const UObject* Object);
 
 	/**
 	 * Gets a GameInstance subsystem of the requested type from the given UObject's world, checking that it exists/is valid.
 	 */
 	template <typename Subsystem>
-	Subsystem* GetGameInstanceSubsystemChecked(UObject* Ctx)
+	Subsystem* GetGameInstanceSubsystemChecked(const UObject* Ctx)
 	{
 		auto SS = GetWorldChecked(Ctx)->GetGameInstance()->GetSubsystem<Subsystem>();
 		checkf(IsValid(SS), TEXT("Cannot find GameInstance subsystem"))

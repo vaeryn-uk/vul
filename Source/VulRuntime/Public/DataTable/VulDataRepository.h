@@ -52,9 +52,11 @@ struct VULRUNTIME_API FVulDataRef
 
 	friend class UVulDataRepository;
 
+	bool IsInitialized() const;
+
 private:
 	UPROPERTY()
-	class UVulDataRepository* Repository = nullptr;
+	UVulDataRepository* Repository = nullptr;
 
 	FName TableName;
 };
@@ -90,7 +92,7 @@ private:
 
 	void InitRefProperty(const FProperty* Property, FVulDataRef* Ref, const UScriptStruct* Struct)
 	{
-		if (Ref->Repository != nullptr)
+		if (Ref->IsInitialized())
 		{
 			// Already initialized.
 			return;
