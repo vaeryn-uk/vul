@@ -1,11 +1,21 @@
 ﻿#include "DataTable/VulDataRepository.h"
 
-bool FVulDataRef::IsInitialized() const
+TObjectPtr<UScriptStruct> UVulDataRepository::StructType(const FName& TableName) const
 {
-	return IsValid(Repository) && !TableName.IsNone();
+	return DataTables.FindChecked(TableName)->RowStruct;
 }
 
-bool UVulDataRepository::IsRefType(const FProperty* Property) const
+FVulDataPtr UVulDataRepository::FindPtrChecked(const FName& TableName, const FName& RowName)
 {
-	return Property->GetCPPType() == FVulDataRef::StaticStruct()->GetStructCPPName();
+	return FVulDataPtr(
+		TSoftObjectPtr<UVulDataRepository>(this),
+		TableName,
+		RowName,
+		FindRaw<FTableRowBase>(TableName, RowName)
+	);
+}
+
+bool UVulDataRepository::IsPtrType(const FProperty* Property) const
+{
+	return Property->GetCPPType() == FVulDataPtr::StaticStruct()->GetStructCPPName();
 }

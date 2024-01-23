@@ -45,10 +45,10 @@ struct FTestWeapon : public FTableRowBase
 };
 
 USTRUCT()
-struct FTestDataRef : public FTableRowBase
+struct FTestDataPtr : public FTableRowBase
 {
 	GENERATED_BODY()
 
 	UPROPERTY()
-	FVulDataRef Ref;
+	FVulDataPtr Ptr;
 };

@@ -82,17 +82,17 @@ void TestMultiStructImport(TestDataTableSource* TestCase)
 void TestDataRefParsing(TestDataTableSource* TestCase)
 {
 	auto Table = NewObject<UDataTable>();
-	Table->RowStruct = FTestDataRef::StaticStruct();
+	Table->RowStruct = FTestDataPtr::StaticStruct();
 
 	auto Source = CreateSource(TEXT("data_ref_parsing.yaml"), Table);
 
 	Source->Import();
 
-	TArray<FTestDataRef*> Rows;
+	TArray<FTestDataPtr*> Rows;
 	Table->GetAllRows(TEXT("MultiStruct test"), Rows);
 	if (TestCase->TestEqual("Data ref row count", Rows.Num(), 1))
 	{
-		TestCase->TestEqual("Data Ref parsed", Rows[0]->Ref.RowName.ToString(), "somevalue");
+		TestCase->TestEqual("Data Ref parsed", Rows[0]->Ptr.GetRowName().ToString(), "somevalue");
 	}
 }
 

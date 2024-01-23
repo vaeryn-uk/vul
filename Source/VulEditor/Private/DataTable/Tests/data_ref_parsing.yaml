@@ -1,2 +1,2 @@
 ﻿row:
-  ref: somevalue
+  ptr: somevalue

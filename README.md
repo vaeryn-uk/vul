@@ -84,12 +84,14 @@ features over & above native UE data table functionality:
 * [TODO] Automated triggering of imports on project start/preview start/cook etc.
 * [TODO] Automatic population of row name references (below)
 
-### Data table refs
+### Data repositories
 
 * Data table wrapper to coordinate access to data table rows, see `UVulDataRepository`.
-* A reference type in row structs that allow for convenient access to other rows, see `UVulDataRef`.
-  These references are initialized with enough information to fetch the referenced row without needing
+* A reference type in row structs that allow for convenient access to other rows, see `FVulDataPtr`.
+  These pointers are initialized with enough information to fetch the referenced row without needing
   to go back through the repository.
+  * `FVulDataPtr` and its typed version, `TVulDataPtr`, provides a bunch of features as a general-use
+    pointer type for rows, so we use this as the only type returned from the repository.
 
 ### Variable Stat & Measure
 

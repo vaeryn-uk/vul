@@ -1,6 +1,6 @@
 ﻿#pragma once
-#include "DataTable/VulDataRepository.h"
 
+#include "DataTable/VulDataRepository.h"
 #include "TestVulDataStructs.generated.h"
 
 USTRUCT()
@@ -21,7 +21,7 @@ struct FTestTableRow2 : public FTableRowBase
 	GENERATED_BODY()
 
 	UPROPERTY(meta=(VulDataTable="T1"))
-	FVulDataRef ARef;
+	FVulDataPtr ARef;
 };
 
 USTRUCT()
@@ -30,13 +30,13 @@ struct FCircDepIncluder
 	GENERATED_BODY()
 
 	FCircDepIncluder() = default;
-	FCircDepIncluder(const int InSomeValue, const FVulDataRef& Ref) : SomeValue(InSomeValue), CircularProperty(Ref) {};
+	FCircDepIncluder(const int InSomeValue, const FVulDataPtr& Ref) : SomeValue(InSomeValue), CircularProperty(Ref) {};
 
 	UPROPERTY()
 	int SomeValue = 0;
 
 	UPROPERTY(meta=(VulDataTable="CircTable"))
-	FVulDataRef CircularProperty;
+	FVulDataPtr CircularProperty;
 };
 
 USTRUCT()
@@ -51,11 +51,35 @@ struct FCircDep : public FTableRowBase
 	int Value = 0;
 
 	UPROPERTY(meta=(VulDataTable="CircTable"))
-	FVulDataRef CircularProperty;
+	FVulDataPtr CircularProperty;
 
 	UPROPERTY(meta=(VulDataTable="CircTable"))
-	TArray<FVulDataRef> CircularArray;
+	TArray<FVulDataPtr> CircularArray;
 
 	UPROPERTY(meta=(VulDataTable="CircTable"))
 	TMap<FString, FCircDepIncluder> CircularMap;
+};
+
+USTRUCT()
+struct FVulTestBaseStruct : public FTableRowBase
+{
+	GENERATED_BODY()
+
+	FString ParentField;
+};
+
+USTRUCT()
+struct FVulTestChild1Struct : public FVulTestBaseStruct
+{
+	GENERATED_BODY()
+
+	FString Child1Field;
+};
+
+USTRUCT()
+struct FVulTestChild2Struct : public FVulTestBaseStruct
+{
+	GENERATED_BODY()
+
+	FString Child2Field;
 };

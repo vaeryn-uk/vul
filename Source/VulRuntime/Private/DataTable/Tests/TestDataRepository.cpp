@@ -19,7 +19,7 @@ bool TestDataRepository::RunTest(const FString& Parameters)
 		DT1->AddRow(FName("Table1Row1"), FTestTableRow1(10));
 
 		auto TTR2 = FTestTableRow2();
-		TTR2.ARef.RowName = FName("Table1Row1");
+		TTR2.ARef = FVulDataPtr("Table1Row1");
 		DT2->AddRow(FName("Table2Row1"), TTR2);
 
 		auto Repo = NewObject<UVulDataRepository>();
@@ -31,12 +31,12 @@ bool TestDataRepository::RunTest(const FString& Parameters)
 
 		{
 			auto Row = Repo->FindChecked<FTestTableRow1>(FName("T1"), FName("Table1Row1"));
-			TestEqual("Repository FindChecked", Row->Value, 10);
+			TestEqual("Repository FindPtrChecked", Row.Get()->Value, 10);
 		}
 
 		{
 			auto Row = Repo->FindChecked<FTestTableRow2>(FName("T2"), FName("Table2Row1"));
-			TestEqual("Repository FindChecked", Row->ARef.FindChecked<FTestTableRow1>()->Value, 10);
+			TestEqual("Repository FindPtrChecked", Row.Get()->ARef.Get<FTestTableRow1>()->Value, 10);
 		}
 	}
 
@@ -53,13 +53,13 @@ bool TestDataRepository::RunTest(const FString& Parameters)
 		DT->AddRow(FName("ChildRow3"), Child3);
 
 		auto Parent = FCircDep(10);
-		Parent.CircularProperty.RowName = TEXT("ChildRow1");
+		Parent.CircularProperty = FVulDataPtr("ChildRow1");
 
-		Parent.CircularArray.Add(FVulDataRef("ChildRow1"));
-		Parent.CircularArray.Add(FVulDataRef("ChildRow2"));
+		Parent.CircularArray.Add(FVulDataPtr("ChildRow1"));
+		Parent.CircularArray.Add(FVulDataPtr("ChildRow2"));
 
-		Parent.CircularMap.Add("a", FCircDepIncluder(15, FVulDataRef("ChildRow2")));
-		Parent.CircularMap.Add("b", FCircDepIncluder(25, FVulDataRef("ChildRow3")));
+		Parent.CircularMap.Add("a", FCircDepIncluder(15, FVulDataPtr("ChildRow2")));
+		Parent.CircularMap.Add("b", FCircDepIncluder(25, FVulDataPtr("ChildRow3")));
 
 		DT->AddRow(FName("ParentRow"), Parent);
 
@@ -70,28 +70,75 @@ bool TestDataRepository::RunTest(const FString& Parameters)
 		};
 
 		auto FoundParent = Repo->FindChecked<FCircDep>(FName("CircTable"), FName("ParentRow"));
-		TestEqual("CircDep parent", FoundParent->Value, 10);
-		TestEqual("CircDep property", FoundParent->CircularProperty.FindChecked<FCircDep>()->Value, 20);
-		if (TestEqual("CircDep array length", FoundParent->CircularArray.Num(), 2))
+		TestEqual("CircDep parent", FoundParent.Get()->Value, 10);
+		TestEqual("CircDep property", FoundParent.Get()->CircularProperty.Get<FCircDep>()->Value, 20);
+		if (TestEqual("CircDep array length", FoundParent.Get()->CircularArray.Num(), 2))
 		{
-			TestEqual("CircDep array[0]", FoundParent->CircularArray[0].FindChecked<FCircDep>()->Value, 20);
-			TestEqual("CircDep array[1]", FoundParent->CircularArray[1].FindChecked<FCircDep>()->Value, 30);
+			TestEqual("CircDep array[0]", FoundParent.Get()->CircularArray[0].Get<FCircDep>()->Value, 20);
+			TestEqual("CircDep array[1]", FoundParent.Get()->CircularArray[1].Get<FCircDep>()->Value, 30);
 		}
 
-		if (TestEqual("CircDep map length", FoundParent->CircularMap.Num(), 2))
+		if (TestEqual("CircDep map length", FoundParent.Get()->CircularMap.Num(), 2))
 		{
-			if (TestTrue("CircDep map[\"a\"]", FoundParent->CircularMap.Contains("a")))
+			if (TestTrue("CircDep map[\"a\"]", FoundParent.Get()->CircularMap.Contains("a")))
 			{
-				TestEqual("CircDep map[\"a\"] value", FoundParent->CircularMap["a"].SomeValue, 15);
-				TestEqual("CircDep map[\"a\"] ref", FoundParent->CircularMap["a"].CircularProperty.FindChecked<FCircDep>()->Value, 30);
+				TestEqual("CircDep map[\"a\"] value", FoundParent.Get()->CircularMap["a"].SomeValue, 15);
+				TestEqual("CircDep map[\"a\"] ref", FoundParent.Get()->CircularMap["a"].CircularProperty.Get<FCircDep>()->Value, 30);
 			}
 
-			if (TestTrue("CircDep map[\"b\"]", FoundParent->CircularMap.Contains("b")))
+			if (TestTrue("CircDep map[\"b\"]", FoundParent.Get()->CircularMap.Contains("b")))
 			{
-				TestEqual("CircDep map[\"b\"] value", FoundParent->CircularMap["b"].SomeValue, 25);
-				TestEqual("CircDep map[\"b\"] ref", FoundParent->CircularMap["b"].CircularProperty.FindChecked<FCircDep>()->Value, 40);
+				TestEqual("CircDep map[\"b\"] value", FoundParent.Get()->CircularMap["b"].SomeValue, 25);
+				TestEqual("CircDep map[\"b\"] ref", FoundParent.Get()->CircularMap["b"].CircularProperty.Get<FCircDep>()->Value, 40);
 			}
 		}
+	}
+
+	{
+		auto Child1Table = NewObject<UDataTable>();
+		Child1Table->RowStruct = FVulTestChild1Struct::StaticStruct();
+
+		FVulTestChild1Struct Child1Struct;
+		Child1Struct.Child1Field = "child 1 field";
+		Child1Struct.ParentField = "parent 1 field";
+
+		Child1Table->AddRow(FName("child1struct"), Child1Struct);
+
+		auto Child2Table = NewObject<UDataTable>();
+		Child2Table->RowStruct = FVulTestChild2Struct::StaticStruct();
+
+		FVulTestChild2Struct Child2Struct;
+		Child2Struct.Child2Field = "child 2 field";
+		Child2Struct.ParentField = "parent 2 field";
+
+		Child2Table->AddRow(FName("child2struct"), Child2Struct);
+
+		auto Repo = NewObject<UVulDataRepository>();
+		Repo->DataTables.Add("child1", Child1Table);
+		Repo->DataTables.Add("child2", Child2Table);
+
+		auto FoundChild1 = Repo->FindChecked<FVulTestChild1Struct>("child1", "child1struct");
+
+		TestEqual("child1ptr: parent field", FoundChild1.Get()->ParentField, "parent 1 field");
+		TestEqual("child1ptr: child field", FoundChild1.Get()->Child1Field, "child 1 field");
+
+		// Up-cast.
+		auto Child1AsParent = Cast<FVulTestBaseStruct>(FoundChild1);
+		TestEqual("child1ptr as parent: parent field", Child1AsParent.Get()->ParentField, "parent 1 field");
+
+		// Down-cast.
+		auto Child1AsChild1 = Cast<FVulTestChild1Struct>(Child1AsParent);
+		TestEqual("child1ptr as child: parent field", Child1AsChild1.Get()->ParentField, "parent 1 field");
+		TestEqual("child1ptr as child: parent field", Child1AsChild1.Get()->Child1Field, "child 1 field");
+
+		// Failed downcast.
+		TestFalse("downcast fails cleanly", Cast<FVulTestChild2Struct>(Child1AsParent).IsSet());
+
+		// Implicit casts.
+		Child1AsParent = FoundChild1;
+		TestEqual("implicit up cast", Child1AsParent.Get()->ParentField, "parent 1 field");
+		Child1AsChild1 = Child1AsParent;
+		TestEqual("implicit down cast", Child1AsParent.Get()->ParentField, "parent 1 field");
 	}
 
 	return !HasAnyErrors();

@@ -1,65 +1,9 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "VulDataPtr.h"
 #include "UObject/Object.h"
 #include "VulDataRepository.generated.h"
-
-/**
- * A reference to a row in a data table. This can be embedded in USTRUCTs and deferenced
- * as required to get the referenced row.
- *
- * You may use a ref in a USTRUCT property, array value or map value. You must specify
- * a VulDataTable metadata specified, e.g.:
- *
- *   UPROPERTY(meta=(VulDataTable="MyOtherTable"))
- *   FVulDataRef SomeOtherRow;
- *
- * Where "MyOtherTable" is the name given to a data table in a UVulDataRepository.
- *
- * You must instantiate rows via a UVulDataRepository for refs to function correctly.
- *
- * For support in the editor, this class is non-templated, but does accept a when actually
- * fetching the referenced row.
- */
-USTRUCT()
-struct VULRUNTIME_API FVulDataRef
-{
-	GENERATED_BODY()
-
-	FVulDataRef() = default;
-	FVulDataRef(const FName& InRowName) : RowName(InRowName) {};
-
-	/**
-	 * The RowName of the row we're referencing.
-	 */
-	UPROPERTY(EditAnywhere)
-	FName RowName;
-
-	/**
-	 * Fetches the referenced row, encountering an error if the row does not exist
-	 * or this reference has not been initialized correctly.
-	 */
-	template <typename RowType>
-	const RowType* FindChecked() const;
-
-	/**
-	 * Converts an array of references to an array of typed data rows.
-	 *
-	 * Creates a new array, so use with caution.
-	 */
-	template <typename RowType>
-	static TArray<const RowType*> FindChecked(const TArray<FVulDataRef>& Refs);
-
-	friend class UVulDataRepository;
-
-	bool IsInitialized() const;
-
-private:
-	UPROPERTY()
-	UVulDataRepository* Repository = nullptr;
-
-	FName TableName;
-};
 
 /**
  * A data repository provides access to one or more data tables that may have references
@@ -70,11 +14,18 @@ class VULRUNTIME_API UVulDataRepository : public UObject
 {
 	GENERATED_BODY()
 public:
+
+	TObjectPtr<UScriptStruct> StructType(const FName& TableName) const;
+
 	/**
-	 * Finds a row reference, ensuring the row exists.
+	 * Finds a row by table & row name, asserting the row exists.
+	 *
+	 * Returned is a TVulDataPtr; a lightweight wrapper that saves copying of
+	 * struct data. This can be passed safely around calling code. See FVulDataPtr
+	 * for a summary of this ptr type.
 	 */
 	template <typename RowType>
-	RowType* FindChecked(const FName& TableName, const FName& RowName);
+	TVulDataPtr<RowType> FindChecked(const FName& TableName, const FName& RowName);
 
 	/**
 	 * The data tables that make up this repository. Each table is indexed by a user-defined name
@@ -86,15 +37,22 @@ public:
 	TMap<FName, UDataTable*> DataTables;
 
 private:
+	friend FVulDataPtr;
+
+	template <typename RowType>
+	const RowType* FindRaw(const FName& TableName, const FName& RowName);
+
+	FVulDataPtr FindPtrChecked(const FName& TableName, const FName& RowName);
+
 	void InitStruct(const UDataTable* Table, UScriptStruct* Struct, void* Data);
 
-	bool IsRefType(const FProperty* Property) const;
+	bool IsPtrType(const FProperty* Property) const;
 
-	void InitRefProperty(const FProperty* Property, FVulDataRef* Ref, const UScriptStruct* Struct)
+	void InitPtrProperty(const FProperty* Property, FVulDataPtr* Ptr, const UScriptStruct* Struct)
 	{
-		if (Ref->IsInitialized())
+		if (!Ptr->IsPendingInitialization())
 		{
-			// Already initialized.
+			// Already initialized or a null ptr.
 			return;
 		}
 
@@ -107,36 +65,18 @@ private:
 		const auto RefTable = FName(Property->GetMetaData(FName(TEXT("VulDataTable"))));
 		checkf(DataTables.Contains(RefTable), TEXT("Data repository does not have table %s"), RefTable);
 
-		Ref->Repository = this;
-		Ref->TableName = RefTable;
+		Ptr->Repository = this;
+		Ptr->TableName = RefTable;
+
+		checkf(Ptr->IsValid(), TEXT("InitPtrProperty resulted in an invalid FVulDataPtr"))
 	}
 };
 
 template <typename RowType>
-const RowType* FVulDataRef::FindChecked() const
-{
-	checkf(Repository != nullptr, TEXT("Repository not set"));
-	return Repository->FindChecked<RowType>(TableName, RowName);
-}
-
-template <typename RowType>
-TArray<const RowType*> FVulDataRef::FindChecked(const TArray<FVulDataRef>& Refs)
-{
-	TArray<const RowType*> Out;
-
-	for (const auto Ref : Refs)
-	{
-		Out.Add(Ref.FindChecked<RowType>());
-	}
-
-	return Out;
-}
-
-template <typename RowType>
-RowType* UVulDataRepository::FindChecked(const FName& TableName, const FName& RowName)
+const RowType* UVulDataRepository::FindRaw(const FName& TableName, const FName& RowName)
 {
 	auto Table = DataTables.FindChecked(TableName);
-	auto Row = Table->FindRow<RowType>(RowName, TEXT("VulDataRepository FindChecked"));
+	auto Row = Table->FindRow<RowType>(RowName, TEXT("VulDataRepository FindChecked"), false);
 	checkf(Row != nullptr, TEXT("Cannot find row %s in table %s"), *TableName.ToString(), *RowName.ToString());
 
 	InitStruct(Table, Table->RowStruct, Row);
@@ -144,14 +84,24 @@ RowType* UVulDataRepository::FindChecked(const FName& TableName, const FName& Ro
 	return Row;
 }
 
+template <typename RowType>
+TVulDataPtr<RowType> UVulDataRepository::FindChecked(const FName& TableName, const FName& RowName)
+{
+	auto Ptr = FindPtrChecked(TableName, RowName);
+
+	// This assumes TVulDataPtr is the same size as FVulDataPtr.
+	static_assert(sizeof(TVulDataPtr<FTableRowBase>) == sizeof(FVulDataPtr), "FVulDataPtr and TVulDataPtr must be the same size");
+	return *reinterpret_cast<TVulDataPtr<RowType>*>(&Ptr);
+}
+
 inline void UVulDataRepository::InitStruct(const UDataTable* Table, UScriptStruct* Struct, void* Data)
 {
 	for (TFieldIterator<FProperty> It(Struct); It; ++It)
 	{
-		if (IsRefType(*It))
+		if (IsPtrType(*It))
 		{
-			auto RefProperty = reinterpret_cast<FVulDataRef*>(It->ContainerPtrToValuePtr<void>(Data));
-			InitRefProperty(*It, RefProperty, Struct);
+			const auto RefProperty = static_cast<FVulDataPtr*>(It->ContainerPtrToValuePtr<void>(Data));
+			InitPtrProperty(*It, RefProperty, Struct);
 		} else if (const auto ArrayProperty = CastField<FArrayProperty>(*It))
 		{
 			FScriptArrayHelper Helper(ArrayProperty, It->ContainerPtrToValuePtr<void>(Data));
@@ -160,9 +110,9 @@ inline void UVulDataRepository::InitStruct(const UDataTable* Table, UScriptStruc
 			{
 				auto InnerData = Helper.GetElementPtr(i);
 
-				if (IsRefType(ArrayProperty->Inner))
+				if (IsPtrType(ArrayProperty->Inner))
 				{
-					InitRefProperty(ArrayProperty, reinterpret_cast<FVulDataRef*>(InnerData), Struct);
+					InitPtrProperty(ArrayProperty, reinterpret_cast<FVulDataPtr*>(InnerData), Struct);
 				} else if (const auto StructProp = CastField<FStructProperty>(ArrayProperty->Inner))
 				{
 					InitStruct(Table, StructProp->Struct, InnerData);
@@ -177,9 +127,9 @@ inline void UVulDataRepository::InitStruct(const UDataTable* Table, UScriptStruc
 				// TODO: Support for refs as keys?
 				auto ValueData = Helper.GetValuePtr(i);
 
-				if (IsRefType(MapProperty->KeyProp))
+				if (IsPtrType(MapProperty->KeyProp))
 				{
-					InitRefProperty(MapProperty, reinterpret_cast<FVulDataRef*>(ValueData), Struct);
+					InitPtrProperty(MapProperty, reinterpret_cast<FVulDataPtr*>(ValueData), Struct);
 				} else if (auto ValueProp = CastField<FStructProperty>(MapProperty->ValueProp))
 				{
 					InitStruct(Table, ValueProp->Struct, ValueData);

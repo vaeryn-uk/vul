@@ -195,7 +195,7 @@ bool UVulDataTableSource::BuildStructRows(
 		DataTable->RowStruct->InitializeDefaultValue(RowData);
 
 		auto Options = FYamlParseIntoOptions::Strict();
-		Options.TypeHandlers.Add("FVulDataRef", [](
+		Options.TypeHandlers.Add("FVulDataPtr", [](
 			const FYamlNode& Node,
 			const UScriptStruct* ScriptStruct,
 			void* Value,
@@ -208,9 +208,8 @@ bool UVulDataTableSource::BuildStructRows(
 
 			auto Str = Node.As<FString>();
 
-			FVulDataRef Ref;
-			Ref.RowName = FName(Str);
-			*static_cast<FVulDataRef*>(Value) = Ref;
+			FVulDataPtr Ptr = FName(Str);
+			*static_cast<FVulDataPtr*>(Value) = Ptr;
 		});
 
 		FYamlParseIntoCtx ParseResult;
