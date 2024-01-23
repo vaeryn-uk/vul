@@ -77,7 +77,7 @@ const RowType* UVulDataRepository::FindRaw(const FName& TableName, const FName& 
 {
 	auto Table = DataTables.FindChecked(TableName);
 	auto Row = Table->FindRow<RowType>(RowName, TEXT("VulDataRepository FindChecked"), false);
-	checkf(Row != nullptr, TEXT("Cannot find row %s in table %s"), *TableName.ToString(), *RowName.ToString());
+	checkf(Row != nullptr, TEXT("Cannot find row %s in table %s"), *RowName.ToString(), *TableName.ToString());
 
 	InitStruct(Table, Table->RowStruct, Row);
 

@@ -79,8 +79,10 @@ public:
 	/**
 	 * Performs the import, clearing any existing data in the connected data table.
 	 */
-	UFUNCTION(CallInEditor, Category="Actions")
-	bool Import(bool ShowDetails = true);
+	UFUNCTION(CallInEditor, Category="Actions", DisplayName="Import")
+	void BP_Import();
+
+	bool Import(bool ShowDetails = false);
 
 	/**
 	 * Runs a test, reporting what will happen on import.

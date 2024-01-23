@@ -86,7 +86,7 @@ private:
 	TSoftObjectPtr<UVulDataRepository> Repository;
 	UPROPERTY()
 	FName TableName;
-	UPROPERTY()
+	UPROPERTY(EditAnywhere)
 	FName RowName;
 
 	mutable const void* Ptr = nullptr;

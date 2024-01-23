@@ -4,6 +4,11 @@
 #include "UnrealYAML/Public/Parsing.h"
 #include "HAL/FileManagerGeneric.h"
 
+void UVulDataTableSource::BP_Import()
+{
+	Import(true);
+}
+
 bool UVulDataTableSource::Import(const bool ShowDetails)
 {
 	if (!EnsureConfigured(true))
