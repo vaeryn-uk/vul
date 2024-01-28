@@ -28,9 +28,6 @@ struct TTest
  *                   (-2 +2  0)        (-1 +2 -1)        ( 0 +2 -2)
  *
  * Templated to allow arbitrary data structures to be stored at each tile in the grid.
- *
- * VULRUNTIME_API applied here causes linker errors when using this from a different module.
- * Unsure why, as supposedly this is how you signify cross-module exports?
  */
 template <typename TileData>
 struct TVulHexgrid

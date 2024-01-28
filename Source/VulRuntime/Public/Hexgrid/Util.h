@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "Addr.h"
+#include "Misc/VulVectorPath.h"
 #include "Util.generated.h"
 
 /**
@@ -66,7 +67,6 @@ struct FVulWorldHexGridSettings
 
 namespace VulRuntime::Hexgrid
 {
-
 	/**
 	 * Given a mesh, returns a transformation to apply to that mesh to ensure that its sides
 	 * of the provided length.
@@ -95,5 +95,21 @@ namespace VulRuntime::Hexgrid
 	 */
 	VULRUNTIME_API FVector Project(const FVulHexAddr& Addr, const FVulWorldHexGridSettings& GridSettings);
 
+	/**
+	 * Takes a world location and returns the hex grid address this point sits within, according to GridSettings.
+	 *
+	 * The inverse of Project.
+	 */
 	VULRUNTIME_API FVulHexAddr Deproject(const FVector& WorldLocation, const FVulWorldHexGridSettings& GridSettings);
+
+	/**
+	 * Converts the provided start position and path to a path made of positions in the world.
+	 *
+	 * This can be used in conjunction with the results from a Path query to visualize actors moving
+	 * along a hexgrid path.
+	 */
+	VULRUNTIME_API FVulVectorPath VectorPath(
+		const FVulHexAddr& Start,
+		const TArray<FVulHexAddr>& Path,
+		const FVulWorldHexGridSettings& GridSettings);
 }

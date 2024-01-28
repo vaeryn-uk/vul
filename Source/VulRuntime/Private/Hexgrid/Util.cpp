@@ -50,6 +50,23 @@ FVulHexAddr VulRuntime::Hexgrid::Deproject(const FVector& WorldLocation, const F
 	return FVulHexAddr(Q, R);
 }
 
+FVulVectorPath VulRuntime::Hexgrid::VectorPath(
+	const FVulHexAddr& Start,
+	const TArray<FVulHexAddr>& Path,
+	const FVulWorldHexGridSettings& GridSettings)
+{
+	TArray<FVector> Points;
+	TArray Tiles = {Start};
+	Tiles.Append(Path);
+
+	for (const auto Tile : Tiles)
+	{
+		Points.Add(Project(Tile, GridSettings));
+	}
+
+	return FVulVectorPath(Points);
+}
+
 float FVulWorldHexGridSettings::ShortStep() const
 {
 	return FMath::Sqrt(FMath::Square(HexSize) - FMath::Square(HexSize / 2));
