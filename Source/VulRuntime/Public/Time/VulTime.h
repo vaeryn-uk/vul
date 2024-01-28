@@ -36,6 +36,15 @@ struct VULRUNTIME_API FVulTime
 	bool IsWithin(float Seconds) const;
 
 	/**
+	 * Returns an alpha value (0-1) representing how much of the interval between this time and the provided TotalSeconds.
+	 *
+	 *  0 - this time is now, so none of the interval has passed.
+	 *  1 - it is currently this time + TotalSeconds exactly; all of the interval has passed.
+	 * >1 - the interval has passed by this amount (e.g. 2 = twice the interval has passed).
+	 */
+	float Alpha(float TotalSeconds) const;
+
+	/**
 	 * Checks if we are after Seconds after we last started.
 	 *
 	 * False if we haven't started or is not valid.
