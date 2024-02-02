@@ -45,4 +45,24 @@ namespace VulRuntime::WorldGlobals
 		checkf(IsValid(PC), TEXT("Cannot find player controller"))
 		return PC;
 	}
+
+	/**
+	 * Returns the provided subsystem, checking it exists (if the player controller is a local player).
+	 *
+	 * If not a local player controller, this returns nullptr.
+	 */
+	template <typename Subsystem>
+	Subsystem* GetLocalPlayerSubsystem(const APlayerController* PlayerController)
+	{
+		auto Player = PlayerController->GetLocalPlayer();
+		if (!Player)
+		{
+			return nullptr;
+		}
+
+		auto Ret = Player->GetSubsystem<Subsystem>();
+		checkf(IsValid(Ret), TEXT("Could not resolve local player controller"));
+		return Ret;
+	}
+
 }

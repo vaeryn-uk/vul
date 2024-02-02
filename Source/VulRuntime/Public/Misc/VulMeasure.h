@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "VulObjectWatches.h"
 #include "VulVariableStat.h"
 #include "UObject/Object.h"
 
@@ -71,6 +72,16 @@ struct TVulMeasure
 	NumberType MaxValue() const
 	{
 		return Max.Current();
+	}
+
+	const TVulVariableStat<NumberType>& GetCurrent() const
+	{
+		return Current;
+	}
+
+	const TVulVariableStat<NumberType>& GetMax() const
+	{
+		return Max;
 	}
 
 private:

@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "VulObjectWatches.h"
 #include "UObject/Object.h"
 
 /**
@@ -89,6 +90,12 @@ public:
 		return Out;
 	}
 
+	typedef TVulObjectWatches<NumberType> WatchCollection;
+	void Watch(const UObject* Obj, const typename WatchCollection::Signature& Fn) const
+	{
+		Watches.Add(Obj, Fn);
+	}
+
 private:
 	struct FVulStatModification
 	{
@@ -99,4 +106,6 @@ private:
 	TArray<FVulStatModification> Modifications;
 
 	NumberType Base;
+
+	mutable WatchCollection Watches;
 };
