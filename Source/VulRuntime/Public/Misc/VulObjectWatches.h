@@ -16,37 +16,48 @@ public:
 	using Signature = TFunction<void (const Type New, const Type Old)>;
 
 	/**
-	* Adds a function to this collection, bound to the lifetime of the provided UObject.
-	*
-	* Will be called everytime Invoke is called (if its object is still valid).
-	*
-	* TODO: Should we provide a lifetime callback to detangle this from UObject? Then could provide
-	*   an IsValid(Obj) implementation of this.
-	*/
+	 * Adds a function to this collection, bound to the lifetime of the provided UObject.
+	 *
+	 * Will be called everytime Invoke is called (if its object is still valid).
+	 */
 	void Add(const UObject* Obj, const Signature& Fn)
 	{
-		if (!Fns.Contains(Obj))
-		{
-			Fns.Add(Obj, TArray{Fn});
-		} else
-		{
-			Fns.Find(Obj)->Add(Fn);
-		}
+		Fns.Add({
+			.Valid = [Obj] { return IsValid(Obj); },
+			.Fn = Fn,
+		});
+	}
+
+	/**
+	 * Adds a function to this collection, bound for as long as the Valid function returns true.
+	 *
+	 * Will be called everytime Invoke is called, until Valid returns false in which case the
+	 * Watch will be removed.
+	 */
+	void Add(const TFunction<bool ()> Valid, const Signature& Fn)
+	{
+		Fns.Add({.Valid = Valid, .Fn = Fn});
 	}
 
 	void Invoke(Type New, Type Old)
 	{
-		// TODO: Detect and remove invalid callbacks.
-		// TODO: Test coverage.
-		for (auto ToCall : Fns)
+		for (auto N = Fns.Num() - 1; N >= 0; --N)
 		{
-			for (auto Fn : ToCall.Value)
+			if (!Fns[N].Valid())
 			{
-				Fn(New, Old);
+				Fns.RemoveAt(N);
+			} else
+			{
+				Fns[N].Fn(New, Old);
 			}
 		}
 	}
 
 private:
-	TMap<TWeakObjectPtr<const UObject>, TArray<Signature>> Fns;
+	struct FVulObjectWatchFn
+	{
+		TFunction<bool ()> Valid;
+		Signature Fn;
+	};
+	TArray<FVulObjectWatchFn> Fns;
 };

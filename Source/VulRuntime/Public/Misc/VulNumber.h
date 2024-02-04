@@ -12,6 +12,9 @@ struct TVulNumberModification
 {
 	FGuid Id;
 
+	/**
+	 * Modifies a number by a percentage. E.g. 1.1 increases a value by 10%.
+	 */
 	static TVulNumberModification MakePercent(const float InPercent, const FGuid& Id = FGuid())
 	{
 		TVulNumberModification Out;
@@ -20,6 +23,9 @@ struct TVulNumberModification
 		return Out;
 	}
 
+	/**
+	 * Modifies a number by a flat amount; this is simple added to the value.
+	 */
 	static TVulNumberModification MakeFlat(const NumberType Flat, const FGuid& Id = FGuid())
 	{
 		TVulNumberModification Out;
@@ -28,6 +34,13 @@ struct TVulNumberModification
 		return Out;
 	}
 
+	/**
+	 * Modifies a number by a percent of the base. This is added to the value.
+	 *
+	 * E.g.
+	 *   -  +0.2 increases the value by 20% of the base amount.
+	 *   -  -1.0 decreases the value by 100% of the base amount.
+	 */
 	static TVulNumberModification MakeBasePercent(const float InBasePercent, const FGuid& Id = FGuid())
 	{
 		TVulNumberModification Out;
@@ -126,7 +139,7 @@ public:
 	/**
 	 * Returns the current value with all modifications applied.
 	 */
-	float Value() const
+	NumberType Value() const
 	{
 		auto Out = Base;
 
@@ -134,7 +147,13 @@ public:
 		{
 			if (Modification.Percent.IsSet())
 			{
-				Out += Modification.Percent.GetValue() * Base;
+				Out *= Modification.Percent.GetValue();
+			} else if (Modification.Flat.IsSet())
+			{
+				Out += Modification.Flat.GetValue();
+			} else if (Modification.BasePercent.IsSet())
+			{
+				Out += Modification.BasePercent.GetValue() * Base;
 			}
 		}
 
@@ -142,9 +161,9 @@ public:
 	}
 
 	typedef TVulObjectWatches<NumberType> WatchCollection;
-	void Watch(const UObject* Obj, const typename WatchCollection::Signature& Fn) const
+	WatchCollection& Watch() const
 	{
-		Watches.Add(Obj, Fn);
+		return Watches;
 	}
 
 private:
