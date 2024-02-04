@@ -1,8 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "VulObjectWatches.h"
-#include "VulVariableStat.h"
+#include "VulNumber.h"
 #include "UObject/Object.h"
 
 /**
@@ -74,12 +73,12 @@ struct TVulMeasure
 		return Max.Current();
 	}
 
-	const TVulVariableStat<NumberType>& GetCurrent() const
+	const TVulNumber<NumberType>& GetCurrent() const
 	{
 		return Current;
 	}
 
-	const TVulVariableStat<NumberType>& GetMax() const
+	const TVulNumber<NumberType>& GetMax() const
 	{
 		return Max;
 	}
@@ -90,6 +89,6 @@ private:
 		Current.ModifyBase(Amount, {{0, Max.Current()}});
 	}
 
-	TVulVariableStat<NumberType> Current = 0;
-	TVulVariableStat<NumberType> Max = 0;
+	TVulNumber<NumberType> Current = 0;
+	TVulNumber<NumberType> Max = 0;
 };

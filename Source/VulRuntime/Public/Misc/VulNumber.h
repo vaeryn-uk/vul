@@ -5,6 +5,44 @@
 #include "UObject/Object.h"
 
 /**
+ * Describes a single modification to a TVulNumber.
+ */
+template <typename NumberType>
+struct TVulNumberModification
+{
+	FGuid Id;
+
+	static TVulNumberModification MakePercent(const float InPercent, const FGuid& Id = FGuid())
+	{
+		TVulNumberModification Out;
+		Out.Percent = InPercent;
+		Out.Id = Id;
+		return Out;
+	}
+
+	static TVulNumberModification MakeFlat(const NumberType Flat, const FGuid& Id = FGuid())
+	{
+		TVulNumberModification Out;
+		Out.Flat = Flat;
+		Out.Id = Id;
+		return Out;
+	}
+
+	static TVulNumberModification MakeBasePercent(const float InBasePercent, const FGuid& Id = FGuid())
+	{
+		TVulNumberModification Out;
+		Out.BasePercent = InBasePercent;
+		Out.Id = Id;
+		return Out;
+	}
+
+	TOptional<TPair<NumberType, NumberType>> Clamp;
+	TOptional<float> Percent;
+	TOptional<float> BasePercent;
+	TOptional<NumberType> Flat;
+};
+
+/**
  * A numeric value that can be modified with the ability to withdraw modifications
  * later on.
  *
@@ -12,14 +50,19 @@
  * attribute by X%.
  *
  * TODO: This only covers a basic implementation that demonstrates the intention & basic
- * design, but needs fleshing out.
+ * design, but needs fleshing out. And tests.
  */
 template <typename NumberType>
-class TVulVariableStat
+class TVulNumber
 {
 public:
-	TVulVariableStat() = default;
-	TVulVariableStat(const NumberType InBase) : Base(InBase) {};
+	TVulNumber() = default;
+	TVulNumber(const NumberType InBase) : Base(InBase) {};
+
+	void Modify(const TVulNumberModification<NumberType>& Modification)
+	{
+		Modifications.Add(Modification);
+	}
 
 	/**
 	 * Alters the base value for this stat by a fixed amount.
@@ -47,6 +90,14 @@ public:
 	void AddPercent(const NumberType Amount, FGuid& Id)
 	{
 		Modifications.Add({Id, Amount});
+	}
+
+	/**
+	 * Returns the current value clamped between min & max.
+	 */
+	NumberType GetClamped(const NumberType Min, const NumberType Max) const
+	{
+		return FMath::Clamp(Current(), Min, Max);
 	}
 
 	/**
@@ -97,13 +148,8 @@ public:
 	}
 
 private:
-	struct FVulStatModification
-	{
-		FGuid Id;
-		TOptional<float> Percent;
-	};
 
-	TArray<FVulStatModification> Modifications;
+	TArray<TVulNumberModification<NumberType>> Modifications;
 
 	NumberType Base;
 
