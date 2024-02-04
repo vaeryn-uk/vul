@@ -78,6 +78,8 @@ public:
 
 	/**
 	 * Performs the import, clearing any existing data in the connected data table.
+	 *
+	 * Saves the table if changes were made.
 	 */
 	UFUNCTION(CallInEditor, Category="Actions", DisplayName="Import")
 	void BP_Import();
@@ -98,6 +100,8 @@ private:
 	bool EnsureConfigured(const bool ShowDialog) const;
 
 	bool ParseFile(const FString& Path, FString& Error, TMap<FString, YAML::Node>& Out);
+
+	FString HashTableContents() const;
 
 	bool BuildStructRows(
 		const TMap<FString, YAML::Node>& Data,

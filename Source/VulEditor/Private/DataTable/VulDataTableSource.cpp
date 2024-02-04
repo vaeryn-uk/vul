@@ -1,4 +1,6 @@
 ﻿#include "DataTable/VulDataTableSource.h"
+
+#include "EditorAssetLibrary.h"
 #include "VulEditorUtil.h"
 #include "DataTable/VulDataRepository.h"
 #include "UnrealYAML/Public/Parsing.h"
@@ -23,12 +25,19 @@ bool UVulDataTableSource::Import(const bool ShowDetails)
 
 	if (ImportResults->Error.IsEmpty())
 	{
+		const auto Before = HashTableContents();
+
 		// Import new data.
 		ImportResults->RowCountActuallyDeleted = DataTable->GetRowMap().Num();
 		DataTable->EmptyTable();
 		for (const auto Entry : BuiltRows)
 		{
 			DataTable->AddRow(Entry.Key, *Entry.Value);
+		}
+
+		if (DataTable->IsAsset() && Before != HashTableContents())
+		{
+			UEditorAssetLibrary::SaveLoadedAsset(DataTable, false);
 		}
 	}
 
@@ -184,6 +193,14 @@ bool UVulDataTableSource::ParseFile(const FString& Path, FString& Error, TMap<FS
 	Out = Root.As<TMap<FString, YAML::Node>>();
 
 	return true;
+}
+
+FString UVulDataTableSource::HashTableContents() const
+{
+	// TODO: This is detecting changes in FTexts that aren't materially different.
+	//       It looks like UseSimpleText should solve this, but it doesn't.
+	const FString Contents = DataTable->GetTableAsString(EDataTableExportFlags::UseSimpleText);
+	return FMD5::HashAnsiString(*Contents);
 }
 
 bool UVulDataTableSource::BuildStructRows(
