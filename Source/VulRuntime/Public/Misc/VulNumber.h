@@ -56,14 +56,12 @@ struct TVulNumberModification
 };
 
 /**
- * A numeric value that can be modified with the ability to withdraw modifications
- * later on.
+ * A numeric value with support for RPG-like operations.
  *
- * This offers numeric interactions commonly found in RPGs, such as increasing some
- * attribute by X%.
- *
- * TODO: This only covers a basic implementation that demonstrates the intention & basic
- * design, but needs fleshing out. And tests.
+ * - Supports modification which are tracked separately, applied in order, and can be withdrawn independently.
+ * - A base value that is tracked independently of any modifications.
+ * - Ability to clamp the value with another TVulNumber for dynamic bound setting.
+ * - Access to WatchCollection for registering callbacks for when the number is changed through any means.
  */
 template <typename NumberType>
 class TVulNumber
@@ -155,6 +153,11 @@ public:
 			{
 				Out += Modification.BasePercent.GetValue() * Base;
 			}
+		}
+
+		if (Clamp.Key.IsValid() && Clamp.Value.IsValid())
+		{
+			return FMath::Clamp(Out, Clamp.Key->Value(), Clamp.Value->Value());
 		}
 
 		return Out;
