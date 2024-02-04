@@ -11,6 +11,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 void TestAutoPopulateRowName(TestDataTableSource* TestCase);
 void TestMultiStructImport(TestDataTableSource* TestCase);
 void TestDataRefParsing(TestDataTableSource* TestCase);
+void TestInvalidPtrRef(TestDataTableSource* TestDataTableSource);
 UVulDataTableSource* CreateSource(const TCHAR* FilePattern, UDataTable* DataTable);
 
 bool TestDataTableSource::RunTest(const FString& Parameters)
@@ -18,6 +19,7 @@ bool TestDataTableSource::RunTest(const FString& Parameters)
 	TestAutoPopulateRowName(this);
 	TestMultiStructImport(this);
 	TestDataRefParsing(this);
+	TestInvalidPtrRef(this);
 
 	return !HasAnyErrors();
 }
@@ -93,6 +95,30 @@ void TestDataRefParsing(TestDataTableSource* TestCase)
 	if (TestCase->TestEqual("Data ref row count", Rows.Num(), 1))
 	{
 		TestCase->TestEqual("Data Ref parsed", Rows[0]->Ptr.GetRowName().ToString(), "somevalue");
+	}
+}
+
+void TestInvalidPtrRef(TestDataTableSource* Test)
+{
+	auto Table = NewObject<UDataTable>();
+	Table->RowStruct = FTestDataPtr::StaticStruct();
+
+	auto Source = CreateSource(TEXT("invalid_data_ref_parsing.yaml"), Table);
+
+	const auto Result = Source->Import();
+
+	Test->TestFalse(TEXT("Invalid ptr fails"), Result->AllFilesOk());
+	if (Test->TestTrue(TEXT("Invalid ptr file exists"), Result->Files.Contains("invalid_data_ref_parsing.yaml")))
+	{
+		const auto Errors = Result->Files["invalid_data_ref_parsing.yaml"].Errors;
+		if (Test->TestEqual(TEXT("Invalid ptr error count"), Errors.Num(), 1))
+		{
+			Test->TestEqual(
+				TEXT("Invalid ptr error message"),
+				Errors[0],
+				TEXT("row: .Ptr: YAML value cannot be converted to FVulDataPtr")
+			);
+		}
 	}
 }
 

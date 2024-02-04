@@ -11,11 +11,11 @@ void UVulDataTableSource::BP_Import()
 	Import(true);
 }
 
-bool UVulDataTableSource::Import(const bool ShowDetails)
+UVulDataTableSourceImportResult* UVulDataTableSource::Import(const bool ShowDetails)
 {
 	if (!EnsureConfigured(true))
 	{
-		return false;
+		return nullptr;
 	}
 
 	ImportResults = NewObject<UVulDataTableSourceImportResult>(this, UVulDataTableSourceImportResult::StaticClass(), FName(TEXT("Data import")));
@@ -55,7 +55,7 @@ bool UVulDataTableSource::Import(const bool ShowDetails)
 		);
 	}
 
-	return ImportResults->Error.IsEmpty();
+	return ImportResults;
 }
 
 void UVulDataTableSource::Test()
@@ -225,7 +225,8 @@ bool UVulDataTableSource::BuildStructRows(
 		) {
 			if (!Node.CanConvertTo<FString>())
 			{
-				// TODO and test.
+				Ctx.AddError(TEXT("YAML value cannot be converted to FVulDataPtr"));
+				return;
 			}
 
 			auto Str = Node.As<FString>();

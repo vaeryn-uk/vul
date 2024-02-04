@@ -84,7 +84,14 @@ public:
 	UFUNCTION(CallInEditor, Category="Actions", DisplayName="Import")
 	void BP_Import();
 
-	bool Import(bool ShowDetails = false);
+	/**
+	 * Imports data, returning the results in a UOBJECT for further inspection.
+	 *
+	 * Will render this UObject in an editor dialog to the user if ShowDetails is true.
+	 *
+	 * If the source is not correctly configured, nullptr will be returned.
+	 */
+	class UVulDataTableSourceImportResult* Import(bool ShowDetails = false);
 
 	/**
 	 * Runs a test, reporting what will happen on import.
