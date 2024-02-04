@@ -40,7 +40,7 @@ public:
 		// TODO: Test coverage.
 		for (auto ToCall : Fns)
 		{
-			for (auto Fn : ToCall)
+			for (auto Fn : ToCall.Value)
 			{
 				Fn(New, Old);
 			}

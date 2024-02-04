@@ -56,12 +56,18 @@ template <typename NumberType>
 class TVulNumber
 {
 public:
-	TVulNumber() = default;
-	TVulNumber(const NumberType InBase) : Base(InBase) {};
+	typedef TPair<TSharedPtr<TVulNumber>, TSharedPtr<TVulNumber>> FClamp;
 
+	TVulNumber() = default;
+	TVulNumber(const NumberType InBase) : Base(InBase), Clamp({nullptr, nullptr}) {};
+	TVulNumber(const NumberType InBase, FClamp InClamp) : Base(InBase), Clamp(InClamp) {};
+
+	/**
+	 * Applies a modification.
+	 */
 	void Modify(const TVulNumberModification<NumberType>& Modification)
 	{
-		Modifications.Add(Modification);
+		WithWatch([&] { Modifications.Add(Modification); });
 	}
 
 	/**
@@ -69,27 +75,18 @@ public:
 	 *
 	 * This cannot be withdrawn.
 	 */
-	void ModifyBase(const NumberType Amount, const TOptional<TPair<NumberType, NumberType>>& Clamp = {})
+	void ModifyBase(const NumberType Amount, const TOptional<TPair<NumberType, NumberType>>& InClamp = {})
 	{
-		if (Clamp.IsSet())
+		WithWatch([&]
 		{
-			Base = FMath::Clamp(Base + Amount, Clamp.GetValue().Key, Clamp.GetValue().Value);
-		} else
-		{
-			Base += Amount;
-		}
-	}
-
-	/**
-	 * Modify the current stat value by a percentage amount of the base, additive.
-	 *
-	 * E.g. +0.05 will make the total value 1.05 of the base.
-	 *
-	 * The provided ID can later be passed to @see Remove to withdraw this modification.
-	 */
-	void AddPercent(const NumberType Amount, FGuid& Id)
-	{
-		Modifications.Add({Id, Amount});
+			if (InClamp.IsSet())
+			{
+				Base = FMath::Clamp(Base + Amount, InClamp.GetValue().Key, InClamp.GetValue().Value);
+			} else
+			{
+				Base += Amount;
+			}
+		});
 	}
 
 	/**
@@ -97,7 +94,7 @@ public:
 	 */
 	NumberType GetClamped(const NumberType Min, const NumberType Max) const
 	{
-		return FMath::Clamp(Current(), Min, Max);
+		return FMath::Clamp(Value(), Min, Max);
 	}
 
 	/**
@@ -105,14 +102,17 @@ public:
 	 */
 	void Remove(const FGuid& Id)
 	{
-		for (auto N = Modifications.Num() - 1; N >= 0; --N)
+		WithWatch([&]
 		{
-			if (Modifications[N].Id == Id)
+			for (auto N = Modifications.Num() - 1; N >= 0; --N)
 			{
-				Modifications.RemoveAt(N);
-				break;
+				if (Modifications[N].Id == Id)
+				{
+					Modifications.RemoveAt(N);
+					break;
+				}
 			}
-		}
+		});
 	}
 
 	/**
@@ -120,13 +120,13 @@ public:
 	 */
 	void Reset()
 	{
-		Modifications.Empty();
+		WithWatch([&] { Modifications.Empty(); });
 	}
 
 	/**
 	 * Returns the current value with all modifications applied.
 	 */
-	float Current() const
+	float Value() const
 	{
 		auto Out = Base;
 
@@ -148,10 +148,18 @@ public:
 	}
 
 private:
+	void WithWatch(const TFunction<void ()>& Fn)
+	{
+		const auto Old = Value();
+		Fn();
+		Watches.Invoke(Value(), Old);
+	}
 
 	TArray<TVulNumberModification<NumberType>> Modifications;
 
 	NumberType Base;
+
+	FClamp Clamp;
 
 	mutable WatchCollection Watches;
 };

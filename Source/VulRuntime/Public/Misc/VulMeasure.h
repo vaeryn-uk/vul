@@ -12,9 +12,20 @@
 template <typename NumberType>
 struct TVulMeasure
 {
-	TVulMeasure() = default;
-	explicit TVulMeasure(const NumberType InMax) : Current(InMax), Max(InMax) {};
-	explicit TVulMeasure(const NumberType InCurrent, const NumberType InMax) : Current(InCurrent), Max(InMax) {};
+	TVulMeasure()
+	{
+		Init(0, 0);
+	}
+
+	explicit TVulMeasure(const NumberType InMax)
+	{
+		Init(InMax, InMax);
+	}
+
+	explicit TVulMeasure(const NumberType InCurrent, const NumberType InMax)
+	{
+		Init(InCurrent, InMax);
+	}
 
 	/**
 	 * Modifies the current value of this measure, returning true if we are not at min (e.g. not dead).
@@ -23,7 +34,7 @@ struct TVulMeasure
 	{
 		ModifyCurrent(Delta);
 
-		return Current.Current() > 0;
+		return GetCurrent().Value() > 0;
 	}
 
 	/**
@@ -47,7 +58,7 @@ struct TVulMeasure
 	 */
 	bool CanConsume(const NumberType Amount) const
 	{
-		return Current.Current() >= Amount;
+		return GetCurrent().Value() >= Amount;
 	}
 
 	/**
@@ -55,40 +66,48 @@ struct TVulMeasure
 	 */
 	void Empty()
 	{
-		Current.Reset();
+		GetCurrent().Reset();
 	}
 
 	float Percent() const
 	{
-		return static_cast<float>(Current.Current()) / static_cast<float>(Max.Current());
+		return static_cast<float>(GetCurrent().Value()) / static_cast<float>(GetMax().Value());
 	}
 
 	NumberType CurrentValue() const
 	{
-		return Current.Current();
+		return GetCurrent().Value();
 	}
 
 	NumberType MaxValue() const
 	{
-		return Max.Current();
+		return GetMax().Value();
 	}
 
-	const TVulNumber<NumberType>& GetCurrent() const
+	TVulNumber<NumberType>& GetCurrent() const
 	{
-		return Current;
+		return *Current;
 	}
 
-	const TVulNumber<NumberType>& GetMax() const
+	TVulNumber<NumberType>& GetMax() const
 	{
-		return Max;
+		return *Max;
 	}
 
 private:
-	void ModifyCurrent(const NumberType Amount)
+	void Init(const NumberType InCurrent, const NumberType InMax)
 	{
-		Current.ModifyBase(Amount, {{0, Max.Current()}});
+		Max = MakeShared<TVulNumber<NumberType>>(InMax);
+		auto Zero = MakeShared<TVulNumber<NumberType>>(0);
+		Current = MakeShared<TVulNumber<NumberType>>(InCurrent, TVulNumber<NumberType>::FClamp({Zero, Max}));
 	}
 
-	TVulNumber<NumberType> Current = 0;
-	TVulNumber<NumberType> Max = 0;
+	void ModifyCurrent(const NumberType Amount)
+	{
+		// TODO: Refactor.
+		GetCurrent().ModifyBase(Amount, {{0, GetMax().Value()}});
+	}
+
+	TSharedPtr<TVulNumber<NumberType>> Current;
+	TSharedPtr<TVulNumber<NumberType>> Max;
 };
