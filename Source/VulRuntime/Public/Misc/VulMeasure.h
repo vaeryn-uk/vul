@@ -34,7 +34,7 @@ struct TVulMeasure
 	{
 		ModifyCurrent(Delta);
 
-		return GetCurrent().Value() > 0;
+		return CurrentValue() > 0;
 	}
 
 	/**
@@ -58,7 +58,7 @@ struct TVulMeasure
 	 */
 	bool CanConsume(const NumberType Amount) const
 	{
-		return GetCurrent().Value() >= Amount;
+		return CurrentValue() >= Amount;
 	}
 
 	/**
@@ -66,12 +66,12 @@ struct TVulMeasure
 	 */
 	void Empty()
 	{
-		GetCurrent().Reset();
+		Current.Get().Reset();
 	}
 
 	float Percent() const
 	{
-		return static_cast<float>(GetCurrent().Value()) / static_cast<float>(GetMax().Value());
+		return static_cast<float>(CurrentValue()) / static_cast<float>(MaxValue());
 	}
 
 	NumberType CurrentValue() const
@@ -84,12 +84,12 @@ struct TVulMeasure
 		return GetMax().Value();
 	}
 
-	TVulNumber<NumberType>& GetCurrent() const
+	const TVulNumber<NumberType>& GetCurrent() const
 	{
 		return *Current;
 	}
 
-	TVulNumber<NumberType>& GetMax() const
+	const TVulNumber<NumberType>& GetMax() const
 	{
 		return *Max;
 	}
@@ -104,8 +104,7 @@ private:
 
 	void ModifyCurrent(const NumberType Amount)
 	{
-		// TODO: Refactor.
-		GetCurrent().ModifyBase(Amount, {{0, GetMax().Value()}});
+		Current.Get()->ModifyBase(Amount);
 	}
 
 	TSharedPtr<TVulNumber<NumberType>> Current;

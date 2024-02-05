@@ -98,20 +98,11 @@ public:
 	/**
 	 * Alters the base value for this stat by a fixed amount.
 	 *
-	 * This cannot be withdrawn.
+	 * This is permanent and cannot be withdrawn nor reset, as with normal modifications.
 	 */
-	void ModifyBase(const NumberType Amount, const TOptional<TPair<NumberType, NumberType>>& InClamp = {})
+	void ModifyBase(const NumberType Amount)
 	{
-		WithWatch([&]
-		{
-			if (InClamp.IsSet())
-			{
-				Base = FMath::Clamp(Base + Amount, InClamp.GetValue().Key, InClamp.GetValue().Value);
-			} else
-			{
-				Base += Amount;
-			}
-		});
+		WithWatch([&] { Base += Amount; });
 	}
 
 	/**

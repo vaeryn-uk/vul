@@ -11,7 +11,7 @@ typedef TVulMeasure<float> FTestMeasure;
 
 bool TestMeasure::RunTest(const FString& Parameters)
 {
-	// Simple free-form testing.
+	// Basic-case free-form testing.
 	{
 		FTestMeasure Measure(10);
 
