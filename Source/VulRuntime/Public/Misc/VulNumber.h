@@ -86,6 +86,9 @@ public:
 	TVulNumber() = default;
 	TVulNumber(const NumberType InBase) : Base(InBase), Clamp({nullptr, nullptr}) {};
 	TVulNumber(const NumberType InBase, FClamp InClamp) : Base(InBase), Clamp(InClamp) {};
+	TVulNumber(const NumberType InBase, const NumberType ClampMin, const NumberType ClampMax)
+		: Base(InBase)
+		, Clamp({MakeShared<TVulNumber>(ClampMin), MakeShared<TVulNumber>(ClampMax)}) {};
 
 	/**
 	 * Applies a modification.
@@ -103,14 +106,6 @@ public:
 	void ModifyBase(const NumberType Amount)
 	{
 		WithWatch([&] { Base += Amount; });
-	}
-
-	/**
-	 * Returns the current value clamped between min & max.
-	 */
-	NumberType GetClamped(const NumberType Min, const NumberType Max) const
-	{
-		return FMath::Clamp(Value(), Min, Max);
 	}
 
 	/**
