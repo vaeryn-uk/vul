@@ -49,6 +49,20 @@ struct TVulNumberModification
 		return Out;
 	}
 
+	/**
+	 * Sets an upper and lower limit for the amount of difference to the final value this modification
+	 * can have.
+	 *
+	 * This behaves the same for all types of modification: calculate the difference that the modification
+	 * would cause, then clamp it before applying.
+	 */
+	TVulNumberModification& WithClamp(const NumberType Min, const NumberType Max)
+	{
+		Clamp = {Min, Max};
+
+		return *this;
+	}
+
 	TOptional<TPair<NumberType, NumberType>> Clamp;
 	TOptional<float> Percent;
 	TOptional<float> BasePercent;
@@ -143,15 +157,27 @@ public:
 
 		for (auto Modification : Modifications)
 		{
+			auto New = Out;
+
 			if (Modification.Percent.IsSet())
 			{
-				Out *= Modification.Percent.GetValue();
+				New = Modification.Percent.GetValue() * Out;
 			} else if (Modification.Flat.IsSet())
 			{
-				Out += Modification.Flat.GetValue();
+				New = Modification.Flat.GetValue() + Out;
 			} else if (Modification.BasePercent.IsSet())
 			{
-				Out += Modification.BasePercent.GetValue() * Base;
+				New = Out + Modification.BasePercent.GetValue() * Base;
+			}
+
+			if (Modification.Clamp.IsSet())
+			{
+				const auto Diff = New - Out;
+				New = FMath::Clamp(Diff, Modification.Clamp.GetValue().Key, Modification.Clamp.GetValue().Value);
+				Out += New;
+			} else
+			{
+				Out = New;
 			}
 		}
 

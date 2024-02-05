@@ -52,6 +52,11 @@ bool TestNumber::RunTest(const FString& Parameters)
 		// We can modify the clamp in place.
 		Twelve->Modify(TestMod::MakePercent(1.5));
 		Ddt.Run("clamp-modified", {10, 18, {TestMod::MakeFlat(30)}, TestType::FClamp({Zero, Twelve})});
+
+		Ddt.Run("flat-min-clamp", {10, 15, {TestMod::MakeFlat(8).WithClamp(0, 5)}});
+		Ddt.Run("flat-max-clamp", {10, 8, {TestMod::MakeFlat(-3).WithClamp(-2, 5)}});
+		Ddt.Run("pct-min-clamp", {10, 12, {TestMod::MakePercent(1.5).WithClamp(0, 2)}});
+		Ddt.Run("pct-max-clamp", {10, 8, {TestMod::MakePercent(.5).WithClamp(-2, 5)}});
 	}
 
 	// Test modification removal.
