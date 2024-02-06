@@ -71,9 +71,11 @@ struct VULRUNTIME_API FVulTextNotification : public FVulUiNotification
  * * An allocator, which is responsible for returning a new WidgetType instance when a new
  *   notification is received. This is expected to add the created widget to the owning widget
  *   hierarchy in a container.
- * * A tick, which is given the notification and pre-existing widget. It is expected to
+ * * An update fn, which is given the notification and pre-existing widget. It is expected to
  *   up date the widget according to the notification given. It is also given the amount we
  *   have progressed through its duration, as a figure between 0 (just started) and 1 (completed).
+ *   Note that applying widget content should be applied here, and not in allocator, to ensure
+ *   that when an existing widget gets new content, we apply it correctly.
  *
  * Note that deallocation is not customizable; we instead just remove a dead widget from its
  * parent when its notification is no longer required.
@@ -89,7 +91,7 @@ struct TVulNotificationCollection
 	static_assert(TIsDerivedFrom<WidgetType, UWidget>::Value, "WidgetType is not a valid widget type");
 
 	typedef TFunction<WidgetType* (const NotificationType& Notification)> FWidgetAllocator;
-	typedef TFunction<void (const NotificationType& Notification, WidgetType*, float Completed)> FWidgetTick;
+	typedef TFunction<void (const NotificationType& Notification, WidgetType*, float Completed)> FWidgetUpdater;
 
 	struct FEntryStruct
 	{
@@ -99,8 +101,10 @@ struct TVulNotificationCollection
 	};
 
 	TVulNotificationCollection() = default;
-	TVulNotificationCollection(FWidgetAllocator Allocator, FWidgetTick TickFn)
-		: Allocator(Allocator), TickFn(TickFn) {};
+	TVulNotificationCollection(
+		FWidgetAllocator Allocator,
+		FWidgetUpdater UpdateFn
+	) : Allocator(Allocator), UpdateFn(UpdateFn) {};
 
 	/**
 	 * Checks for changes and expiry in contained notifications and returns true if there's been a change since the
@@ -136,7 +140,7 @@ struct TVulNotificationCollection
 		{
 			if (Entry.Widget.IsValid())
 			{
-				TickFn(Entry.Notification, Entry.Widget.Get(), Entry.Time.Alpha(Entry.Notification.RenderTime));
+				UpdateFn(Entry.Notification, Entry.Widget.Get(), Entry.Time.Alpha(Entry.Notification.RenderTime));
 			}
 		}
 	}
@@ -198,14 +202,19 @@ struct TVulNotificationCollection
 			// Replace if a ref match.
 			if (Entries[Existing].Widget.IsValid())
 			{
-				TickFn(Notification, Entries[Existing].Widget.Get(), Entries[Existing].Time.PercentDone());
+				UpdateFn(
+					Notification,
+					Entries[Existing].Widget.Get(),
+					Entries[Existing].Time.Alpha(Entries[Existing].Notification.RenderTime)
+				);
+
 				Entries[Existing] = {Notification, Time, Entries[Existing].Widget};
 			}
 		} else
 		{
 			// Otherwise just append.
 			auto Created = Allocator(Notification);
-			TickFn(Notification, Created, Time.Alpha(Notification.RenderTime()));
+			UpdateFn(Notification, Created, Time.Alpha(Notification.RenderTime));
 			Entries.Add({Notification, Time, Created});
 		}
 
@@ -246,5 +255,5 @@ private:
 	bool Dirty = false;
 
 	FWidgetAllocator Allocator;
-	FWidgetTick TickFn;
+	FWidgetUpdater UpdateFn;
 };
