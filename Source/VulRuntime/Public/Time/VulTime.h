@@ -42,14 +42,14 @@ struct VULRUNTIME_API FVulTime
 	 *  1 - it is currently this time + TotalSeconds exactly; all of the interval has passed.
 	 * >1 - the interval has passed by this amount (e.g. 2 = twice the interval has passed).
 	 */
-	float Alpha(float TotalSeconds) const;
+	float Alpha(const float TotalSeconds) const;
 
 	/**
 	 * Checks if we are after Seconds after we last started.
 	 *
 	 * False if we haven't started or is not valid.
 	 */
-	bool IsAfter(float Seconds) const;
+	bool IsAfter(const float Seconds) const;
 
 	/**
 	 * Set the time to now.

@@ -93,7 +93,17 @@ features over & above native UE data table functionality:
   * `FVulDataPtr` and its typed version, `TVulDataPtr`, provides a bunch of features as a general-use
     pointer type for rows, so we use this as the only type returned from the repository.
 
-### Variable Stat & Measure
+### Number functionality
 
-`TVulMeasure` and `TVariableStat` provide functionality for representing and modifying numeric
+`TVulMeasure` and `TVulNumber` provide functionality for representing and modifying numeric
 values in game logic, such as health and stats in an RPG system.
+
+### UI Notifications
+
+`FVulUiNotification` and `TVulNotificationCollection` provide an efficient creation and storage
+of temporary notifications to a player. This provides functionality such as:
+* Configuration for how long each notification displays for.
+* Automatic widget creation & removal once the notification expires.
+* Simple API to replace existing content.
+* Extensibility for implementation of different notification types; `FVulHeadlineNotification` is
+  the provided implementation.

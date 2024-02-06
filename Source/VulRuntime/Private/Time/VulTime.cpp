@@ -30,12 +30,12 @@ bool FVulTime::IsWithin(float Seconds) const
 	return NowFn() <= Time + Seconds;
 }
 
-float FVulTime::Alpha(float TotalSeconds) const
+float FVulTime::Alpha(const float TotalSeconds) const
 {
 	return (NowFn() - Time) / TotalSeconds;
 }
 
-bool FVulTime::IsAfter(float Seconds) const
+bool FVulTime::IsAfter(const float Seconds) const
 {
 	if (!IsValid())
 	{
