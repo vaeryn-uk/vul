@@ -134,12 +134,12 @@ struct TVulHexgrid
 		const auto Start = VulRuntime::Hexgrid::Project(From, Settings);
 		const auto End = VulRuntime::Hexgrid::Project(To, Settings);
 		const auto LineSegment = End - Start;
-		const auto SampleCount = 10; // TODO.
+		const auto SampleCount = From.Distance(To);
 
 		FTraceResult Result;
 		Result.Tiles.Add(From);
 
-		for (auto SampleN = 0; SampleN < SampleCount; SampleN++)
+		for (auto SampleN = 1; SampleN <= SampleCount; ++SampleN)
 		{
 			const auto Sample = Start + LineSegment * (SampleN / static_cast<float>(SampleCount));
 			const auto Tile = VulRuntime::Hexgrid::Deproject(Sample, Settings);

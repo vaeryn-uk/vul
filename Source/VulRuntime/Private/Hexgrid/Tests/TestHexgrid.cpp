@@ -73,17 +73,27 @@ bool TestHexgrid::RunTest(const FString& Parameters)
 	);
 
 	{
-		auto Grid = MakeGrid(3);
-		struct Data { FVulHexAddr From; FVulHexAddr To; TSet<FVulHexAddr> ExpectedTiles; bool ExpectedComplete; };
-		auto Ddt = DDT<Data>(this, "Hexgrid Trace", [&Grid](const TestCase& TestCase, const Data& Data)
+		struct Data { int GridSize; FVulHexAddr From; FVulHexAddr To; TSet<FVulHexAddr> ExpectedTiles; bool ExpectedComplete; };
+		auto Ddt = DDT<Data>(this, "Hexgrid Trace", [](const TestCase& TestCase, const Data& Data)
 		{
+			auto Grid = MakeGrid(Data.GridSize);
 			const auto Result = Grid.Trace(Data.From, Data.To);
 			TestCase.Equal(Result.Complete, Data.ExpectedComplete);
 			TestCase.Equal(Result.Tiles.Array(), Data.ExpectedTiles.Array());
 		});
 
-		Ddt.Run("Test 1", {FVulHexAddr(0, 0), FVulHexAddr(1, -1), {FVulHexAddr(0, 0), FVulHexAddr(1, -1)}, true});
-		Ddt.Run("Test 2", {{0, 0}, {2, -3}, {{0, 0}, {1, -1}, {1, -2}, {2, -3}}, true});
+		Ddt.Run("1 tile", {3, FVulHexAddr(0, 0), FVulHexAddr(1, -1), {FVulHexAddr(0, 0), FVulHexAddr(1, -1)}, true});
+		Ddt.Run("3 tiles, non straight", {3, {0, 0}, {2, -3}, {{0, 0}, {1, -1}, {1, -2}, {2, -3}}, true});
+		Ddt.Run("3 tiles, straight", {3, {0, 0}, {3, 0}, {{0, 0}, {1, 0}, {2, 0}, {3, 0}}, true});
+
+		// Check sampling tolerates large grids.
+		TSet<FVulHexAddr> Expected;
+		for (auto I = -25; I <= 25; I++)
+		{
+			Expected.Add({I, 0});
+		}
+
+		Ddt.Run("50 tiles, straight", {50, {-25, 0}, {25, 0}, Expected, true});
 	}
 
 	return true;
