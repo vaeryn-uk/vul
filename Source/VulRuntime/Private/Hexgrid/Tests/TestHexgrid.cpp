@@ -37,8 +37,8 @@ void TestPath(
 {
 	auto Grid = MakeGrid(GridSize);
 
-	TestGrid::FVulQueryOptions<int> Opts;
-	Opts.CostFn = [Impassable](const TestGrid::TVulTile& From, const TestGrid::TVulTile& To) -> TOptional<int>
+	TestGrid::TVulQueryOptions<int> Opts;
+	Opts.CostFn = [Impassable](const TestGrid::FVulTile& From, const TestGrid::FVulTile& To, TestGrid* Grid) -> TOptional<int>
 	{
 		if (Impassable.Contains(To.Addr))
 		{

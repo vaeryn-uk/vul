@@ -34,10 +34,10 @@ struct TVulHexgrid
 {
 	typedef TFunction<TileData (const FVulHexAddr& Addr)> FVulTileAllocator;
 
-	struct TVulTile
+	struct FVulTile
 	{
-		TVulTile() = default;
-		TVulTile(const FVulHexAddr& InAddr, const TileData& InData) : Addr(InAddr), Data(InData) {};
+		FVulTile() = default;
+		FVulTile(const FVulHexAddr& InAddr, const TileData& InData) : Addr(InAddr), Data(InData) {};
 		FVulHexAddr Addr;
 		TileData Data;
 	};
@@ -75,9 +75,9 @@ struct TVulHexgrid
 	 * Options we provide to @see Path to customize the path-finding algorithm.
 	 */
 	template <typename CostType = int>
-	struct FVulQueryOptions
+	struct TVulQueryOptions
 	{
-		static TOptional<CostType> DefaultCostFn(const TVulTile& From, const TVulTile& To)
+		static TOptional<CostType> DefaultCostFn(const FVulTile& From, const FVulTile& To, TVulHexgrid* Grid)
 		{
 			return 1;
 		}
@@ -88,7 +88,7 @@ struct TVulHexgrid
 		 *
 		 * This can return unset to indicate that the movement is not valid.
 		 */
-		TFunction<TOptional<CostType> (const TVulTile& From, const TVulTile& To)> CostFn = &DefaultCostFn;
+		TFunction<TOptional<CostType> (const FVulTile& From, const FVulTile& To, TVulHexgrid* Grid)> CostFn = &DefaultCostFn;
 
 		/**
 		 * Returns the euclidean distance between two tile addresses.
@@ -122,7 +122,7 @@ struct TVulHexgrid
 		 * Note the starting tile is implied and not included here.
 		 * This also means that for a null path query (where From == To), this will be empty.
 		 */
-		TArray<TVulTile> Tiles;
+		TArray<FVulTile> Tiles;
 
 		/**
 		 * The cost of this path, according to the algorithm passed to our pathfinding.
@@ -141,7 +141,7 @@ struct TVulHexgrid
 	FPathResult<CostType> Path(
 		const FVulHexAddr& From,
 		const FVulHexAddr& To,
-		const FVulQueryOptions<CostType>& Opts = FVulQueryOptions<CostType>())
+		const TVulQueryOptions<CostType>& Opts = TVulQueryOptions<CostType>())
 	{
 		if (From == To)
 		{
@@ -183,7 +183,8 @@ struct TVulHexgrid
 			{
 				auto Cost = Opts.CostFn(
 					Tiles.FindChecked(Current.Element),
-					Tiles.FindChecked(Next.Addr)
+					Tiles.FindChecked(Next.Addr),
+					this
 				);
 
 				if (!Cost.IsSet())
@@ -246,14 +247,24 @@ struct TVulHexgrid
 	int GetSize() const { return Size; }
 	int TileCount() const { return Tiles.Num(); };
 
-	TArray<TVulTile> GetTiles() const
+	TArray<FVulTile> GetTiles() const
 	{
-		TArray<TVulTile> Out;
+		TArray<FVulTile> Out;
 		Tiles.GenerateValueArray(Out);
 		return Out;
 	}
 
-	TOptional<TVulTile> Find(const FVulHexAddr& Addr) const
+	TOptional<FVulTile> GetTile(const FVulHexAddr& Addr) const
+	{
+		if (!Tiles.Contains(Addr))
+		{
+			return {};
+		}
+
+		return Tiles.Find(Addr);
+	}
+
+	TOptional<FVulTile> Find(const FVulHexAddr& Addr) const
 	{
 		if (!IsValidAddr(Addr))
 		{
@@ -266,7 +277,12 @@ struct TVulHexgrid
 	void SetTileData(const FVulHexAddr& Addr, const TileData& Data)
 	{
 		// TODO: Do we destruct properly here?
-		Tiles[Addr] = TVulTile(Addr, Data);
+		Tiles[Addr] = FVulTile(Addr, Data);
+	}
+
+	FVulTile* ModifyTileData(const FVulHexAddr& Addr)
+	{
+		return Tiles.Find(Addr);
 	}
 
 	bool IsValidAddr(const FVulHexAddr& Addr) const
@@ -278,14 +294,14 @@ struct TVulHexgrid
 
 private:
 
-	TArray<TVulTile> AdjacentTiles(const FVulHexAddr& To) const
+	TArray<FVulTile> AdjacentTiles(const FVulHexAddr& To) const
 	{
 		auto Addresses = To.Adjacent().FilterByPredicate([this](const FVulHexAddr& Adjacent)
 		{
 			return IsValidAddr(Adjacent);
 		});
 
-		TArray<TVulTile> Out;
+		TArray<FVulTile> Out;
 
 		for (auto Addr : Addresses)
 		{
@@ -296,10 +312,10 @@ private:
 	}
 
 	int Size;
-	TMap<FVulHexAddr, TVulTile> Tiles;
+	TMap<FVulHexAddr, FVulTile> Tiles;
 
 	void AddTile(const FVulHexAddr& Addr, const FVulTileAllocator& Allocator)
 	{
-		Tiles.Add(Addr, TVulTile(Addr, Allocator(Addr)));
+		Tiles.Add(Addr, FVulTile(Addr, Allocator(Addr)));
 	}
 };
