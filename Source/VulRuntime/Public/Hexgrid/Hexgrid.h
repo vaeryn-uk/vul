@@ -1,7 +1,8 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
-#include "Hexgrid/Addr.h"
+#include "Addr.h"
+#include "Util.h"
 #include "Containers/VulPriorityQueue.h"
 #include "vector"
 #include "UObject/Object.h"
@@ -104,6 +105,56 @@ struct TVulHexgrid
 		 */
 		TFunction<CostType (const FVulHexAddr& From, const FVulHexAddr& To)> Heuristic = &DefaultHeuristic;
 	};
+
+	struct FTraceResult
+	{
+		/**
+		 * The tiles along this trace, including start and end.
+		 */
+		TSet<FVulHexAddr> Tiles;
+
+		/**
+		 * If this trace made it to the requested destination without hitting an obstacle.
+		 */
+		bool Complete = false;
+	};
+
+	/**
+	 * Traces a straight line between From and To, returning the tiles that are underneath the trace.
+	 */
+	FTraceResult Trace(
+		const FVulHexAddr& From,
+		const FVulHexAddr& To,
+		const TFunction<bool (const FVulHexAddr&)>& Check = [](const FVulHexAddr&) { return true; })
+	{
+		FVulWorldHexGridSettings Settings;
+		Settings.HexSize = 10;
+		Settings.Origin = FVector::Zero();
+
+		const auto Start = VulRuntime::Hexgrid::Project(From, Settings);
+		const auto End = VulRuntime::Hexgrid::Project(To, Settings);
+		const auto LineSegment = End - Start;
+		const auto SampleCount = 10; // TODO.
+
+		FTraceResult Result;
+		Result.Tiles.Add(From);
+
+		for (auto SampleN = 0; SampleN < SampleCount; SampleN++)
+		{
+			const auto Sample = Start + LineSegment * (SampleN / static_cast<float>(SampleCount));
+			const auto Tile = VulRuntime::Hexgrid::Deproject(Sample, Settings);
+
+			if (!IsValidAddr(Tile) || !Check(Tile))
+			{
+				return Result;
+			}
+
+			Result.Tiles.Add(Tile);
+		}
+
+		Result.Complete = true;
+		return Result;
+	}
 
 	/**
 	 * Result of a @see Path call.
