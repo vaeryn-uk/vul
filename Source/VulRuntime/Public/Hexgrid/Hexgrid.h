@@ -111,7 +111,7 @@ struct TVulHexgrid
 		/**
 		 * The tiles along this trace, including start and end.
 		 */
-		TSet<FVulHexAddr> Tiles;
+		TArray<FVulHexAddr> Tiles;
 
 		/**
 		 * If this trace made it to the requested destination without hitting an obstacle.
@@ -121,11 +121,14 @@ struct TVulHexgrid
 
 	/**
 	 * Traces a straight line between From and To, returning the tiles that are underneath the trace.
+	 *
+	 * The optional function returns true if a tile is valid along the trace. Can be used to implement
+	 * line of sight obstacles.
 	 */
 	FTraceResult Trace(
 		const FVulHexAddr& From,
 		const FVulHexAddr& To,
-		const TFunction<bool (const FVulHexAddr&)>& Check = [](const FVulHexAddr&) { return true; })
+		const TFunction<bool (const FVulTile&)>& Check = [](const FVulTile&) { return true; })
 	{
 		FVulWorldHexGridSettings Settings;
 		Settings.HexSize = 10;
@@ -144,7 +147,7 @@ struct TVulHexgrid
 			const auto Sample = Start + LineSegment * (SampleN / static_cast<float>(SampleCount));
 			const auto Tile = VulRuntime::Hexgrid::Deproject(Sample, Settings);
 
-			if (!IsValidAddr(Tile) || !Check(Tile))
+			if (!IsValidAddr(Tile) || !Check(GetTile(Tile).GetValue()))
 			{
 				return Result;
 			}
@@ -312,7 +315,7 @@ struct TVulHexgrid
 			return {};
 		}
 
-		return Tiles.Find(Addr);
+		return *Tiles.Find(Addr);
 	}
 
 	TOptional<FVulTile> Find(const FVulHexAddr& Addr) const
