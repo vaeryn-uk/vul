@@ -84,7 +84,7 @@ private:
 
 	UPROPERTY()
 	TSoftObjectPtr<UVulDataRepository> Repository;
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere)
 	FName TableName;
 	UPROPERTY(EditAnywhere)
 	FName RowName;
