@@ -6,33 +6,31 @@
 #include "VulHexShape.generated.h"
 
 /**
- * A shape in a hexagonal grid; a collection of directions that "walk along" the shape.
- *
- * Supports only contiguous shapes (cannot represents two independent shapes that are not connected
- * by at least two adjacent tiles).
- *
- * This is conceptual representation disconnected from any specific hexgrid. Internally, this
- * stores the information needed to draw the shape and provides functionality to project
- * this on to a grid.
+ * A shape in a hexagonal grid; a collection of tiles that make up a shape that can be
+ * translated and rotated as one.
  */
 USTRUCT()
-struct VULRUNTIME_API FVulHexVectorShape
+struct VULRUNTIME_API FVulHexShape
 {
 	GENERATED_BODY()
 
-	FVulHexVectorShape() = default;
-	FVulHexVectorShape(const TArray<FVulHexRotation>& InDirections) : Directions(InDirections) {};
+	FVulHexShape() = default;
 
 	/**
-	 * Projects this shape on to a hexgrid, returning the tiles that make up the shape.
+	 * Construct from the tiles that make up a shape.
 	 */
-	TArray<FVulHexAddr> Project(
-		const FVulHexAddr& Origin       = FVulHexAddr(),
-		const FVulHexRotation& Rotation = FVulHexRotation()) const;
+	FVulHexShape(const TArray<FVulHexAddr>& InTiles) : Tiles(InTiles) {};
+
+	/**
+	 * Rotates this shape around the origin.
+	 */
+	FVulHexShape Rotate(const FVulHexRotation& Rotation) const;
+
+	FString ToString() const;
 
 private:
 	/**
-	 * The turns we take whilst walking along this shape.
+	 * The tiles that make up the shape on a hexgrid.
 	 */
-	TArray<FVulHexRotation> Directions;
+	TArray<FVulHexAddr> Tiles;
 };

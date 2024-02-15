@@ -11,49 +11,34 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool TestShape::RunTest(const FString& Parameters)
 {
-	{
+	{ // Test Rotate().
 		struct Data
 		{
-			TArray<FVulHexRotation> InDirections;
-			FVulHexAddr Origin;
+			TArray<FVulHexAddr> Tiles;
 			FVulHexRotation Rotation;
-			TArray<FVulHexAddr> ExpectedTiles;
+			FString ExpectedTiles;
 		};
 
-		auto Ddt = VulTest::DDT<Data>(this, "Projection", [](const VulTest::TestCase& TC, const Data& Data)
+		auto Ddt = VulTest::DDT<Data>(this, "Rotate", [](const VulTest::TestCase& TC, const Data& Data)
 		{
-			const auto Shape = FVulHexVectorShape(Data.InDirections);
+			const auto Shape = FVulHexShape(Data.Tiles);
 
-			TC.Equal(Shape.Project(Data.Origin, Data.Rotation), Data.ExpectedTiles);
+			TC.Equal(Shape.Rotate(Data.Rotation).ToString(), Data.ExpectedTiles);
 		});
 
-		Ddt.Run("Empty shape", {
-			{},
-			FVulHexAddr(),
-			FVulHexRotation(),
-			{FVulHexAddr()}
-		});
+		Ddt.Run("Empty shape", {.Tiles={}, .ExpectedTiles={}});
 
-		Ddt.Run("Straight line 2, origin, 0 rotation", {
-			{0, 0},
-			FVulHexAddr(),
-			FVulHexRotation(),
-			{FVulHexAddr(), FVulHexAddr(1, 0), FVulHexAddr(2, 0)}
-		});
+		const TArray<FVulHexAddr> Straight2 = {{1, -1}, {2, -2}};
+		Ddt.Run("Straight2, origin, 0 rotation", {.Tiles=Straight2, .ExpectedTiles="(1 -1 0), (2 -2 0)"});
+		Ddt.Run("Straight2, origin, 1 rotation", {.Tiles=Straight2, .Rotation=1, .ExpectedTiles="(1 0 -1), (2 0 -2)",});
+		Ddt.Run("Straight2, origin, 2 rotation", {.Tiles=Straight2, .Rotation=2, .ExpectedTiles="(0 1 -1), (0 2 -2)",});
+		Ddt.Run("Straight2, origin, 3 rotation", {.Tiles=Straight2, .Rotation=3, .ExpectedTiles="(-1 1 0), (-2 2 0)",});
+		Ddt.Run("Straight2, origin, 4 rotation", {.Tiles=Straight2, .Rotation=4, .ExpectedTiles="(-1 0 1), (-2 0 2)",});
+		Ddt.Run("Straight2, origin, 5 rotation", {.Tiles=Straight2, .Rotation=5, .ExpectedTiles="(0 -1 1), (0 -2 2)",});
 
-		Ddt.Run("Straight line 2, origin, 3 rotation", {
-			{0, 0},
-			FVulHexAddr(),
-			3,
-			{FVulHexAddr(), FVulHexAddr(-1, 0), FVulHexAddr(-2, 0)}
-		});
-
-		Ddt.Run("Perp line 2, origin, 0 rotation", {
-			{0, 0},
-			FVulHexAddr(),
-			3,
-			{FVulHexAddr(), FVulHexAddr(-1, 0), FVulHexAddr(-2, 0)}
-		});
+		const TArray<FVulHexAddr> Perp2 = {{1, -1}, {1, 0}};
+		Ddt.Run("Perp2, origin, 0 rotation", {.Tiles=Perp2, .ExpectedTiles="(1 -1 0), (1 0 -1)"});
+		Ddt.Run("Perp2, origin, 1 rotation", {.Tiles=Perp2, .Rotation=1, .ExpectedTiles="(1 0 -1), (0 1 -1)"});
 	}
 
 	return !HasAnyErrors();

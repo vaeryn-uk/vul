@@ -22,7 +22,7 @@ struct VULRUNTIME_API FVulHexRotation
 	FVulHexRotation operator+(const FVulHexRotation Other) const;
 
 	/**
-	 * Returns the internal value. A value between 0-5.
+	 * Returns the internal value. Guaranteed a value between 0-5.
 	 */
 	int GetValue() const;
 
@@ -64,9 +64,9 @@ struct VULRUNTIME_API FVulHexAddr
 	TArray<FVulHexAddr> Adjacent() const;
 
 	/**
-	 * Returns the tile adjacent to this one in the provided direction.
+	 * Rotates this address as presented on a hexgrid around the origin tile.
 	 */
-	FVulHexAddr Adjacent(const FVulHexRotation& Rotation);
+	FVulHexAddr Rotate(const FVulHexRotation& Rotation) const;
 
 	/**
 	 * True if this tile is adjacent to (a neighbor of) Other.

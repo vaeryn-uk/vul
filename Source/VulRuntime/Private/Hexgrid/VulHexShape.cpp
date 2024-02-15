@@ -1,13 +1,25 @@
 ﻿#include "Hexgrid/VulHexShape.h"
 
-TArray<FVulHexAddr> FVulHexVectorShape::Project(const FVulHexAddr& Origin, const FVulHexRotation& Rotation) const
+FVulHexShape FVulHexShape::Rotate(const FVulHexRotation& Rotation) const
 {
-	TArray Out = {Origin};
+	TArray<FVulHexAddr> Out;
 
-	for (const auto Direction : Directions)
+	for (const auto Tile : Tiles)
 	{
-		Out.Add(Out.Last().Adjacent(Rotation + Direction));
+		Out.Add(Tile.Rotate(Rotation));
 	}
 
 	return Out;
+}
+
+FString FVulHexShape::ToString() const
+{
+	TArray<FString> Out;
+
+	for (const auto Tile : Tiles)
+	{
+		Out.Add(Tile.ToString());
+	}
+
+	return FString::Join(Out, TEXT(", "));
 }
