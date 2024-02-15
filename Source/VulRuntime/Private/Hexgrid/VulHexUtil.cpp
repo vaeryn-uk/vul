@@ -1,5 +1,5 @@
-﻿#include "Hexgrid/Util.h"
-#include "Hexgrid/Addr.h"
+﻿#include "Hexgrid/VulHexUtil.h"
+#include "Hexgrid/VulHexAddr.h"
 
 FTransform VulRuntime::Hexgrid::CalculateMeshTransformation(
 	const FBox& HexMeshBoundingBox,

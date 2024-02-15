@@ -1,8 +1,8 @@
 ﻿#pragma once
 
-#include "Addr.h"
+#include "VulHexAddr.h"
 #include "Misc/VulVectorPath.h"
-#include "Util.generated.h"
+#include "VulHexUtil.generated.h"
 
 /**
  * Defines settings required for the following utility functions.

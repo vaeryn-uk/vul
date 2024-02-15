@@ -1,6 +1,6 @@
 ﻿#include "TestCase.h"
-#include "Hexgrid/Addr.h"
-#include "Hexgrid/Util.h"
+#include "Hexgrid/VulHexAddr.h"
+#include "Hexgrid/VulHexUtil.h"
 #include "Misc/AutomationTest.h"
 
 using namespace VulTest;

@@ -1,5 +1,5 @@
 ﻿#include "TestCase.h"
-#include "Hexgrid/Hexgrid.h"
+#include "Hexgrid/VulHexgrid.h"
 #include "Misc/AutomationTest.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(

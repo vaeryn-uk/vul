@@ -1,20 +1,14 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
-#include "Addr.h"
-#include "Util.h"
+#include "VulHexAddr.h"
+#include "VulHexUtil.h"
 #include "Containers/VulPriorityQueue.h"
 #include "vector"
 #include "UObject/Object.h"
 
-template <typename S>
-struct TTest
-{
-	TArray<S> Foo;
-};
-
 /**
- * A 2D hexgrid using a cube-based 3D coordinate system.
+ * A 2D hexgrid using a cube-based 3D coordinate system, (q, r, s).
  *
  * https://www.redblobgames.com/grids/hexagons/#coordinates-cube
  *

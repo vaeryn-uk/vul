@@ -1,4 +1,14 @@
-﻿#include "Hexgrid/Addr.h"
+﻿#include "Hexgrid/VulHexAddr.h"
+
+FVulHexRotation FVulHexRotation::operator+(const FVulHexRotation Other) const
+{
+	return FVulMath::Modulo(Value + Other.Value, 6);
+}
+
+int FVulHexRotation::GetValue() const
+{
+	return Value;
+}
 
 FString FVulHexAddr::ToString() const
 {
@@ -8,13 +18,19 @@ FString FVulHexAddr::ToString() const
 TArray<FVulHexAddr> FVulHexAddr::Adjacent() const
 {
 	return {
-		FVulHexAddr(Q, R - 1),
-		FVulHexAddr(Q, R + 1),
-		FVulHexAddr(Q + 1, R - 1),
-		FVulHexAddr(Q - 1, R + 1),
+		// In order of FVulHexRotation.
 		FVulHexAddr(Q + 1, R),
+		FVulHexAddr(Q, R + 1),
+		FVulHexAddr(Q - 1, R + 1),
 		FVulHexAddr(Q - 1, R),
+		FVulHexAddr(Q, R - 1),
+		FVulHexAddr(Q + 1, R - 1),
 	};
+}
+
+FVulHexAddr FVulHexAddr::Adjacent(const FVulHexRotation& Rotation)
+{
+	return Adjacent()[Rotation.GetValue()];
 }
 
 bool FVulHexAddr::AdjacentTo(const FVulHexAddr& Other) const
