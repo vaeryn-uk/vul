@@ -33,6 +33,8 @@ struct VULRUNTIME_API FVulHexShape
 
 	FString ToString() const;
 
+	TArray<FVulHexAddr> GetTiles() const;
+
 private:
 	/**
 	 * The tiles that make up the shape on a hexgrid.

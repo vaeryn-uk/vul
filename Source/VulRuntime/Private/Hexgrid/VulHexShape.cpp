@@ -35,3 +35,8 @@ FString FVulHexShape::ToString() const
 
 	return FString::Join(Out, TEXT(", "));
 }
+
+TArray<FVulHexAddr> FVulHexShape::GetTiles() const
+{
+	return Tiles;
+}
