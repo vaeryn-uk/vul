@@ -31,6 +31,11 @@ private:
 };
 
 /**
+ * Describes a translation between two tiles in a hexgrid.
+ */
+typedef UE::Math::TIntVector2<int> FVulHexVector;
+
+/**
  * The address of a single tile in a 2D hexgrid.
  *
  * Uses a cube coordinate system (q, r, s).
@@ -43,6 +48,14 @@ struct VULRUNTIME_API FVulHexAddr
 	FVulHexAddr() = default; // Required for some containers.
 
 	FVulHexAddr(const int InQ, const int InR) : Q(InQ), R(InR), S(-InR - InQ)
+	{
+		EnsureValid();
+	}
+
+	/**
+	 * From a vector, which is simply QR coords.
+	 */
+	FVulHexAddr(const FVulHexVector& V) : Q(V[0]), R(V[1]), S(-V[1] - V[0])
 	{
 		EnsureValid();
 	}
@@ -67,6 +80,11 @@ struct VULRUNTIME_API FVulHexAddr
 	 * Rotates this address as presented on a hexgrid around the origin tile.
 	 */
 	FVulHexAddr Rotate(const FVulHexRotation& Rotation) const;
+
+	/**
+	 * Returns the address after moving this tile across the grid by QR (as per our q,r,s coord system).
+	 */
+	FVulHexAddr Translate(const FVulHexVector& Vector) const;
 
 	/**
 	 * True if this tile is adjacent to (a neighbor of) Other.

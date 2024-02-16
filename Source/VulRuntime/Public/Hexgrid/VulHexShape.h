@@ -26,6 +26,11 @@ struct VULRUNTIME_API FVulHexShape
 	 */
 	FVulHexShape Rotate(const FVulHexRotation& Rotation) const;
 
+	/**
+	 * Translates this shape by the given QR values.
+	 */
+	FVulHexShape Translate(const FVulHexVector& Vector) const;
+
 	FString ToString() const;
 
 private:

@@ -12,6 +12,18 @@ FVulHexShape FVulHexShape::Rotate(const FVulHexRotation& Rotation) const
 	return Out;
 }
 
+FVulHexShape FVulHexShape::Translate(const FVulHexVector& Vector) const
+{
+	TArray<FVulHexAddr> Out;
+
+	for (const auto Tile : Tiles)
+	{
+		Out.Add(Tile.Translate(Vector));
+	}
+
+	return Out;
+}
+
 FString FVulHexShape::ToString() const
 {
 	TArray<FString> Out;

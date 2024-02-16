@@ -57,6 +57,11 @@ FVulHexAddr FVulHexAddr::Rotate(const FVulHexRotation& Rotation) const
 	}
 }
 
+FVulHexAddr FVulHexAddr::Translate(const FVulHexVector& QR) const
+{
+	return FVulHexAddr(Q + QR[0], R + QR[1]);
+}
+
 bool FVulHexAddr::AdjacentTo(const FVulHexAddr& Other) const
 {
 	return Adjacent().Contains(Other);
