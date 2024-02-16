@@ -1,4 +1,6 @@
 ﻿#include "Hexgrid/VulHexAddr.h"
+#include "Hexgrid/VulHexUtil.h"
+#include "Kismet/KismetMathLibrary.h"
 
 FVulHexRotation FVulHexRotation::operator+(const FVulHexRotation Other) const
 {
@@ -13,6 +15,11 @@ int FVulHexRotation::GetValue() const
 FString FVulHexAddr::ToString() const
 {
 	return FString::Printf(TEXT("(%d %d %d)"), Q, R, S);
+}
+
+FVulHexVector FVulHexAddr::Diff(const FVulHexAddr& Other) const
+{
+	return {Other.Q - Q, Other.R - R};
 }
 
 TArray<FVulHexAddr> FVulHexAddr::Adjacent() const
@@ -60,6 +67,27 @@ FVulHexAddr FVulHexAddr::Rotate(const FVulHexRotation& Rotation) const
 FVulHexAddr FVulHexAddr::Translate(const FVulHexVector& QR) const
 {
 	return FVulHexAddr(Q + QR[0], R + QR[1]);
+}
+
+FVulHexRotation FVulHexAddr::RotationTowards(const FVulHexAddr& Other) const
+{
+	// Plot on a grid and use euler to convert to a hex rotation.
+	const auto GridSettings = FVulWorldHexGridSettings(1);
+	auto Start = VulRuntime::Hexgrid::Project(*this, GridSettings);
+	auto End = VulRuntime::Hexgrid::Project(Other, GridSettings);
+
+	const auto Degrees = UKismetMathLibrary::FindLookAtRotation(Start, End);
+
+	/*
+	 * The below formula maps the given angles to our hex rotation definition:
+	 *   60 -> 0
+	 *    0 -> 1
+	 *  -60 -> 2
+	 * -120 -> 3
+	 *  180 -> 4
+	 *  120 -> 5
+	 */
+	return FVulMath::Modulo<int>(-FMath::RoundToInt(Degrees.Yaw) + 60, 360) / 60;
 }
 
 bool FVulHexAddr::AdjacentTo(const FVulHexAddr& Other) const

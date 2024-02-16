@@ -17,7 +17,7 @@ struct VULRUNTIME_API FVulHexRotation
 	GENERATED_BODY()
 
 	FVulHexRotation() = default;
-	FVulHexRotation(int InValue) : Value(InValue) {}
+	FVulHexRotation(int InValue) : Value(FVulMath::Modulo(InValue, 6)) {}
 
 	FVulHexRotation operator+(const FVulHexRotation Other) const;
 
@@ -70,6 +70,11 @@ struct VULRUNTIME_API FVulHexAddr
 	FString ToString() const;
 
 	/**
+	 * Returns the translation to move this to Other.
+	 */
+	FVulHexVector Diff(const FVulHexAddr& Other) const;
+
+	/**
 	 * All the addresses that are adjacent to this address on a hexgrid.
 	 *
 	 * Note that the addresses returned may not be valid for a given grid due to its boundaries.
@@ -85,6 +90,11 @@ struct VULRUNTIME_API FVulHexAddr
 	 * Returns the address after moving this tile across the grid by QR (as per our q,r,s coord system).
 	 */
 	FVulHexAddr Translate(const FVulHexVector& Vector) const;
+
+	/**
+	 * Returns the closest hex rotation towards the Other address.
+	 */
+	FVulHexRotation RotationTowards(const FVulHexAddr& Other) const;
 
 	/**
 	 * True if this tile is adjacent to (a neighbor of) Other.
