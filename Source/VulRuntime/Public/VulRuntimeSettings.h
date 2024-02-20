@@ -7,21 +7,13 @@
 /**
  * Global settings for the Vul runtime plugin.
  */
-UCLASS(Config=Game)
+UCLASS(Config=Game, DefaultConfig)
 class VULRUNTIME_API UVulRuntimeSettings : public UDeveloperSettings
 {
 	GENERATED_BODY()
 
 public:
 	bool IsTooltipEnabled() const;
-
-	virtual FName GetCategoryName() const override { return FName("Game"); }
-	virtual FName GetContainerName() const override { return FName("Project"); };
-
-#if WITH_EDITOR
-	virtual FText GetSectionDescription() const override { return NSLOCTEXT("FVulRuntime", "SettingsDescription", "Configure Vul Runtime settings."); }
-	virtual FText GetSectionText() const override { return NSLOCTEXT("FVulRuntime", "SettingsText", "Vaeryn's Unreal Library Runtime"); }
-#endif
 
 	/**
 	 * The widget class that we show as the tooltip.
@@ -46,6 +38,17 @@ public:
 	 */
 	UPROPERTY(EditAnywhere, Config, Category="User Interface|Tooltip")
 	int32 TooltipZOrder = 100;
+
+
+// Editor integration
+	virtual FName GetCategoryName() const override { return FName("Game"); }
+	virtual FName GetContainerName() const override { return FName("Project"); };
+
+#if WITH_EDITOR
+	virtual FText GetSectionDescription() const override { return NSLOCTEXT("FVulRuntime", "SettingsDescription", "Configure Vul Runtime settings."); }
+	virtual FText GetSectionText() const override { return NSLOCTEXT("FVulRuntime", "SettingsText", "Vaeryn's Unreal Library Runtime"); }
+#endif
+// End editor integration
 };
 
 namespace VulRuntime
