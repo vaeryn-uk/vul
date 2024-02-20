@@ -6,6 +6,11 @@ public class VulRuntime : ModuleRules
     {
         PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 
+        // For casting of native CPP types.
+        // Avoids [C4541] 'dynamic_cast' used on polymorphic type 'XXX' with /GR-; unpredictable behavior may result
+        // when casting to non-UObjects.
+        bUseRTTI = true;
+
         PublicDependencyModuleNames.AddRange(
             new string[]
             {
@@ -22,6 +27,7 @@ public class VulRuntime : ModuleRules
                 "SlateCore",
                 "VulTest",
                 "DeveloperSettings",
+                "UMG",
             }
         );
     }

@@ -28,6 +28,22 @@ Then add this to your project's `.uproject` file:
 // ...
 ```
 
+### Runtime Type Information
+
+The Vul plugin provides some template classes that use `dynamic_cast` outside of the UE UObject system.
+You will need to enable RTTI in your game's module(s) for this to compile.
+
+```
+// in MyGameModule.build.cs
+
+    // ...
+    bUseRTTI = true;
+    // ...
+```
+
+This requirement is introduced by Vul's tooltip implementation. If you don't use this, you may not need
+to enable RTTI in your modules.
+
 ### UnrealYAML
 
 You will also need the UnrealYAML project: https://github.com/jwindgassen/UnrealYAML
@@ -107,3 +123,20 @@ of temporary notifications to a player. This provides functionality such as:
 * Simple API to replace existing content.
 * Extensibility for implementation of different notification types; `FVulHeadlineNotification` is
   the provided implementation.
+
+### Tooltip
+
+`UVulTooltipSubsystem` provides a simple API for displaying a tooltip to the user as they interact
+with the world/interface. This is implemented independently of Unreal's native tooltip support for now,
+but maybe integrated later if a need arises.
+
+To use this, create a widget class and implement `IVulTooltipWidget` in CPP, then create
+a widget UMG blueprint that extends it and select the UMG in Vul Runtime's project settings as the
+widget class to use.
+
+Once configured, `UVulTooltipSystem` can be called to show and hide a tooltip per player. When
+showing the tooltip, you must provide a tooltip data instance (which extends `FVulTooltipData`).
+This allows you to define what data can be displayed in a tooltip and provides a structured system
+for consistent tooltips across your game.
+
+Later, this will be integrated with Vul's RichText support.
