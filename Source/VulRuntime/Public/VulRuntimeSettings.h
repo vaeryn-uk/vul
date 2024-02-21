@@ -49,14 +49,6 @@ public:
 	UPROPERTY(EditAnywhere, Config, Category="User Interface|Rich Text")
 	TSoftClassPtr<UVulRichTextTooltipWrapper> RichTextTooltipWrapper;
 
-	/**
-	 * The icons made available to Vul's Rich Text Block.
-	 *
-	 * TODO: Test this RequiredAssetDataTags specifier.
-	 */
-	UPROPERTY(EditAnywhere, Config, Category="User Interface|Rich Text", meta=(RequiredAssetDataTags = "RowStructure=/Script/CommonUI.RichTextIconData"))
-	TSoftObjectPtr<UDataTable> RichTextIconsTable;
-
 
 // Editor integration
 	virtual FName GetCategoryName() const override { return FName("Game"); }

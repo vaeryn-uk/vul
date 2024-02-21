@@ -145,12 +145,25 @@ This tooltip system also integrates with Vul's Rich Text support.
 
 `UVulRichTextBlock` seeks to simplify customization and workflows when using Unreal's rich text system.
 This encapsulates a bunch of boilerplate code and allows your project to extend this widget class
-to customize available rich text support for your project. See the code for full documentation.
+to customize available rich text support across your entire project. Use your extending class in all
+places where text is used in the UI.
 
-To use this rich text support:
+The approach is an extension of Unreal's
+[CommonUI](https://docs.unrealengine.com/5.0/en-US/common-ui-plugin-for-advanced-user-interfaces-in-unreal-engine/).
 
-- Create a data table with `RowStruct=RichTextIconData` if you want icons support.
-  - Set this in Vul's project settings' `Rich Text Icons Table`.
+
+See the code in `UVulRichTextBlock` for customization documentation, but as a quick setup overview:
+
+- As per CommonUI, configure relevant settings:
+  - `Common UI Editor` -> `Template Text Style`. This will be applied as the rich text default style override
+    for newly created rich text blocks.
+  -  Create a BP that extends `UCommonUIRichTextData`
+    - Select this in `Common UI Framework` -> `Default Rich Text Data Class`
+    - If you want CommonUI's icon support:
+      - Create a data table asset with `RowStruct=RichTextIconData`
+      - Select this in your BP.
+  - You may define a rich text styles table as per CommonUI, although the Vul rich text support
+    doesn't utilize or enhance this in any way.
 - Create a widget blueprint with parent `UVulRichTextTooltipWrapper`. This is used whenever
   we replace rich text markup with something with a tooltip.
   - Set this Vul's project settings' `Rich Text Tooltip Wrapper`.

@@ -83,11 +83,6 @@ public:
 	 */
 	static FString StaticContentMarker(const FString& Str);
 
-	/*
-	 * TODO: Test if commonui default text style is set. If not look it up and apply it here. May also need
-	 *       to apply the default text style override boolean.
-	 */
-
 	/**
 	 * Overwritten to ensure substitutions are parsed & replaced.
 	 */
