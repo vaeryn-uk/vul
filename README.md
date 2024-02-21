@@ -139,4 +139,20 @@ showing the tooltip, you must provide a tooltip data instance (which extends `FV
 This allows you to define what data can be displayed in a tooltip and provides a structured system
 for consistent tooltips across your game.
 
-Later, this will be integrated with Vul's RichText support.
+This tooltip system also integrates with Vul's Rich Text support.
+
+### Rich Text
+
+`UVulRichTextBlock` seeks to simplify customization and workflows when using Unreal's rich text system.
+This encapsulates a bunch of boilerplate code and allows your project to extend this widget class
+to customize available rich text support for your project. See the code for full documentation.
+
+To use this rich text support:
+
+- Create a data table with `RowStruct=RichTextIconData` if you want icons support.
+  - Set this in Vul's project settings' `Rich Text Icons Table`.
+- Create a widget blueprint with parent `UVulRichTextTooltipWrapper`. This is used whenever
+  we replace rich text markup with something with a tooltip.
+  - Set this Vul's project settings' `Rich Text Tooltip Wrapper`.
+- Review `UVulRichTextBlock` comments, and override relevant methods to add rich text support
+  specific for your project.

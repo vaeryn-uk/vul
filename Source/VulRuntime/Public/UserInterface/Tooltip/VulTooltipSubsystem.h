@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
-#include "VulTooptip.h"
+#include "VulTooltip.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "VulTooltipSubsystem.generated.h"
 

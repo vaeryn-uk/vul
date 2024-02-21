@@ -2,7 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Object.h"
-#include "VulTooptip.generated.h"
+#include "VulTooltip.generated.h"
 
 /**
  * Content that is provided to a tooltip widget for rendering.

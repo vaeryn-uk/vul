@@ -12,12 +12,13 @@ void UVulTooltipSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 void UVulTooltipSubsystem::Tick(float DeltaTime)
 {
 	// Update widget positions to track the mouse.
-	for (const auto& [Contexts, Widget, Hash, Controller] : Entries)
+	for (const auto& [_, Widget, Hash, Controller] : Entries)
 	{
 		if (Hash.IsSet() && Widget.IsValid() && Controller.IsValid())
 		{
 			FVector2D Pos;
 			Controller->GetMousePosition(Pos.X, Pos.Y);
+			// TODO: This doesn't seem to update from rich text updates.
 			Widget->SetPositionInViewport(Pos + VulRuntime::Settings()->TooltipMouseOffset);
 		}
 	}

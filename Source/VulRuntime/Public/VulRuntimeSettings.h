@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Object.h"
+#include "UserInterface/RichText/VulRichTextTooltipWrapper.h"
 #include "VulRuntimeSettings.generated.h"
 
 /**
@@ -38,6 +39,23 @@ public:
 	 */
 	UPROPERTY(EditAnywhere, Config, Category="User Interface|Tooltip")
 	int32 TooltipZOrder = 100;
+
+	/**
+	 * Your widget blueprint that the Vul rich text system will use to display text and/or content
+	 * inline in text that will trigger a tooltip when hovered.
+	 *
+	 * Note this is not the tooltip widget itself.
+	 */
+	UPROPERTY(EditAnywhere, Config, Category="User Interface|Rich Text")
+	TSoftClassPtr<UVulRichTextTooltipWrapper> RichTextTooltipWrapper;
+
+	/**
+	 * The icons made available to Vul's Rich Text Block.
+	 *
+	 * TODO: Test this RequiredAssetDataTags specifier.
+	 */
+	UPROPERTY(EditAnywhere, Config, Category="User Interface|Rich Text", meta=(RequiredAssetDataTags = "RowStructure=/Script/CommonUI.RichTextIconData"))
+	TSoftObjectPtr<UDataTable> RichTextIconsTable;
 
 
 // Editor integration

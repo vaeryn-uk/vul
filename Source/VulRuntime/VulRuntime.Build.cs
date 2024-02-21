@@ -14,7 +14,7 @@ public class VulRuntime : ModuleRules
         PublicDependencyModuleNames.AddRange(
             new string[]
             {
-                "Core",
+                "Core", "CommonUI",
             }
         );
 
