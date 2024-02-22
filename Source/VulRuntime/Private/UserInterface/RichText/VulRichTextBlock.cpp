@@ -5,6 +5,7 @@
 #include "Reflection/VulReflection.h"
 #include "CommonTextBlock.h"
 #include "UserInterface/RichText/VulRichTextTooltipWrapper.h"
+#include "Widgets/Text/SRichTextBlock.h"
 
 const TMap<FString, FString>& UVulRichTextBlock::StaticContent() const
 {
@@ -132,9 +133,6 @@ FText UVulRichTextBlock::ApplyStaticSubstitutions(const FText& InText) const
 	// This implementation feels heavy with all this string searching.
 	// Might be a candidate for perf changes in the future.
 
-	// TODO: Current implementation replaces the text in the editor. Would be nice for UMG editing
-	//       to save the pre-substituted value.
-
 	// TODO: Does this handling mess with FText formatting/localization? Need to test this.
 
 	auto Replaced = false;
@@ -159,14 +157,22 @@ FText UVulRichTextBlock::ApplyStaticSubstitutions(const FText& InText) const
 	return FText::FromString(Str);
 }
 
+void UVulRichTextBlock::ApplySWidgetText()
+{
+	if (MyRichTextBlock.IsValid())
+	{
+		MyRichTextBlock->SetText(ApplyStaticSubstitutions(GetText()));
+	}
+}
+
 void UVulRichTextBlock::SetText(const FText& InText)
 {
-	Super::SetText(ApplyStaticSubstitutions(InText));
+	Super::SetText(InText);
+	ApplySWidgetText();
 }
 
 void UVulRichTextBlock::SynchronizeProperties()
 {
 	Super::SynchronizeProperties();
-
-	SetText(GetText()); // Trigger
+	ApplySWidgetText();
 }

@@ -119,7 +119,7 @@ protected:
 	virtual void CreateDecorators(TArray<TSharedRef<ITextDecorator>>& OutDecorators) override;
 
 	/**
-	 * Overwritten to ensure substitutions are parsed & replaced, even when SetText is not called.
+	 * Overwritten to ensure substitutions are parsed & replaced.
 	 */
 	virtual void SynchronizeProperties() override;
 
@@ -127,6 +127,15 @@ private:
 	friend class FVulTooltipDecorator;
 
 	FText ApplyStaticSubstitutions(const FText& Text) const;
+
+	/**
+	 * Ensures the text we've set against the internal SWidget has static content substitutions applied.
+	 *
+	 * Not great as we need to call this in the correct places (highly coupled with parent), but can't
+	 * find a more future-proof way of achieving a separation between the text set in the UWidget (e.g.
+	 * UMG editor) and the substituted text we actually render.
+	 */
+	void ApplySWidgetText();
 
 	TSharedPtr<SWidget> DecorateTooltip(const FTextRunInfo& RunInfo, const FTextBlockStyle& InDefaultTextStyle);
 };
