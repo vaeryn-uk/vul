@@ -17,6 +17,7 @@ void UVulRichTextTooltipWrapper::VulInit(TSharedPtr<const FVulTooltipData> InToo
 FReply UVulRichTextTooltipWrapper::NativeOnMouseMove(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
 {
 	auto Ret = Super::NativeOnMouseMove(InGeometry, InMouseEvent);
+
 	if (!TooltipData.IsValid())
 	{
 		return Ret;
@@ -24,7 +25,9 @@ FReply UVulRichTextTooltipWrapper::NativeOnMouseMove(const FGeometry& InGeometry
 
 	VulRuntime::Tooltip(this)->Show("RichText", GetOwningPlayer(), TooltipData);
 
-	return FReply::Handled();
+	// Don't return a handled reply otherwise that prevents our player controller reporting
+	// an accurate mouse position when moving within this widget.
+	return Ret;
 }
 
 void UVulRichTextTooltipWrapper::NativeOnMouseLeave(const FPointerEvent& InMouseEvent)

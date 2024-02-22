@@ -18,7 +18,6 @@ void UVulTooltipSubsystem::Tick(float DeltaTime)
 		{
 			FVector2D Pos;
 			Controller->GetMousePosition(Pos.X, Pos.Y);
-			// TODO: This doesn't seem to update from rich text updates.
 			Widget->SetPositionInViewport(Pos + VulRuntime::Settings()->TooltipMouseOffset);
 		}
 	}
