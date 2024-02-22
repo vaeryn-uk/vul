@@ -2,6 +2,8 @@
 #include "VulRuntimeSettings.h"
 #include "Blueprint/UserWidget.h"
 #include "Components/RichTextBlockDecorator.h"
+#include "Reflection/VulReflection.h"
+#include "CommonTextBlock.h"
 #include "UserInterface/RichText/VulRichTextTooltipWrapper.h"
 
 const TMap<FString, FString>& UVulRichTextBlock::StaticContent() const
@@ -98,7 +100,17 @@ TSharedPtr<SWidget> UVulRichTextBlock::DecorateTooltip(
 		const auto Umg = CreateWidget<UVulRichTextTooltipWrapper>(this, VulRuntime::Settings()->RichTextTooltipWrapper.LoadSynchronous());
 		checkf(IsValid(Umg), TEXT("Failed to create default rich text tooltip widget"))
 
-		// TODO: Carry through rich text default style?
+		if (GetDefaultTextStyleClass())
+		{
+			// Pass through commonUI default text style class override if specified.
+			// Have to hack with reflection here because this can only be changed in the
+			// editor, but not CPP for some reason.
+			FVulReflection::SetPropertyValue(
+				Umg->Content,
+				FName("DefaultTextStyleOverrideClass"),
+				GetDefaultTextStyleClass()
+			);
+		}
 
 		// Use the tooltip data specified above, if set, otherwise no tooltip is fine too (just no tooltip will appear).
 		const auto Data = Tooltip.HasSubtype<TSharedPtr<const FVulTooltipData>>()
