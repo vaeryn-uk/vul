@@ -116,6 +116,8 @@ struct TVulDataPtr
 
 	/**
 	 * Gets the raw pointer to the underlying row data.
+	 *
+	 * Will trigger a load of the row data if required.
 	 */
 	const RowType* Get() const
 	{

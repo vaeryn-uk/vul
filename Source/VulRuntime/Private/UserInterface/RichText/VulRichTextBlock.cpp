@@ -51,10 +51,9 @@ void UVulRichTextBlock::CreateDecorators(TArray<TSharedRef<ITextDecorator>>& Out
 	OutDecorators.Add(MakeShared<FVulTooltipDecorator>(this));
 }
 
-const TArray<UVulRichTextBlock::FVulDynamicTooltipResolver>& UVulRichTextBlock::DynamicTooltips() const
+void UVulRichTextBlock::CreateDynamicTooltips(TArray<FVulDynamicTooltipResolver>&) const
 {
-	const static TArray<FVulDynamicTooltipResolver> Empty = {};
-	return Empty;
+
 }
 
 FString UVulRichTextBlock::StaticContentMarker(const FString& Str)
@@ -126,6 +125,17 @@ TSharedPtr<SWidget> UVulRichTextBlock::DecorateTooltip(
 	}
 
 	return Widget;
+}
+
+const TArray<UVulRichTextBlock::FVulDynamicTooltipResolver>& UVulRichTextBlock::DynamicTooltips() const
+{
+	if (!CachedDynamicTooltips.IsSet())
+	{
+		CachedDynamicTooltips = TOptional<TArray<FVulDynamicTooltipResolver>>({});
+		CreateDynamicTooltips(CachedDynamicTooltips.GetValue());
+	}
+
+	return CachedDynamicTooltips.GetValue();
 }
 
 FText UVulRichTextBlock::ApplyStaticSubstitutions(const FText& InText) const

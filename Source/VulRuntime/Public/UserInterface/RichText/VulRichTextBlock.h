@@ -35,7 +35,7 @@
  *     text block is set to the style of the containing block.
  *   - <tt NAME="VALUE">CONTENT</>
  *     Similar to above, but for dynamic tooltips where your project has more control over the
- *     widget that is inlined in the text. Implement DynamicTooltips() and provide delegates
+ *     widget that is inlined in the text. Implement CreateDynamicTooltips() and provide delegates
  *     for how these are resolved.
  */
 UCLASS()
@@ -114,7 +114,7 @@ protected:
 	 *
 	 * See FVulDynamicTooltipResolver.
 	 */
-	virtual const TArray<FVulDynamicTooltipResolver>& DynamicTooltips() const;
+	virtual void CreateDynamicTooltips(TArray<FVulDynamicTooltipResolver>& Tooltips) const;
 
 	virtual void CreateDecorators(TArray<TSharedRef<ITextDecorator>>& OutDecorators) override;
 
@@ -138,4 +138,7 @@ private:
 	void ApplySWidgetText();
 
 	TSharedPtr<SWidget> DecorateTooltip(const FTextRunInfo& RunInfo, const FTextBlockStyle& InDefaultTextStyle);
+
+	const TArray<FVulDynamicTooltipResolver>& DynamicTooltips() const;
+	mutable TOptional<TArray<FVulDynamicTooltipResolver>> CachedDynamicTooltips;
 };

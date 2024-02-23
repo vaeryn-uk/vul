@@ -139,6 +139,10 @@ showing the tooltip, you must provide a tooltip data instance (which extends `FV
 This allows you to define what data can be displayed in a tooltip and provides a structured system
 for consistent tooltips across your game.
 
+`UVulTooltipUserWidget` is provided to save writing tooltip-triggering logic for widgets that
+should trigger a tooltip when hovered. If you extend this, all you need to do is define the tooltip
+data that widget will trigger.
+
 This tooltip system also integrates with Vul's Rich Text support.
 
 ### Rich Text
