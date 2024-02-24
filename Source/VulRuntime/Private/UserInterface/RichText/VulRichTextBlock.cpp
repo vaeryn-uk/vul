@@ -145,8 +145,19 @@ TSharedPtr<SWidget> UVulRichTextBlock::DecorateTooltip(
 
 		if (const auto SizeBox = AutoSized->GetAutoSizeBox(); IsValid(SizeBox))
 		{
-			const auto WidgetHeight = RecommendedHeight(InDefaultTextStyle) * AutoSized->GetAutoSizeDefaultScale() * CustomScale;
-			SizeBox->SetMaxDesiredHeight(WidgetHeight);
+			const auto TextHeight = RecommendedHeight(InDefaultTextStyle);
+			const auto WidgetHeight = TextHeight * AutoSized->GetAutoSizeDefaultScale() * CustomScale;
+			SizeBox->SetHeightOverride(WidgetHeight);
+
+			// If the widget requests it, apply some translation to vertically center it.
+			// Not sure that this is the best way to do achieve this (via render transform),
+			// but some testing suggests that this render translation is respected for mouse
+			// hover detection and layouts around the widget.
+			if (AutoSized->AutoSizeVerticallyCentre())
+			{
+				const auto Correction = FVector2D(0, (WidgetHeight - TextHeight) / 2);
+				SizeBox->SetRenderTranslation(SizeBox->GetRenderTransform().Translation + Correction);
+			}
 		}
 	}
 

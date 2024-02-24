@@ -56,4 +56,10 @@ public:
 	 * Implement this to scale the widget by some constant factor.
 	 */
 	virtual float GetAutoSizeDefaultScale() { return 1.f; }
+
+	/**
+	 * When applying scaling, should we ensure that the widget is rendered vertically aligned with the
+	 * surrounding text?
+	 */
+	virtual bool AutoSizeVerticallyCentre() { return true; }
 };
