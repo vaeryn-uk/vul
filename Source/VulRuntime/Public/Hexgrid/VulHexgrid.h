@@ -167,7 +167,8 @@ struct TVulHexgrid
 		/**
 		 * The tiles that make up the path in the tile grid.
 		 *
-		 * Note the starting tile is implied and not included here.
+		 * Note the starting tile is implied and not included here, but the To tile
+		 * will be (assuming we have a complete path).
 		 * This also means that for a null path query (where From == To), this will be empty.
 		 */
 		TArray<FVulTile> Tiles;

@@ -15,7 +15,7 @@ typedef TVulHexgrid<FString> TestGrid;
 TestGrid MakeGrid(int Size);
 void TestTileDistance(TestHexgrid* TestCase, const FVulHexAddr& One, const FVulHexAddr& Two, const int Expected);
 void TestConstruction(TestHexgrid* TestCase);
-void TestPath(
+TestGrid::FPathResult<int> TestPath(
 	TestHexgrid* TestCase,
 	const int GridSize,
 	const FVulHexAddr& Start,
@@ -39,6 +39,12 @@ bool TestHexgrid::RunTest(const FString& Parameters)
 	TestPath(this, 3, FVulHexAddr(-2, 1), FVulHexAddr(3, -3), 5);
 	TestPath(this, 3, FVulHexAddr(-3, 0), FVulHexAddr(3, 0), 6);
 	TestPath(this, 3, FVulHexAddr(3, -2), FVulHexAddr(0, -3), 4);
+
+	{ // Single tile.
+		const auto Result = TestPath(this, 3, FVulHexAddr(0, 0), FVulHexAddr(1, -1), 1);
+		TestEqual("single tile path tile", Result.Tiles[0].Addr.ToString(), "(1 -1 0)");
+	}
+
 
 	// Reaches goal around some obstructing tiles.
 	TestPath(
@@ -113,7 +119,7 @@ void TestTileDistance(TestHexgrid* TestCase, const FVulHexAddr& One, const FVulH
 	TestCase->TestEqual(Assertion, One.Distance(Two), Expected);
 }
 
-void TestPath(
+TestGrid::FPathResult<int> TestPath(
 	TestHexgrid* TestCase,
 	const int GridSize,
 	const FVulHexAddr& Start,
@@ -153,6 +159,8 @@ void TestPath(
 	{
 		TestCase->TestEqual("Path End Distance", Tiles.Last().Addr.Distance(Goal), ExpectedDistanceFromGoal);
 	}
+
+	return Result;
 }
 
 void TestConstruction(TestHexgrid* TestCase)
