@@ -4,6 +4,8 @@
 #include "Components/RichTextBlockDecorator.h"
 #include "Reflection/VulReflection.h"
 #include "CommonTextBlock.h"
+#include "Fonts/FontMeasure.h"
+#include "Misc/DefaultValueHelper.h"
 #include "UserInterface/RichText/VulRichTextTooltipWrapper.h"
 #include "Widgets/Text/SRichTextBlock.h"
 
@@ -56,6 +58,13 @@ void UVulRichTextBlock::CreateDynamicTooltips(TArray<FVulDynamicTooltipResolver>
 
 }
 
+float UVulRichTextBlock::RecommendedHeight(const FTextBlockStyle& TextStyle)
+{
+	const FSlateFontInfo Font = TextStyle.Font;
+	const TSharedRef<FSlateFontMeasure> FontMeasure = FSlateApplication::Get().GetRenderer()->GetFontMeasureService();
+	return FontMeasure.Get().GetMaxCharacterHeight(Font);
+}
+
 FString UVulRichTextBlock::StaticContentMarker(const FString& Str)
 {
 	return FString::Printf(TEXT("%%static(%s)%%"), *Str);
@@ -83,7 +92,7 @@ TSharedPtr<SWidget> UVulRichTextBlock::DecorateTooltip(
 	{
 		for (const auto& Delegate : DynamicTooltips())
 		{
-			if (const auto Result = Delegate.Execute(this, RunInfo); Result.IsSet())
+			if (const auto Result = Delegate.Execute(this, RunInfo, InDefaultTextStyle); Result.IsSet())
 			{
 				Tooltip = Result.GetValue();
 				break;
@@ -91,9 +100,9 @@ TSharedPtr<SWidget> UVulRichTextBlock::DecorateTooltip(
 		}
 	}
 
-	TSharedPtr<SWidget> Widget;
+	UWidget* Widget;
 
-	if (!Tooltip.HasSubtype<TSharedPtr<SWidget>>())
+	if (!Tooltip.HasSubtype<UWidget*>())
 	{
 		// If not a widget, create the default and apply the tooltip data to it.
 		checkf(!VulRuntime::Settings()->RichTextTooltipWrapper.IsNull(), TEXT("No rich text tooltip wrapper widget configured"))
@@ -118,13 +127,30 @@ TSharedPtr<SWidget> UVulRichTextBlock::DecorateTooltip(
 			: nullptr;
 
 		Umg->VulInit(Data, RunInfo.Content);
-		Widget = Umg->TakeWidget();
+
+		Widget = Umg;
 	} else
 	{
-		Widget = Tooltip.GetSubtype<TSharedPtr<SWidget>>();
+		Widget = Tooltip.GetSubtype<UWidget*>();
 	}
 
-	return Widget;
+	// Apply scaling to the widget.
+	if (const auto AutoSized = dynamic_cast<IVulAutoSizedInlineWidget*>(Widget); AutoSized != nullptr)
+	{
+		auto CustomScale = 1.f;
+		if (RunInfo.MetaData.Contains("scale"))
+		{
+			FDefaultValueHelper::ParseFloat(RunInfo.MetaData["scale"], CustomScale);
+		}
+
+		if (const auto SizeBox = AutoSized->GetAutoSizeBox(); IsValid(SizeBox))
+		{
+			const auto WidgetHeight = RecommendedHeight(InDefaultTextStyle) * AutoSized->GetAutoSizeDefaultScale() * CustomScale;
+			SizeBox->SetMaxDesiredHeight(WidgetHeight);
+		}
+	}
+
+	return Widget->TakeWidget();
 }
 
 const TArray<UVulRichTextBlock::FVulDynamicTooltipResolver>& UVulRichTextBlock::DynamicTooltips() const

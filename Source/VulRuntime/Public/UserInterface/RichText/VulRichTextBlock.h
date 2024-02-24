@@ -49,14 +49,16 @@ public:
 	 *
 	 * Widget is set, which is the widget to use to render the content inline. This is useful
 	 * when a dynamic tooltip definition wants to entirely customize what is shown in line and
-	 * also takes responsibility for triggering any tooltip (and the data for it).
+	 * also takes responsibility for triggering any tooltip (and the data for it). This widget
+	 * can optionally implement IVulAutoSizedInlineWidget to have its size standarized by this
+	 * rich text system and its scale controls.
 	 *
 	 * Or:
 	 *
 	 * The tooltip data to trigger when the rich text element is hovered. The default tooltip
 	 * wrapper widget is used in this case, as per VulRuntime::Settings.
 	 */
-	typedef TUnion<TSharedPtr<SWidget>, TSharedPtr<const FVulTooltipData>> FVulRichTextDynamicData;
+	typedef TUnion<UWidget*, TSharedPtr<const FVulTooltipData>> FVulRichTextDynamicData;
 
 	/**
 	 * Returns rich text tooltip data given the provided run info.
@@ -67,13 +69,18 @@ public:
 	 *   - an SWidget instance; we're overriding the tooltip widget and are responsible for its tooltip logic (if any)
 	 *
 	 * The provided text block is the containing widget.
+	 *
+	 * The provided DefaultTextStyle can be used to assist with widget sizing.
 	 */
-	DECLARE_DELEGATE_RetVal_TwoParams(
+	DECLARE_DELEGATE_RetVal_ThreeParams(
 		TOptional<FVulRichTextDynamicData>,
 		FVulDynamicTooltipResolver,
 		UVulRichTextBlock*,
-		const FRunInfo& RunInfo
+		const FRunInfo&,
+		const FTextBlockStyle&
 	);
+
+	static float RecommendedHeight(const FTextBlockStyle& TextStyle);
 
 	/**
 	 * Utility function when defining static content in your project.
