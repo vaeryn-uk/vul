@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "VulTooltip.h"
+#include "Misc/VulContextToggle.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "VulTooltipSubsystem.generated.h"
 
@@ -37,6 +38,21 @@ public:
 	 */
 	void Hide(const FString& Context, const APlayerController* Controller) const;
 
+	DECLARE_MULTICAST_DELEGATE_TwoParams(FVulOnTooltipDataShown, TSharedPtr<const FVulTooltipData>, UUserWidget*)
+	DECLARE_MULTICAST_DELEGATE_OneParam(FVulOnTooltipDataHidden, TSharedPtr<const FVulTooltipData>)
+
+	/**
+	 * Invoked when new tooltip data is shown. The tooltip data and configured widget will be provided.
+	 *
+	 * This is called after the widget has been updated with the new data.
+	 */
+	FVulOnTooltipDataShown OnDataShown;
+
+	/**
+	 * Invoked when tooltip data is hidden (including when the tooltip changes to new data). The data that was hidden is provided.
+	 */
+	FVulOnTooltipDataHidden OnDataHidden;
+
 private:
 	struct FWidgetState
 	{
@@ -45,7 +61,7 @@ private:
 		 *
 		 * If no contexts are wanting the tooltip visible, it is hidden.
 		 */
-		TSet<FString> Contexts;
+		TVulStrCtxToggle Contexts;
 
 		/**
 		 * The widget instance.
@@ -63,6 +79,11 @@ private:
 		 * A reference to the player controller, used for updating the widget position.
 		 */
 		TWeakObjectPtr<const APlayerController> Controller;
+
+		/**
+		 * The last data rendered for this player.
+		 */
+		TSharedPtr<const FVulTooltipData> Data;
 	};
 
 	/**

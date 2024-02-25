@@ -12,7 +12,7 @@ void UVulTooltipSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 void UVulTooltipSubsystem::Tick(float DeltaTime)
 {
 	// Update widget positions to track the mouse.
-	for (const auto& [_, Widget, Hash, Controller] : Entries)
+	for (const auto& [_, Widget, Hash, Controller, ExistingData] : Entries)
 	{
 		if (Hash.IsSet() && Widget.IsValid() && Controller.IsValid())
 		{
@@ -39,9 +39,9 @@ void UVulTooltipSubsystem::Show(
 		return;
 	}
 
-	auto& [Contexts, Widget, Hash, _] = GetState(Controller);
+	auto& [Contexts, Widget, Hash, _, ExistingData] = GetState(Controller);
 
-	Contexts.Add(Context);
+	Contexts.Enable(Context);
 
 	if (Hash.IsSet() && Hash.GetValue() == Data->Hash())
 	{
@@ -63,22 +63,37 @@ void UVulTooltipSubsystem::Show(
 	Hash = Data->Hash();
 
 	Widget->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+
+	if (ExistingData)
+	{
+		// We're updating an existing tooltip so fire that the old one is hidden.
+		OnDataHidden.Broadcast(ExistingData);
+	}
+
+	ExistingData = Data;
+
+	OnDataShown.Broadcast(Data, Widget.Get());
 }
 
 void UVulTooltipSubsystem::Hide(const FString& Context, const APlayerController* Controller) const
 {
-	auto& [Contexts, Widget, Hash, _] = GetState(Controller);
+	auto& State = GetState(Controller);
 
-	Contexts.Remove(Context);
+	State.Contexts.Disable(Context);
 
-	if (Contexts.IsEmpty())
+	// Hash won't be set if we're already hidden.
+	if (!State.Contexts.IsEnabled() && State.Hash.IsSet())
 	{
-		if (Widget.IsValid())
+		if (State.Widget.IsValid())
 		{
-			Widget->SetVisibility(ESlateVisibility::Collapsed);
+			State.Widget->SetVisibility(ESlateVisibility::Collapsed);
 		}
 
-		Hash.Reset();
+		OnDataHidden.Broadcast(State.Data);
+
+		State.Hash.Reset();
+
+		State.Data = nullptr;
 	}
 }
 
