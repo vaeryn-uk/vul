@@ -96,6 +96,17 @@ private:
 	 */
 	mutable TArray<FWidgetState> Entries;
 
+	/**
+	 * Calculates the tooltip widget's ideal location based on For, moving it as
+	 * required to avoid clipping off screen.
+	 *
+	 * For is the location the widget would appear without adjustment. For example, the
+	 * mouse location.
+	 *
+	 * This returns the location the top left of the widget should appear on the screen.
+	 */
+	FVector2D BestWidgetLocation(const FVector2D& For, const UWidget* Widget) const;
+
 	bool bIsEnabled;
 };
 

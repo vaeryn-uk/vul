@@ -16,9 +16,10 @@ void UVulTooltipSubsystem::Tick(float DeltaTime)
 	{
 		if (Hash.IsSet() && Widget.IsValid() && Controller.IsValid())
 		{
-			FVector2D Pos;
-			Controller->GetMousePosition(Pos.X, Pos.Y);
-			Widget->SetPositionInViewport(Pos + VulRuntime::Settings()->TooltipMouseOffset);
+			if (FVector2D Pos; Controller->GetMousePosition(Pos.X, Pos.Y))
+			{
+				Widget->SetPositionInViewport(BestWidgetLocation(Pos, Widget.Get()));
+			}
 		}
 	}
 }
@@ -109,6 +110,44 @@ UVulTooltipSubsystem::FWidgetState& UVulTooltipSubsystem::GetState(const APlayer
 	auto& Ref = Entries.InsertDefaulted_GetRef(PlayerIndex);
 	Ref.Controller = Controller;
 	return Ref;
+}
+
+FVector2D UVulTooltipSubsystem::BestWidgetLocation(const FVector2D& For, const UWidget* Widget) const
+{
+	auto Ctrl = Widget->GetOwningPlayer();
+	if (!Ctrl)
+	{
+		return For;
+	}
+
+	UE::Math::TIntVector2<int32> ScreenSize;
+	Ctrl->GetViewportSize(ScreenSize.X, ScreenSize.Y);
+
+	const auto Offset = VulRuntime::Settings()->TooltipMouseOffset;
+	const auto WidgetSize = Widget->GetDesiredSize();
+	auto Result = For;
+
+	if (For.X + WidgetSize.X + Offset.X > ScreenSize.X)
+	{
+		// Widget would overlap the right-hand side of the screen, so show on the left of For.
+		Result.X = For.X - WidgetSize.X - Offset.X;
+	} else
+	{
+		// Or we have room. Add the offset to the right.
+		Result.X += Offset.X;
+	}
+
+	if (For.Y + WidgetSize.Y + Offset.Y > ScreenSize.Y)
+	{
+		// Widget would overlap bottom of the screen, so show above For.
+		Result.Y = For.Y - WidgetSize.Y - Offset.Y;
+	} else
+	{
+		// Or we have room. Add the offset below.
+		Result.Y += Offset.Y;
+	}
+
+	return Result;
 }
 
 UVulTooltipSubsystem* VulRuntime::Tooltip(const UObject* WorldCtx)
