@@ -303,6 +303,16 @@ struct TVulHexgrid
 		return Out;
 	}
 
+	/**
+	 * Gets all of the addresses that make up this grid.
+	 */
+	TArray<FVulHexAddr> GetTileAddrs() const
+	{
+		TArray<FVulHexAddr> Out;
+		Tiles.GenerateKeyArray(Out);
+		return Out;
+	}
+
 	TOptional<FVulTile> GetTile(const FVulHexAddr& Addr) const
 	{
 		if (!Tiles.Contains(Addr))
