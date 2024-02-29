@@ -19,6 +19,7 @@ void UVulTooltipSubsystem::Tick(float DeltaTime)
 			if (FVector2D Pos; Controller->GetMousePosition(Pos.X, Pos.Y))
 			{
 				Widget->SetPositionInViewport(BestWidgetLocation(Pos, Widget.Get()));
+				Widget->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
 			}
 		}
 	}
@@ -63,7 +64,9 @@ void UVulTooltipSubsystem::Show(
 	AsVulWidget->Show(Data);
 	Hash = Data->Hash();
 
-	Widget->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+	// Keep invisible until tick so that it doesn't appear until positioned correctly.
+	Widget->SetVisibility(ESlateVisibility::Hidden);
+	Widget->ForceLayoutPrepass();
 
 	if (ExistingData)
 	{
