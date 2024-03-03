@@ -136,6 +136,15 @@ namespace VulRuntime::Hexgrid
 	VULRUNTIME_API FVulHexAddr Deproject(const FVector& WorldLocation, const FVulWorldHexGridSettings& GridSettings);
 
 	/**
+	 * Calculates a random world point inside the Addr tile whilst using GridSettings.
+	 */
+	VULRUNTIME_API FVector RandomPointInTile(
+		const FVulHexAddr& Addr,
+		const FVulWorldHexGridSettings& GridSettings,
+		const FRandomStream& Rng,
+		const float Scale = 1);
+
+	/**
 	 * Converts the provided start position and path to a path made of positions in the world.
 	 *
 	 * This can be used in conjunction with the results from a Path query to visualize actors moving

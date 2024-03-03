@@ -89,6 +89,16 @@ FVulHexAddr VulRuntime::Hexgrid::Deproject(const FVector& WorldLocation, const F
 	return FVulHexAddr(Q, R);
 }
 
+FVector VulRuntime::Hexgrid::RandomPointInTile(
+	const FVulHexAddr& Addr,
+	const FVulWorldHexGridSettings& GridSettings,
+	const FRandomStream& Rng,
+	const float Scale)
+{
+	// Each triangle is equal size, so choose one at random so we get uniform randomness.
+	return FVulMath::RandomPointInTriangle(Triangles(Addr, GridSettings, Scale)[Rng.RandHelper(6)]);
+}
+
 FVulVectorPath VulRuntime::Hexgrid::VectorPath(
 	const FVulHexAddr& Start,
 	const TArray<FVulHexAddr>& Path,

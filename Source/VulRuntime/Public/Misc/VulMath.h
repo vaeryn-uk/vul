@@ -19,4 +19,14 @@ public:
 	{
 		return (Index % Divisor + Divisor) % Divisor;
 	}
+
+	/**
+	 * Gets a random point in a triangle with a non-deterministic Rng.
+	 */
+	static FVector RandomPointInTriangle(const TArray<FVector>& Triangle);
+
+	/**
+	 * Gets a random point in a triangle with deterministic Rng.
+	 */
+	static FVector RandomPointInTriangle(const TArray<FVector>& Triangle, const FRandomStream& Rng);
 };
