@@ -137,6 +137,20 @@ namespace VulRuntime::Hexgrid
 
 	/**
 	 * Calculates a random world point inside the Addr tile whilst using GridSettings.
+	 *
+	 * Scale can extend/restrict the size of a hex available to pick a point from, for example
+	 * a scale of .8 will ensure that the points are picked from the inner 80% of the hex, and
+	 * a 20% border at the edge of the tile is excluded.
+	 */
+	VULRUNTIME_API FVector RandomPointInTile(
+		const FVulHexAddr& Addr,
+		const FVulWorldHexGridSettings& GridSettings,
+		const float Scale = 1);
+
+	/**
+	 * Calculates a random world point inside the Addr tile whilst using GridSettings.
+	 *
+	 * Rng can be provided for deterministic randomization.
 	 */
 	VULRUNTIME_API FVector RandomPointInTile(
 		const FVulHexAddr& Addr,
