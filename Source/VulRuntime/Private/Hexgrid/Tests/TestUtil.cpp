@@ -76,5 +76,85 @@ bool TestUtil::RunTest(const FString& Parameters)
 		Ddt.Run(TEXT("2, 8"), {6, FVector(2, 8, 0), FVulHexAddr(1, -1)});
 	}
 
+	{
+		// Triangles.
+		struct Data{ int HexSize; FVulHexAddr Addr; TArray<TArray<FVector>> Expected; };
+
+		auto Ddt = DDT<Data>(this, TEXT("Triangles"), [](TC Test, Data Case)
+		{
+			const auto Result = VulRuntime::Hexgrid::Triangles(Case.Addr, Case.HexSize);
+			if (Test.Equal(Result.Num(), 6))
+			{
+				for (auto N = 0; N < 6; ++N)
+				{
+					Test.Equal(Result[N][0], Case.Expected[N][0]);
+					Test.Equal(Result[N][1], Case.Expected[N][1]);
+					Test.Equal(Result[N][2], Case.Expected[N][2]);
+				}
+			}
+		});
+
+		Ddt.Run(TEXT("Origin"), {5, FVulHexAddr(0, 0), {
+			{{4.3301, -2.5, 0}, {0, 0, 0}, {4.3301, 2.5, 0}},
+			{{4.3301, 2.5, 0}, {0, 0, 0}, {0, 5, 0}},
+			{{0, 5, 0}, {0, 0, 0}, {-4.3301, 2.5, 0}},
+			{{-4.3301, 2.5, 0}, {0, 0, 0}, {-4.3301, -2.5, 0}},
+			{{-4.3301, -2.5, 0}, {0, 0, 0}, {0, -5, 0}},
+			{{0, -5, 0}, {0, 0, 0}, {4.3301, -2.5, 0}},
+		}});
+	}
+
+	{ // Points.
+		struct Data{ int HexSize; FVulHexAddr Addr; TArray<FVector> Expected; float Scale = 1; };
+
+		auto Ddt = DDT<Data>(this, "Points", [](TC Test, Data Case)
+		{
+			const auto Result = VulRuntime::Hexgrid::Points(Case.Addr, Case.HexSize, Case.Scale);
+			if (Test.Equal(Result.Num(), 6))
+			{
+				for (auto N = 0; N < 6; ++N)
+				{
+					Test.Equal(Result[N], Case.Expected[N], FString::FromInt(N));
+				}
+			}
+		});
+
+		Ddt.Run(TEXT("Origin"), {5, FVulHexAddr(0, 0), {
+			FVector(4.3301, 2.5, 0),
+			FVector(0, 5, 0),
+			FVector(-4.3301, 2.5, 0),
+			FVector(-4.3301, -2.5, 0),
+			FVector(0, -5, 0),
+			FVector(4.3301, -2.5, 0),
+		}});
+
+		Ddt.Run(TEXT("Origin, larger"), {5 * 2, FVulHexAddr(0, 0), {
+			FVector(4.3301 * 2, 2.5 * 2, 0),
+			FVector(0, 5 * 2, 0),
+			FVector(-4.3301 * 2, 2.5 * 2, 0),
+			FVector(-4.3301 * 2, -2.5 * 2, 0),
+			FVector(0, -5 * 2, 0),
+			FVector(4.3301 * 2, -2.5 * 2, 0),
+		}});
+
+		Ddt.Run(TEXT("1,-1"), {5, FVulHexAddr(1, -1), {
+			FVector(4.3301 * 2, 10, 0),
+			FVector(4.3301, 12.5, 0),
+			FVector(0, 10, 0),
+			FVector(0, 5, 0),
+			FVector(4.3301, 2.5, 0),
+			FVector(4.3301 * 2, 5, 0),
+		}});
+
+		Ddt.Run(TEXT("1,-1 scaled down"), {5, FVulHexAddr(1, -1), {
+			FVector(6.4951, 8.75, 0),
+			FVector(4.3301, 10, 0),
+			FVector(2.165, 8.75, 0),
+			FVector(2.165, 6.250, 0),
+			FVector(4.3301, 5.000, 0),
+			FVector(6.4951, 6.250, 0),
+		}, .5});
+	}
+
 	return true;
 }

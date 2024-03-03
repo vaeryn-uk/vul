@@ -14,9 +14,9 @@ namespace VulTest
 		FAutomationTestBase* TestInstance;
 
 		template <typename Type>
-		void Equal(Type Actual, Type Expected, const FString Message = FString()) const
+		bool Equal(Type Actual, Type Expected, const FString Message = FString()) const
 		{
-			TestInstance->TestEqual(FormatTestTitle(Message), Actual, Expected);
+			return TestInstance->TestEqual(FormatTestTitle(Message), Actual, Expected);
 		}
 
 		/**

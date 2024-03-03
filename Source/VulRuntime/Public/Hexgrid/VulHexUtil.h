@@ -30,12 +30,6 @@ struct FVulWorldHexGridSettings
 	FPlane ProjectionPlane = FPlane(FVector::Zero(), FVector::ZAxisVector);
 
 	/**
-	 * The center of the grid in world space.
-	 */
-	UPROPERTY(EditAnywhere)
-	FVector Origin = FVector::Zero();
-
-	/**
 	 * Returns the value between two hexes center points when moving one hex in the short direction.
 	 *
 	 *                +     +
@@ -54,11 +48,11 @@ struct FVulWorldHexGridSettings
 	 *                +     +
 	 *
 	 *      +     +      X      +
-	 *
-	 *  +      X      +     +
-	 *
-	 *      +     +
-	 *
+	 *                   |
+	 *  +      X      +  |  +
+	 *         |         |
+	 *      +  |  +      |
+	 *         |         |
 	 *         ◀---------▶
 	 *           LongStep
 	 */
@@ -91,9 +85,48 @@ namespace VulRuntime::Hexgrid
 	 *
 	 * Spacing can be set to provide a uniform spacing between all hexes in the grid.
 	 *
+	 * Note that we project X in ShortStep and Y in long step.
+	 *
 	 * Any further transformation (offset, rotation etc), is left to the caller.
 	 */
 	VULRUNTIME_API FVector Project(const FVulHexAddr& Addr, const FVulWorldHexGridSettings& GridSettings);
+
+	/**
+	 * Returns the 6 equilateral triangles that make up a hex tile at the given Addr.
+	 *
+	 *                  0
+	 *            X-----------X
+	 *       5  /   \       /   \  1
+	 *        /       \   /       \
+	 *      X-----------------------X
+	 *        \       /   \       /
+	 *       4  \   /       \   /  2
+	 *            X-----------X
+	 *                  3
+	 *
+	 * Scale is as per Points.
+	 */
+	VULRUNTIME_API TArray<TArray<FVector>> Triangles(
+		const FVulHexAddr& Addr,
+		const FVulWorldHexGridSettings& GridSettings,
+		const float Scale = 1);
+
+	/**
+	 * Like Project, maps a tile on to world space but returns the 6 corners of the hex.
+	 *
+	 *      5     0
+	 *
+	 *  4             1
+	 *
+	 *      3     2
+	 *
+	 * Scale allows for scaling of the size of the hex' points from its center, but note this only
+	 * effects the tile we're getting points for. We do not scale other tiles/the grid as a whole.
+	 */
+	VULRUNTIME_API TArray<FVector> Points(
+		const FVulHexAddr& Addr,
+		const FVulWorldHexGridSettings& GridSettings,
+		const float Scale = 1);
 
 	/**
 	 * Takes a world location and returns the hex grid address this point sits within, according to GridSettings.

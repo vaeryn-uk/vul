@@ -126,7 +126,6 @@ struct TVulHexgrid
 	{
 		FVulWorldHexGridSettings Settings;
 		Settings.HexSize = 10;
-		Settings.Origin = FVector::Zero();
 
 		const auto Start = VulRuntime::Hexgrid::Project(From, Settings);
 		const auto End = VulRuntime::Hexgrid::Project(To, Settings);

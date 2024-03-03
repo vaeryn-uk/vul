@@ -1,5 +1,6 @@
 ﻿#include "Hexgrid/VulHexUtil.h"
 #include "Hexgrid/VulHexAddr.h"
+#include "Kismet/KismetMathLibrary.h"
 
 FTransform VulRuntime::Hexgrid::CalculateMeshTransformation(
 	const FBox& HexMeshBoundingBox,
@@ -40,6 +41,44 @@ FVector VulRuntime::Hexgrid::Project(const FVulHexAddr& Addr, const FVulWorldHex
 		(GridSettings.LongStep() * -Addr.R),
 		0
 	);
+}
+
+TArray<TArray<FVector>> VulRuntime::Hexgrid::Triangles(
+	const FVulHexAddr& Addr,
+	const FVulWorldHexGridSettings& GridSettings,
+	const float Scale)
+{
+	const auto Center = Project(Addr, GridSettings);
+	const auto Verts = Points(Addr, GridSettings, Scale);
+
+	return {
+		{Verts[5], Center, Verts[0]},
+		{Verts[0], Center, Verts[1]},
+		{Verts[1], Center, Verts[2]},
+		{Verts[2], Center, Verts[3]},
+		{Verts[3], Center, Verts[4]},
+		{Verts[4], Center, Verts[5]},
+	};
+}
+
+TArray<FVector> VulRuntime::Hexgrid::Points(
+	const FVulHexAddr& Addr,
+	const FVulWorldHexGridSettings& GridSettings,
+	const float Scale)
+{
+	const auto Center = Project(Addr, GridSettings);
+	TArray<FVector> Out;
+
+	for (auto N = 0; N < 6; ++N)
+	{
+		Out.Add(FVector(
+			Center.X + UKismetMathLibrary::DegCos(30 + 60 * N) * GridSettings.HexSize * Scale,
+			Center.Y + UKismetMathLibrary::DegSin(30 + 60 * N) * GridSettings.HexSize * Scale,
+			0
+		));
+	}
+
+	return Out;
 }
 
 FVulHexAddr VulRuntime::Hexgrid::Deproject(const FVector& WorldLocation, const FVulWorldHexGridSettings& GridSettings)
