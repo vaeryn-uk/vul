@@ -38,7 +38,7 @@ namespace VulRuntime::WorldGlobals
 	/**
 	 * Gets the first player controller of the requested type from the given UObject's world, checking that it exists/is valid.
 	 */
-	template <typename PlayerController>
+	template <typename PlayerController = APlayerController>
 	PlayerController* GetFirstPlayerController(UObject* Ctx)
 	{
 		auto PC = Cast<PlayerController>(GetWorldChecked(Ctx)->GetFirstPlayerController());

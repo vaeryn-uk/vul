@@ -155,7 +155,6 @@ places where text is used in the UI.
 The approach is an extension of Unreal's
 [CommonUI](https://docs.unrealengine.com/5.0/en-US/common-ui-plugin-for-advanced-user-interfaces-in-unreal-engine/).
 
-
 See the code in `UVulRichTextBlock` for customization documentation, but as a quick setup overview:
 
 - As per CommonUI, configure relevant settings:
@@ -173,3 +172,10 @@ See the code in `UVulRichTextBlock` for customization documentation, but as a qu
   - Set this Vul's project settings' `Rich Text Tooltip Wrapper`.
 - Review `UVulRichTextBlock` comments, and override relevant methods to add rich text support
   specific for your project.
+
+### Level management
+
+A `AVulLevelManager` can be dropped in to a root level and levels configured. Management of streaming the
+data in/out will be handled for you and a loading screen can be displayed whilst this occurs. Additional
+support is provided for useful functionality such as hooking in to when levels are loaded and automatically
+spawning widgets when certain levels are shown.
