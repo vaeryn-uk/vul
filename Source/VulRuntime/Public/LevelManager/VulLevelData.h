@@ -31,7 +31,11 @@ struct FVulLevelDataWidget
 /**
  * Base definition of level data.
  *
- * You may extend this in your project to add additional data.
+ * You may extend this in your project to add additional data and provide
+ * your own logic via the included virtual methods.
+ *
+ * This is intended to be extended first in CPP for any logic, then as
+ * a blueprint to specify data in the editor.
  */
 UCLASS(Blueprintable)
 class VULRUNTIME_API UVulLevelData : public UObject
@@ -50,4 +54,10 @@ public:
 	 */
 	UPROPERTY(EditAnywhere)
 	TArray<FVulLevelDataWidget> Widgets;
+
+	/**
+	 * Called when this level is shown (after loading is complete). You can use this to execute your
+	 * own level-specific functionality.
+	 */
+	virtual void OnLevelShown();
 };

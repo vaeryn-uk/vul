@@ -77,7 +77,7 @@ protected:
 	virtual void BeginPlay() override;
 
 private:
-	const UVulLevelData* ResolveData(const FName& LevelName);
+	UVulLevelData* ResolveData(const FName& LevelName);
 
 	void ShowLevel(const FName& LevelName);
 	void HideLevel(const FName& LevelName);

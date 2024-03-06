@@ -24,7 +24,7 @@ void AVulLevelManager::BeginPlay()
 	}
 }
 
-const UVulLevelData* AVulLevelManager::ResolveData(const FName& LevelName)
+UVulLevelData* AVulLevelManager::ResolveData(const FName& LevelName)
 {
 	// Create instances if needed.
 	if (LevelData.Num() != LevelDataInstances.Num())
@@ -83,6 +83,8 @@ void AVulLevelManager::ShowLevel(const FName& LevelName)
 
 		SpawnedWidget->AddToViewport(Widget.ZOrder);
 	}
+
+	ResolvedData->OnLevelShown();
 }
 
 void AVulLevelManager::HideLevel(const FName& LevelName)
