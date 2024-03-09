@@ -2,6 +2,7 @@
 #include "VulRuntime.h"
 #include "Blueprint/UserWidget.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
+#include "Engine/StreamableManager.h"
 #include "Kismet/GameplayStatics.h"
 #include "World/VulWorldGlobals.h"
 
@@ -101,6 +102,24 @@ FLatentActionInfo AVulLevelManager::NextLatentAction()
 	return Info;
 }
 
+void AVulLevelManager::LoadAssets(const TArray<FSoftObjectPath>& Paths)
+{
+	if (Paths.IsEmpty())
+	{
+		return;
+	}
+
+	UE_LOG(LogVul, Display, TEXT("Loading %d additional assets with level"), Paths.Num());
+
+	bIsLoadingAssets = true;
+	StreamableManager.RequestAsyncLoad(Paths, FStreamableDelegate::CreateUObject(this, &AVulLevelManager::OnAssetLoaded));
+}
+
+void AVulLevelManager::OnAssetLoaded()
+{
+	bIsLoadingAssets = false;
+}
+
 ULevelStreaming* AVulLevelManager::GetLevelStreaming(const FName& LevelName, const TCHAR* Reason)
 {
 	checkf(!LevelName.IsNone(), TEXT("Invalid level name provided: "), Reason);
@@ -143,7 +162,7 @@ void AVulLevelManager::Tick(float DeltaTime)
 		return;
 	}
 
-	if (!GetLevelStreaming(CurrentLevel.GetValue())->IsLevelLoaded())
+	if (!GetLevelStreaming(CurrentLevel.GetValue())->IsLevelLoaded() || bIsLoadingAssets)
 	{
 		// Loading is not complete.
 		return;
@@ -229,5 +248,7 @@ void AVulLevelManager::LoadLevel(const FName& LevelName)
 		false,
 		NextLatentAction()
 	);
+
+	LoadAssets(Data->AssetsToLoad());
 }
 

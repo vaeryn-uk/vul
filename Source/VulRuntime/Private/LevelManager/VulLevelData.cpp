@@ -4,3 +4,8 @@ void UVulLevelData::OnLevelShown()
 {
 
 }
+
+TArray<FSoftObjectPath> UVulLevelData::AssetsToLoad()
+{
+	return {};
+}

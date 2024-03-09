@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "VulLevelData.h"
+#include "Engine/StreamableManager.h"
 #include "GameFramework/Actor.h"
 #include "Time/VulTime.h"
 #include "VulLevelManager.generated.h"
@@ -111,4 +112,13 @@ private:
 
 	UPROPERTY()
 	TMap<FName, UVulLevelData*> LevelDataInstances;
+
+	void LoadAssets(const TArray<FSoftObjectPath>& Paths);
+	void OnAssetLoaded();
+
+	TArray<FSoftObjectPath> AssetsToLoad;
+
+	FStreamableManager StreamableManager;
+
+	bool bIsLoadingAssets = false;
 };

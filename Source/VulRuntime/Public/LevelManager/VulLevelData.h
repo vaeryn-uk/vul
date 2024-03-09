@@ -60,4 +60,15 @@ public:
 	 * own level-specific functionality.
 	 */
 	virtual void OnLevelShown();
+
+	/**
+	 * Returns a list of assets that will be loaded as part of this level's loading.
+	 *
+	 * Loading will not complete (and a new level not shown) until all of these assets are loaded.
+	 *
+	 * Right now, no special consideration is given to this objects once they are loaded in terms
+	 * of their lifetime.
+	 * TODO: How do we ensure that assets are not garbage collected in a useful way?
+	 */
+	virtual TArray<FSoftObjectPath> AssetsToLoad();
 };
