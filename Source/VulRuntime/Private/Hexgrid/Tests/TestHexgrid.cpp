@@ -35,6 +35,22 @@ bool TestHexgrid::RunTest(const FString& Parameters)
 	TestTileDistance(this, FVulHexAddr(0, -2), FVulHexAddr(2, 1), 5);
 	TestTileDistance(this, FVulHexAddr(-3, 0), FVulHexAddr(+3, 0), 6);
 
+	{ // Adjacent.
+		struct Data { FVulHexAddr To; int MaxRange; int GridSize; int ExpectedCount; };
+		auto Ddt = VulTest::DDT<Data>(this, "Adjacent", [](TC TC, Data Data)
+		{
+			const auto Grid = MakeGrid(Data.GridSize);
+
+			TC.Equal(Grid.AdjacentTiles(Data.To, Data.MaxRange).Num(), Data.ExpectedCount);
+		});
+
+		Ddt.Run("Origin, 1 adj", {.To = {0, 0}, .MaxRange = 1, .GridSize = 5, .ExpectedCount = 6});
+		Ddt.Run("Origin, 2 adj", {.To = {0, 0}, .MaxRange = 2, .GridSize = 5, .ExpectedCount = 18});
+		Ddt.Run("Invalid tile", {.To = {3, -2}, .MaxRange = 2, .GridSize = 2, .ExpectedCount = 0});
+		Ddt.Run("Edge tile, 1 adj", {.To = {3, -2}, .MaxRange = 1, .GridSize = 3, .ExpectedCount = 4});
+		Ddt.Run("Edge tile, 2 adj", {.To = {0, 3}, .MaxRange = 2, .GridSize = 3, .ExpectedCount = 8});
+	}
+
 	// Direct path cases; all reach goal.
 	TestPath(this, 3, FVulHexAddr(-2, 1), FVulHexAddr(3, -3), 5);
 	TestPath(this, 3, FVulHexAddr(-3, 0), FVulHexAddr(3, 0), 6);
@@ -146,13 +162,15 @@ TestGrid::FPathResult<int> TestPath(
 	TestCase->TestEqual("Path Found", Result.Complete, ExpectedDistanceFromGoal == 0);
 
 	const auto Tiles = Result.Tiles;
-	TestCase->TestEqual("Path Length", Tiles.Num(), ExpectedLength);
 	TestCase->TestEqual("Path Cost", Result.Cost, ExpectedLength);
-
-	for (int I = 1; I < ExpectedLength; I++)
+	if (TestCase->TestEqual("Path Length", Tiles.Num(), ExpectedLength))
 	{
-		auto What = FString::Printf(TEXT("Path #%d"), I-1);
-		TestCase->TestEqual("Path #%d", true, Tiles[I-1].Addr.AdjacentTo(Tiles[I].Addr));
+		// Check all tiles along the path are adjacent.
+		for (int I = 1; I < ExpectedLength; I++)
+		{
+			auto What = FString::Printf(TEXT("Path #%d"), I-1);
+			TestCase->TestEqual("Path #%d", true, Tiles[I-1].Addr.AdjacentTo(Tiles[I].Addr));
+		}
 	}
 
 	if (Result.Tiles.Num() > 0)

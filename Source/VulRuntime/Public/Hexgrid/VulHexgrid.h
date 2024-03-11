@@ -350,24 +350,48 @@ struct TVulHexgrid
 			&& FMath::IsWithinInclusive(Addr.S, Size * -1, Size);
 	}
 
-private:
-
-	TArray<FVulTile> AdjacentTiles(const FVulHexAddr& To) const
+	/**
+	 * Returns the tiles adjacent to To, recursively searching for those tiles' adjacent tiles if the search if max range > 1.
+	 *
+	 * Return an empty array if the provided tile is not valid in this grid.
+	 */
+	TArray<FVulTile> AdjacentTiles(const FVulHexAddr& To, const int MaxRange = 1) const
 	{
-		auto Addresses = To.Adjacent().FilterByPredicate([this](const FVulHexAddr& Adjacent)
+		if (!IsValidAddr(To))
 		{
-			return IsValidAddr(Adjacent);
-		});
+			return {};
+		}
 
 		TArray<FVulTile> Out;
 
-		for (auto Addr : Addresses)
+		TArray NewTiles = {To};
+		// Tracks our progress through NewTiles, which we just continue to add to as we iterate.
+		auto NewTilesCheckIndex = 0;
+
+		for (auto I = 0; I < MaxRange; I++)
 		{
-			Out.Add(Tiles.FindChecked(Addr));
+			const auto NewTileCount = NewTiles.Num() - NewTilesCheckIndex;
+
+			for (auto TileIndex = NewTilesCheckIndex; TileIndex < NewTilesCheckIndex + NewTileCount; TileIndex++)
+			{
+				for (const auto& Adj : NewTiles[TileIndex].Adjacent())
+				{
+					// Valid in the grid and has not already been checked.
+					if (IsValidAddr(Adj) && !NewTiles.Contains(Adj))
+					{
+						Out.Add(Tiles.FindChecked(Adj));
+						NewTiles.Add(Adj);
+					}
+				}
+			}
+
+			NewTilesCheckIndex += NewTileCount;
 		}
 
 		return Out;
 	}
+
+private:
 
 	int Size;
 	TMap<FVulHexAddr, FVulTile> Tiles;
