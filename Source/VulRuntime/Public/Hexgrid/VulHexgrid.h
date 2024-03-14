@@ -77,13 +77,15 @@ struct TVulHexgrid
 			return 1;
 		}
 
+		typedef TFunction<TOptional<CostType> (const FVulTile& From, const FVulTile& To, TVulHexgrid* Grid)> FCostFn;
+
 		/**
 		 * Given a tile From and its adjacent tile To, this function returns a cost to move between
 		 * them.
 		 *
 		 * This can return unset to indicate that the movement is not valid.
 		 */
-		TFunction<TOptional<CostType> (const FVulTile& From, const FVulTile& To, TVulHexgrid* Grid)> CostFn = &DefaultCostFn;
+		FCostFn CostFn = &DefaultCostFn;
 
 		/**
 		 * Returns the euclidean distance between two tile addresses.
