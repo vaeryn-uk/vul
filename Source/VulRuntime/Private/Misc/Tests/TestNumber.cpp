@@ -43,20 +43,21 @@ bool TestNumber::RunTest(const FString& Parameters)
 		Ddt.Run("int-rounding-up", {10, 15, {TestMod::MakePercent(1.55)}});
 		Ddt.Run("int-rounding-down", {10, 15, {TestMod::MakePercent(1.545)}});
 
-		auto Zero = MakeShared<TestType>(0);
-		auto Twelve = MakeShared<TestType>(12);
-
-		Ddt.Run("clamp-min", {10, 0, {TestMod::MakeFlat(-30)}, TestType::FClamp({Zero, Twelve})});
-		Ddt.Run("clamp-max", {10, 12, {TestMod::MakeFlat(30)}, TestType::FClamp({Zero, Twelve})});
+		auto Clamp = TestType::MakeClamp(0, 12);
+		Ddt.Run("clamp-min", {10, 0, {TestMod::MakeFlat(-30)}, Clamp});
+		Ddt.Run("clamp-max", {10, 12, {TestMod::MakeFlat(30)}, Clamp});
 
 		// We can modify the clamp in place.
-		Twelve->Modify(TestMod::MakePercent(1.5));
-		Ddt.Run("clamp-modified", {10, 18, {TestMod::MakeFlat(30)}, TestType::FClamp({Zero, Twelve})});
+		Clamp.Value->Modify(TestMod::MakePercent(1.5));
+		Ddt.Run("clamp-modified", {10, 18, {TestMod::MakeFlat(30)}, Clamp});
 
 		Ddt.Run("flat-min-clamp", {10, 15, {TestMod::MakeFlat(8).WithClamp(0, 5)}});
 		Ddt.Run("flat-max-clamp", {10, 8, {TestMod::MakeFlat(-3).WithClamp(-2, 5)}});
 		Ddt.Run("pct-min-clamp", {10, 12, {TestMod::MakePercent(1.5).WithClamp(0, 2)}});
 		Ddt.Run("pct-max-clamp", {10, 8, {TestMod::MakePercent(.5).WithClamp(-2, 5)}});
+
+		Ddt.Run("min-clamp-only", {10, -5, {TestMod::MakeFlat(-30)}, TestType::MakeClamp(-5)});
+		Ddt.Run("max-clamp-only", {10, 30, {TestMod::MakeFlat(30)}, TestType::MakeClamp({}, 30)});
 	}
 
 	// Test modification removal.
