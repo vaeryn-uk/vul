@@ -73,8 +73,9 @@ struct TVulNumberModification
  * A numeric value with support for RPG-like operations.
  *
  * - Supports modification which are tracked separately, applied in order, and can be withdrawn independently.
- * - A base value that is tracked independently of any modifications.
- * - Ability to clamp the value with another TVulNumber for dynamic bound setting.
+ * - A base value that is maintained independently of any modifications; modifications are applied on top of the base.
+ * - Ability to clamp the value with another TVulNumber for dynamic bound setting. Clamps are applied against the
+ *   base and when calculating all modifications.
  * - Access to WatchCollection for registering callbacks for when the number is changed through any means.
  */
 template <typename NumberType>
@@ -145,7 +146,7 @@ public:
 	 */
 	FModificationResult Modify(const TVulNumberModification<NumberType>& Modification)
 	{
-		auto Result = WithWatch([&] { Modifications.Add(Modification); });
+		auto Result = Set([&] { Modifications.Add(Modification); });
 		Result.Id = Modification.Id;
 		return Result;
 	}
@@ -168,7 +169,7 @@ public:
 	 */
 	void ModifyBase(const NumberType Amount)
 	{
-		WithWatch([&] { Base += Amount; });
+		Set([&] { Base += Amount; });
 	}
 
 	/**
@@ -176,7 +177,7 @@ public:
 	 */
 	void Remove(const FGuid& Id)
 	{
-		WithWatch([&]
+		Set([&]
 		{
 			for (auto N = Modifications.Num() - 1; N >= 0; --N)
 			{
@@ -194,7 +195,7 @@ public:
 	 */
 	void Reset()
 	{
-		WithWatch([&] { Modifications.Empty(); });
+		Set([&] { Modifications.Empty(); });
 	}
 
 	/**
@@ -228,24 +229,11 @@ public:
 			{
 				Out = New;
 			}
+
+			Out = ApplyClamps(Out);
 		}
 
-		if (Clamp.Key.IsValid() && Clamp.Value.IsValid())
-		{
-			return FMath::Clamp(Out, Clamp.Key->Value(), Clamp.Value->Value());
-		}
-
-		if (Clamp.Key.IsValid())
-		{
-			return FMath::Max(Out, Clamp.Key->Value());
-		}
-
-		if (Clamp.Value.IsValid())
-		{
-			return FMath::Min(Out, Clamp.Value->Value());
-		}
-
-		return Out;
+		return ApplyClamps(Out);
 	}
 
 	typedef TVulObjectWatches<NumberType> WatchCollection;
@@ -255,10 +243,14 @@ public:
 	}
 
 private:
-	FModificationResult WithWatch(const TFunction<void ()>& Fn)
+	/**
+	 * Consistently applies a change to the value. Enforces clamps and triggers watches.
+	 */
+	FModificationResult Set(const TFunction<void ()>& Fn)
 	{
 		const auto Old = Value();
 		Fn();
+		Base = ApplyClamps(Base);
 		const auto New = Value();
 		Watches.Invoke(New, Old);
 
@@ -266,6 +258,26 @@ private:
 			.Before = Old,
 			.After =  New,
 		};
+	}
+
+	NumberType ApplyClamps(const NumberType Value) const
+	{
+		if (Clamp.Key.IsValid() && Clamp.Value.IsValid())
+		{
+			return FMath::Clamp(Value, Clamp.Key->Value(), Clamp.Value->Value());
+		}
+
+		if (Clamp.Key.IsValid())
+		{
+			return FMath::Max(Value, Clamp.Key->Value());
+		}
+
+		if (Clamp.Value.IsValid())
+		{
+			return FMath::Min(Value, Clamp.Value->Value());
+		}
+
+		return Value;
 	}
 
 	TArray<TVulNumberModification<NumberType>> Modifications;

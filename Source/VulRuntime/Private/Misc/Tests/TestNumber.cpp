@@ -60,6 +60,23 @@ bool TestNumber::RunTest(const FString& Parameters)
 		Ddt.Run("max-clamp-only", {10, 30, {TestMod::MakeFlat(30)}, TestType::MakeClamp({}, 30)});
 	}
 
+	VulTest::Case(this, "Clamp applied throughout modification", [](VulTest::TC TC)
+	{
+		// Scenario: set a min clamp and ensure that modifications never exceed that clamp.
+		// Subtracting a value that would go below our min clamp should not then be deducted
+		// from future additions.
+
+		auto Number = TestType(10, TestType::MakeClamp(2));
+
+		Number.Modify(-10);
+		TC.Equal(Number.Value(), 2, "first clamp");
+
+		// We're modifying back up, so we should be adding to a clamped base, not
+		// a base below the clamp.
+		Number.Modify(5);
+		TC.Equal(Number.Value(), 7, "first increase");
+	});
+
 	// Test modification removal.
 	{
 		const auto ToRemove = FGuid::NewGuid();
