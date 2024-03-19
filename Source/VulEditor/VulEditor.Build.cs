@@ -9,7 +9,7 @@ public class VulEditor : ModuleRules
         PublicDependencyModuleNames.AddRange(
             new string[]
             {
-                "Core", "AssetTools",
+                "Core", "AssetTools", "UnrealYAML",
             }
         );
 

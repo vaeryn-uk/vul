@@ -71,7 +71,7 @@ void FVulDataRepositoryAssetTypeActions::ImportAllConnectedSources()
 				if (Entry.Value == Loaded->DataTable)
 				{
 					// This data source is linked to the repository.
-					if (!Loaded->Import(false))
+					if (!Loaded->Import(false)->AllFilesOk())
 					{
 						Failed.Add(Loaded->GetPathName());
 					} else

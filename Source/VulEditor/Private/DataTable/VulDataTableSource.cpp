@@ -1,10 +1,11 @@
 ﻿#include "DataTable/VulDataTableSource.h"
-
 #include "EditorAssetLibrary.h"
 #include "VulEditorUtil.h"
 #include "DataTable/VulDataRepository.h"
 #include "UnrealYAML/Public/Parsing.h"
 #include "HAL/FileManagerGeneric.h"
+
+TMap<FString, FYamlParseIntoOptions::FTypeHandler> UVulDataTableSource::AdditionalTypeHandlers;
 
 void UVulDataTableSource::BP_Import()
 {
@@ -97,6 +98,12 @@ void UVulDataTableSource::PostEditChangeProperty(FPropertyChangedEvent& Property
 	{
 		RowClassName.Reset();
 	}
+}
+
+void UVulDataTableSource::RegisterAdditionalTypeHandler(const FString& TypeName,
+	const FYamlParseIntoOptions::FTypeHandler& Handler)
+{
+	AdditionalTypeHandlers.Add(TypeName, Handler);
 }
 
 void UVulDataTableSource::ParseAndBuildRows(TArray<TPair<FName, FTableRowBase*>>& Rows)
@@ -217,6 +224,12 @@ bool UVulDataTableSource::BuildStructRows(
 		DataTable->RowStruct->InitializeDefaultValue(RowData);
 
 		auto Options = FYamlParseIntoOptions::Strict();
+
+		for (const auto& Handler : AdditionalTypeHandlers)
+		{
+			Options.TypeHandlers.Add(Handler);
+		}
+
 		Options.TypeHandlers.Add("FVulDataPtr", [](
 			const FYamlNode& Node,
 			const UScriptStruct* ScriptStruct,

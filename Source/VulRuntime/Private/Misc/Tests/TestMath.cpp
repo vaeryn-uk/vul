@@ -4,7 +4,7 @@
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	TestMath,
-	"Blackbird.Plugins.Vul.Source.VulRuntime.Private.Misc.Tests.TestMath",
+	"VulRuntime.Misc.TestMath",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter
 )
 

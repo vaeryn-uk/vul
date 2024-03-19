@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "Parsing.h"
 #include "UObject/Object.h"
 #include "UnrealYAML/Public/Node.h"
 #include "VulDataTableSource.generated.h"
@@ -101,6 +102,14 @@ public:
 
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 
+	/**
+	 * Registers an additional type handler for parsing YAML nodes into your own project's types.
+	 *
+	 * Your module's StartupModule function is an easy place to register your own handlers. You
+	 * likely want to wrap with an #if WITH_EDITOR directive.
+	 */
+	static void RegisterAdditionalTypeHandler(const FString& TypeName, const FYamlParseIntoOptions::FTypeHandler& Handler);
+
 private:
 	void ParseAndBuildRows(TArray<TPair<FName, FTableRowBase*>>& Rows);
 
@@ -116,7 +125,9 @@ private:
 		TArray<TPair<FName, FTableRowBase*>>& Rows);
 
 	UPROPERTY()
-	class UVulDataTableSourceImportResult* ImportResults;
+	UVulDataTableSourceImportResult* ImportResults;
+
+	static TMap<FString, FYamlParseIntoOptions::FTypeHandler> AdditionalTypeHandlers;
 };
 
 USTRUCT()
