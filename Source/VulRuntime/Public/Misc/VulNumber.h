@@ -35,6 +35,17 @@ struct TVulNumberModification
 	}
 
 	/**
+	 * A modification that simply sets the value to the provided amount (ignoring whatever the current value is).
+	 */
+	static TVulNumberModification MakeSet(const NumberType Amount, const FGuid& Id = FGuid())
+	{
+		TVulNumberModification Out;
+		Out.Set = Amount;
+		Out.Id = Id;
+		return Out;
+	}
+
+	/**
 	 * Modifies a number by a percent of the base. This is added to the value.
 	 *
 	 * E.g.
@@ -67,6 +78,7 @@ struct TVulNumberModification
 	TOptional<float> Percent;
 	TOptional<float> BasePercent;
 	TOptional<NumberType> Flat;
+	TOptional<NumberType> Set;
 };
 
 /**
@@ -218,6 +230,9 @@ public:
 			} else if (Modification.BasePercent.IsSet())
 			{
 				New = Out + Modification.BasePercent.GetValue() * Base;
+			} else if (Modification.Set.IsSet())
+			{
+				New = Modification.Set.GetValue();
 			}
 
 			if (Modification.Clamp.IsSet())

@@ -58,6 +58,9 @@ bool TestNumber::RunTest(const FString& Parameters)
 
 		Ddt.Run("min-clamp-only", {10, -5, {TestMod::MakeFlat(-30)}, TestType::MakeClamp(-5)});
 		Ddt.Run("max-clamp-only", {10, 30, {TestMod::MakeFlat(30)}, TestType::MakeClamp({}, 30)});
+
+		Ddt.Run("set-modification", {10, 5, {TestMod::MakeSet(5)}});
+		Ddt.Run("set-modification-clamped", {10, 5, {TestMod::MakeSet(3)}, TestType::MakeClamp(5)});
 	}
 
 	VulTest::Case(this, "Clamp applied throughout modification", [](VulTest::TC TC)
