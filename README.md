@@ -179,3 +179,9 @@ A `AVulLevelManager` can be dropped in to a root level and levels configured. Ma
 data in/out will be handled for you and a loading screen can be displayed whilst this occurs. Additional
 support is provided for useful functionality such as hooking in to when levels are loaded and automatically
 spawning widgets when certain levels are shown.
+
+### MultiBorder widget
+
+A reusable variation of a border widget that allows defining multiple, overlaid borders in its style definition.
+
+See `UVulMultiBorder`.
