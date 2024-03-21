@@ -29,6 +29,20 @@ public:
 	}
 
 	/**
+	 * Adds a function that isn't interested in the values; just wants to trigger on any change.
+	 */
+	void Add(const UObject* Obj, TFunction<void ()> Fn)
+	{
+		Fns.Add({
+			.Valid = [Obj] { return IsValid(Obj); },
+			.Fn = [Fn](int, int)
+			{
+				Fn();
+			},
+		});
+	}
+
+	/**
 	 * Adds a function to this collection, bound for as long as the Valid function returns true.
 	 *
 	 * Will be called everytime Invoke is called, until Valid returns false in which case the
