@@ -27,12 +27,12 @@ public:
 	TSoftClassPtr<UUserWidget> TooltipWidget;
 
 	/**
-	 * When rendering a tooltip alongside the mouse cursor, how much offset do we apply in screen pixels?
+	 * When rendering a tooltip alongside an element such as the mouse cursor, how much offset do we apply in screen pixels?
 	 *
-	 * This avoids the tooltip being obstructed by the mouse cursor.
+	 * This avoids the tooltip being obstructed.
 	 */
 	UPROPERTY(EditAnywhere, Config, Category="User Interface|Tooltip")
-	FVector2D TooltipMouseOffset = {12, 12};
+	FVector2D TooltipOffset = {12, 12};
 
 	/**
 	 * The ZOrder value to draw the tooltip. A higher value ensures this appears over other UI elements.

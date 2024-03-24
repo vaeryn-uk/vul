@@ -19,29 +19,21 @@ void UVulTooltipSubsystem::Tick(float DeltaTime)
 		{
 			FVector2D Pos;
 			bool HavePosition;
-			if (Anchor.IsValid())
+			if (Anchor.IsSet() && Anchor->Widget.IsValid())
 			{
-				FVector2D Pixel;
-				USlateBlueprintLibrary::AbsoluteToViewport(
-					this,
-					Anchor->GetCachedGeometry().GetAbsolutePositionAtCoordinates(
-						UE::Slate::FDeprecateVector2DParameter(0.f, 0.f)
-					),
-					Pos,
-					Pixel
-				);
-
-				UE_LOG(LogVul, Display, TEXT("Anchor pos: %s"), *Pos.ToString())
-
-				HavePosition = true;
+				HavePosition = BestWidgetLocationForWidget(Anchor->Widget.Get(), Widget.Get(), Pos);
 			} else
 			{
 				HavePosition = Controller->GetMousePosition(Pos.X, Pos.Y);
+				if (HavePosition)
+				{
+					HavePosition = BestWidgetLocationForMouse(FVector2D(Pos), Widget.Get(), Pos);
+				}
 			}
 
 			if (HavePosition)
 			{
-				Widget->SetPositionInViewport(BestWidgetLocation(Pos, Widget.Get()));
+				Widget->SetPositionInViewport(Pos);
 				Widget->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
 			}
 		}
@@ -57,8 +49,8 @@ void UVulTooltipSubsystem::Show(
 	const FString& Context,
 	APlayerController* Controller,
 	TSharedPtr<const FVulTooltipData> Data,
-	UWidget* AnchorWidget) const
-{
+	const TOptional<FVulTooltipAnchor>& InAnchor
+) const {
 	if (!bIsEnabled)
 	{
 		UE_LOG(LogVul, Warning, TEXT("Request to show Vul tooltip, but this feature is disabled. Check Vul settings"))
@@ -104,7 +96,7 @@ void UVulTooltipSubsystem::Show(
 	}
 
 	ExistingData = Data;
-	Anchor = AnchorWidget;
+	Anchor = InAnchor;
 
 	OnDataShown.Broadcast(Data, Widget.Get());
 }
@@ -145,45 +137,111 @@ UVulTooltipSubsystem::FWidgetState& UVulTooltipSubsystem::GetState(const APlayer
 	return Ref;
 }
 
-FVector2D UVulTooltipSubsystem::BestWidgetLocation(const FVector2D& For, const UWidget* Widget) const
+bool UVulTooltipSubsystem::BestWidgetLocationForMouse(const FVector2D& For, const UWidget* Widget, FVector2D& Out) const
 {
 	auto Ctrl = Widget->GetOwningPlayer();
 	if (!Ctrl)
 	{
-		return For;
+		return false;
 	}
 
 	UE::Math::TIntVector2<int32> ScreenSize;
 	Ctrl->GetViewportSize(ScreenSize.X, ScreenSize.Y);
 
-	const auto Offset = VulRuntime::Settings()->TooltipMouseOffset;
+	const auto Offset = VulRuntime::Settings()->TooltipOffset;
 	const auto WidgetSize = Widget->GetDesiredSize();
-	auto Result = For;
 
 	if (For.X + WidgetSize.X + Offset.X > ScreenSize.X)
 	{
 		// Widget would overlap the right-hand side of the screen, so show on the left of For.
-		Result.X = For.X - WidgetSize.X - Offset.X;
+		Out.X = For.X - WidgetSize.X - Offset.X;
 	} else
 	{
 		// Or we have room. Add the offset to the right.
-		Result.X += Offset.X;
+		Out.X += Offset.X;
 	}
 
 	if (For.Y + WidgetSize.Y + Offset.Y > ScreenSize.Y)
 	{
 		// Widget would overlap bottom of the screen, so show above For.
-		Result.Y = For.Y - WidgetSize.Y - Offset.Y;
+		Out.Y = For.Y - WidgetSize.Y - Offset.Y;
 	} else
 	{
 		// Or we have room. Add the offset below.
-		Result.Y += Offset.Y;
+		Out.Y += Offset.Y;
 	}
 
-	return Result;
+	return true;
+}
+
+bool UVulTooltipSubsystem::BestWidgetLocationForWidget(const UWidget* AnchorWidget, const UWidget* Tooltip, FVector2D& Out)
+{
+	auto Ctrl = Tooltip->GetOwningPlayer();
+	if (!Ctrl)
+	{
+		return false;
+	}
+
+	UE::Math::TIntVector2<int32> ScreenSize;
+	Ctrl->GetViewportSize(ScreenSize.X, ScreenSize.Y);
+
+	const auto TooltipSize = Tooltip->GetDesiredSize();
+	const auto HalfSizeX = FVector2D(TooltipSize.X / 2, 0);
+	const auto TooltipOffset = VulRuntime::Settings()->TooltipOffset;
+
+	if (auto Coords = GetWidgetScreenCoords(AnchorWidget, 0.5f, 0.0f); Coords.Y - TooltipSize.Y - TooltipOffset.Y > 0)
+	{
+		// Render above the anchor widget.
+		Out = Coords - FVector2D(0, TooltipSize.Y) - FVector2D(0, TooltipOffset.Y) - HalfSizeX;
+	} else if (Coords = GetWidgetScreenCoords(AnchorWidget, 0.5f, 1.0f); Coords.Y + TooltipSize.Y + TooltipOffset.Y < ScreenSize.Y)
+	{
+		// Render below the anchor widget.
+		Out = Coords + FVector2D(0, TooltipOffset.Y) - HalfSizeX;
+	} else
+	{
+		// TODO: check/render left-right if needed?
+		return false;
+	}
+
+	return true;
+}
+
+FVector2D UVulTooltipSubsystem::GetWidgetScreenCoords(const UWidget* Widget, const float AnchorX, const float AnchorY)
+{
+	FVector2D Pixel;
+	FVector2D Out;
+	USlateBlueprintLibrary::AbsoluteToViewport(
+		this,
+		Widget->GetCachedGeometry().GetAbsolutePositionAtCoordinates(
+			UE::Slate::FDeprecateVector2DParameter(AnchorX, AnchorY)
+		),
+		Out,
+		Pixel
+	);
+
+	return Out;
 }
 
 UVulTooltipSubsystem* VulRuntime::Tooltip(const UObject* WorldCtx)
 {
 	return VulRuntime::WorldGlobals::GetGameInstanceSubsystemChecked<UVulTooltipSubsystem>(WorldCtx);
+}
+
+void VulRuntime::Tooltipify(const FString& Context, UWidget* Widget, FVulGetTooltipData Getter)
+{
+	Widget->TakeWidget()->SetOnMouseEnter(FNoReplyPointerEventHandler::CreateWeakLambda(
+		Widget,
+		[Context, Getter, Widget](const FGeometry&, const FPointerEvent&)
+		{
+			Tooltip(Widget)->Show(Context, Widget->GetOwningPlayer(), Getter.Execute());
+		}
+	));
+
+	Widget->TakeWidget()->SetOnMouseLeave(FSimpleNoReplyPointerEventHandler::CreateWeakLambda(
+		Widget,
+		[Context, Widget](const FPointerEvent&)
+		{
+			Tooltip(Widget)->Hide(Context, Widget->GetOwningPlayer());
+		}
+	));
 }

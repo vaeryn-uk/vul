@@ -8,6 +8,19 @@
 #include "VulTooltipSubsystem.generated.h"
 
 /**
+ * Describes how a tooltip is anchor to another element.
+ *
+ * The absence of this, and the default, is positioning relative to the mouse cursor.
+ */
+struct FVulTooltipAnchor
+{
+	FVulTooltipAnchor() = default;
+	FVulTooltipAnchor(UWidget* InWidget) : Widget(InWidget) {}
+
+	TWeakObjectPtr<UWidget> Widget;
+};
+
+/**
  * Manages the Vul tooltip implementation. Responsible for showing and updating tooltip
  * widgets. This will do nothing if Vul tooltip functionality is not configured in settings.
  */
@@ -33,7 +46,12 @@ public:
 	 * AnchorWidget can be provided to fix the position of the tooltip to the provided widget.
 	 * If omitted, the tooltip will follow the mouse cursor.
 	 */
-	void Show(const FString& Context, APlayerController* Controller, TSharedPtr<const FVulTooltipData> Data, UWidget* AnchorWidget = nullptr) const;
+	void Show(
+		const FString& Context,
+		APlayerController* Controller,
+		TSharedPtr<const FVulTooltipData> Data,
+		const TOptional<FVulTooltipAnchor>& InAnchor = {}
+	) const;
 
 	/**
 	 * Hides the tooltip for the given player controller from the given context.
@@ -90,9 +108,9 @@ private:
 		TSharedPtr<const FVulTooltipData> Data;
 
 		/**
-		 * A widget that we anchor the tooltip's position against.
+		 * How to position the tooltip. If unset, positioned relative to the mouse.
 		 */
-		TWeakObjectPtr<UWidget> Anchor;
+		TOptional<FVulTooltipAnchor> Anchor;
 	};
 
 	/**
@@ -112,14 +130,44 @@ private:
 	 * For is the location the widget would appear without adjustment. For example, the
 	 * mouse location.
 	 *
-	 * This returns the location the top left of the widget should appear on the screen.
+	 * This sets the location the top left of the widget should appear on the screen.
+	 *
+	 * Returns false if a position cannot be calculated.
 	 */
-	FVector2D BestWidgetLocation(const FVector2D& For, const UWidget* Widget) const;
+	bool BestWidgetLocationForMouse(const FVector2D& For, const UWidget* Widget, FVector2D& Out) const;
+
+	/**
+	 * Finds the best location when anchoring the tooltip to another widget.
+	 * This appears above or below the anchoring widget, avoiding clipping off screen.
+	 * The tooltip is positioned centrally to the provided anchor.
+	 *
+	 * Returns false if a position cannot be calculated.
+	 */
+	bool BestWidgetLocationForWidget(const UWidget* AnchorWidget, const UWidget* Tooltip, FVector2D& Out);
+
+	/**
+	 * Returns the screen space coordinates of the provided widget, at the normalized point on widget
+	 * specified by 0-1 anchors (e.g. (0.5, 1) is center X, bottom).
+	 */
+	FVector2D GetWidgetScreenCoords(const UWidget* Widget, const float AnchorX, const float AnchorY);
 
 	bool bIsEnabled;
 };
 
 namespace VulRuntime
 {
+	/**
+	 * Access to the global UVulTooltipSubsystem.
+	 */
 	VULRUNTIME_API UVulTooltipSubsystem* Tooltip(const UObject* WorldCtx);
+
+	DECLARE_DELEGATE_RetVal(TSharedPtr<const FVulTooltipData>, FVulGetTooltipData);
+
+	/**
+	 * Applies Vul tooltip functionality to the provided widget.
+	 *
+	 * This is useful to add the functionality to native widget types without having to extend
+	 * them in your own projects to get at the handlers.
+	 */
+	VULRUNTIME_API void Tooltipify(const FString& Context, UWidget* Widget, FVulGetTooltipData Getter);
 }
