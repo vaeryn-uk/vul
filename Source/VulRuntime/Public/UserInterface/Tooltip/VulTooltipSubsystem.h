@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "VulTooltip.h"
+#include "Components/Widget.h"
 #include "Misc/VulContextToggle.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "VulTooltipSubsystem.generated.h"
@@ -28,8 +29,11 @@ public:
 	 * Context is required to differentiate different reasons that a tooltip would be made
 	 * visible, and a tooltip will be shown until all contexts for that player controller
 	 * have requested Hide.
+	 *
+	 * AnchorWidget can be provided to fix the position of the tooltip to the provided widget.
+	 * If omitted, the tooltip will follow the mouse cursor.
 	 */
-	void Show(const FString& Context, APlayerController* Controller, TSharedPtr<const FVulTooltipData> Data) const;
+	void Show(const FString& Context, APlayerController* Controller, TSharedPtr<const FVulTooltipData> Data, UWidget* AnchorWidget = nullptr) const;
 
 	/**
 	 * Hides the tooltip for the given player controller from the given context.
@@ -84,6 +88,11 @@ private:
 		 * The last data rendered for this player.
 		 */
 		TSharedPtr<const FVulTooltipData> Data;
+
+		/**
+		 * A widget that we anchor the tooltip's position against.
+		 */
+		TWeakObjectPtr<UWidget> Anchor;
 	};
 
 	/**

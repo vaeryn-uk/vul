@@ -19,7 +19,7 @@ FReply UVulTooltipUserWidget::NativeOnMouseMove(const FGeometry& InGeometry, con
 		return Ret;
 	}
 
-	VulRuntime::Tooltip(this)->Show("RichText", GetOwningPlayer(), Data);
+	VulRuntime::Tooltip(this)->Show("VulUserWidget", GetOwningPlayer(), Data);
 
 	// Don't return a handled reply otherwise that prevents our player controller reporting
 	// an accurate mouse position when moving within this widget.
@@ -28,7 +28,7 @@ FReply UVulTooltipUserWidget::NativeOnMouseMove(const FGeometry& InGeometry, con
 
 void UVulTooltipUserWidget::NativeOnMouseLeave(const FPointerEvent& InMouseEvent)
 {
-	VulRuntime::Tooltip(this)->Hide("RichText", GetOwningPlayer());
+	VulRuntime::Tooltip(this)->Hide("VulUserWidget", GetOwningPlayer());
 }
 
 TSharedPtr<const FVulTooltipData> UVulTooltipUserWidget::GetTooltipData() const

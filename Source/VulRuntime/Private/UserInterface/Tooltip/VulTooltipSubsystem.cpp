@@ -1,6 +1,7 @@
 ﻿#include "UserInterface/Tooltip/VulTooltipSubsystem.h"
 #include "VulRuntime.h"
 #include "VulRuntimeSettings.h"
+#include "Blueprint/SlateBlueprintLibrary.h"
 #include "Blueprint/UserWidget.h"
 #include "World/VulWorldGlobals.h"
 
@@ -12,11 +13,33 @@ void UVulTooltipSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 void UVulTooltipSubsystem::Tick(float DeltaTime)
 {
 	// Update widget positions to track the mouse.
-	for (const auto& [_, Widget, Hash, Controller, ExistingData] : Entries)
+	for (const auto& [_, Widget, Hash, Controller, ExistingData, Anchor] : Entries)
 	{
 		if (Hash.IsSet() && Widget.IsValid() && Controller.IsValid())
 		{
-			if (FVector2D Pos; Controller->GetMousePosition(Pos.X, Pos.Y))
+			FVector2D Pos;
+			bool HavePosition;
+			if (Anchor.IsValid())
+			{
+				FVector2D Pixel;
+				USlateBlueprintLibrary::AbsoluteToViewport(
+					this,
+					Anchor->GetCachedGeometry().GetAbsolutePositionAtCoordinates(
+						UE::Slate::FDeprecateVector2DParameter(0.f, 0.f)
+					),
+					Pos,
+					Pixel
+				);
+
+				UE_LOG(LogVul, Display, TEXT("Anchor pos: %s"), *Pos.ToString())
+
+				HavePosition = true;
+			} else
+			{
+				HavePosition = Controller->GetMousePosition(Pos.X, Pos.Y);
+			}
+
+			if (HavePosition)
 			{
 				Widget->SetPositionInViewport(BestWidgetLocation(Pos, Widget.Get()));
 				Widget->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
@@ -33,7 +56,8 @@ bool UVulTooltipSubsystem::IsTickable() const
 void UVulTooltipSubsystem::Show(
 	const FString& Context,
 	APlayerController* Controller,
-	TSharedPtr<const FVulTooltipData> Data) const
+	TSharedPtr<const FVulTooltipData> Data,
+	UWidget* AnchorWidget) const
 {
 	if (!bIsEnabled)
 	{
@@ -41,7 +65,12 @@ void UVulTooltipSubsystem::Show(
 		return;
 	}
 
-	auto& [Contexts, Widget, Hash, _, ExistingData] = GetState(Controller);
+	if (!Data.IsValid())
+	{
+		return;
+	}
+
+	auto& [Contexts, Widget, Hash, _, ExistingData, Anchor] = GetState(Controller);
 
 	Contexts.Enable(Context);
 
@@ -75,6 +104,7 @@ void UVulTooltipSubsystem::Show(
 	}
 
 	ExistingData = Data;
+	Anchor = AnchorWidget;
 
 	OnDataShown.Broadcast(Data, Widget.Get());
 }
