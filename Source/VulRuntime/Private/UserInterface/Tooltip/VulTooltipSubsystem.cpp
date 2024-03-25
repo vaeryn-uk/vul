@@ -5,6 +5,11 @@
 #include "Blueprint/UserWidget.h"
 #include "World/VulWorldGlobals.h"
 
+bool FVulTooltipAnchor::operator==(const FVulTooltipAnchor& Other) const
+{
+	return Other.Widget == Widget;
+}
+
 void UVulTooltipSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	bIsEnabled = VulRuntime::Settings()->IsTooltipEnabled();
@@ -66,7 +71,7 @@ void UVulTooltipSubsystem::Show(
 
 	Contexts.Enable(Context);
 
-	if (Hash.IsSet() && Hash.GetValue() == Data->Hash())
+	if (Hash.IsSet() && Hash.GetValue() == Data->Hash() && Anchor == InAnchor)
 	{
 		// Nothing's changed.
 		return;

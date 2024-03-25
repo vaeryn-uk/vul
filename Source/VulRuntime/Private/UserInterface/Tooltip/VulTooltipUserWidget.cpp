@@ -31,6 +31,18 @@ void UVulTooltipUserWidget::NativeOnMouseLeave(const FPointerEvent& InMouseEvent
 	VulRuntime::Tooltip(this)->Hide("VulUserWidget", GetOwningPlayer());
 }
 
+void UVulTooltipUserWidget::NativeOnDragDetected(
+	const FGeometry& InGeometry,
+	const FPointerEvent& InMouseEvent,
+	UDragDropOperation*& OutOperation
+)
+{
+	Super::NativeOnDragDetected(InGeometry, InMouseEvent, OutOperation);
+
+	// When we start dragging, hide this tooltip
+	VulRuntime::Tooltip(this)->Hide("VulUserWidget", GetOwningPlayer());
+}
+
 TSharedPtr<const FVulTooltipData> UVulTooltipUserWidget::GetTooltipData() const
 {
 	return nullptr;

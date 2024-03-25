@@ -18,6 +18,8 @@ struct FVulTooltipAnchor
 	FVulTooltipAnchor(UWidget* InWidget) : Widget(InWidget) {}
 
 	TWeakObjectPtr<UWidget> Widget;
+
+	bool operator==(const FVulTooltipAnchor& Other) const;
 };
 
 /**
