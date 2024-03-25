@@ -10,7 +10,7 @@
 /**
  * Extends common UI's rich text widget with extra functionality.
  *
- *   - Content substitutions: define static content markers that are replaced with
+ *   - Content substitutions: define content markers that are replaced with
  *     other content on render. Saves having to repeat common markup syntax for content
  *     that is used in multiple places throughout a game.
  *   - Retains CommonUI functionality for icons, which reads icons from the Vul setting's
@@ -23,10 +23,11 @@
  *     data table. Scale is an optional attribute to scale the icon; a value between 0
  *     and 1. Content is also optional, and is displayed based on the text block's inline
  *     setting and can render the content if there is room.
- *   - %static(NAME)%
- *     NAME matches on some static content and the whole string is replaced by that static
- *     content if found. Implement this in child implementations' StaticContent() method
- *     to add your own definitions (none are provided by default).
+ *   - %content(NAME)%
+ *     NAME matches on some key registered in this class and the whole string is
+ *     replaced by that content if found. Implement this in child implementations'
+ *     CreateStaticContent() and CreateDynamicContent() methods to add your own definitions
+ *     (none are provided by default).
  *   - <tt static="STATIC_TOOLTIP_REF">CONTENT</>
  *     Renders a tooltip with statically-defined content. Implement StaticTooltips() to
  *     return tooltip data specific to your project. This integrates with UVulTooltipSubsystem
@@ -83,12 +84,12 @@ public:
 	static float RecommendedHeight(const FTextBlockStyle& TextStyle);
 
 	/**
-	 * Utility function when defining static content in your project.
+	 * Utility function when defining static or dynamic content markets in your project.
 	 *
-	 * Returns %static(Str)% for your static content keys. Not required, but useful
+	 * Returns %content(Str)% for your content keys. Not required, but useful
 	 * to distinguish static content for authors.
 	 */
-	static FString StaticContentMarker(const FString& Str);
+	static FString ContentMarker(const FString& Str);
 
 	/**
 	 * Overwritten to ensure substitutions are parsed & replaced.
@@ -105,7 +106,23 @@ protected:
 	 * The keys in this map are recommended to include some unique text to distinguish this from normal
 	 * content (and the rich text markup). StaticContentMarker can be used for this.
 	 */
-	virtual const TMap<FString, FString>& StaticContent() const;
+	virtual void CreateStaticContent(TMap<FString, FString>& Out) const {}
+
+	/**
+	 * Delegate to resolve dynamic content replacements. Provided the widget that
+	 * is currently rendering the text being replaced. Must return true if content
+	 * is available, and set OutString to that content. If this returns false, no
+	 * replacement will take place.
+	 */
+	DECLARE_DELEGATE_RetVal_TwoParams(bool, FVulRichTextDynamicContent, UWidget*, FString& OutString)
+	/**
+	 * Like CreateStaticContent, this provides simple string replacement for specific markers.
+	 *
+	 * However, instead of a fixed string, here you provide a delegate which returns the string
+	 * to render on demand. This allows you to resolve content dynamically, such as based on
+	 * the context in which the content is rendered.
+	 */
+	virtual void CreateDynamicContent(TMap<FString, FVulRichTextDynamicContent>&) const {};
 
 	/**
 	 * Returns static tooltip definitions, rendered via <tt static="NAME">CONTENT</>.
@@ -133,7 +150,7 @@ protected:
 private:
 	friend class FVulTooltipDecorator;
 
-	FText ApplyStaticSubstitutions(const FText& Text) const;
+	FText ApplyContentSubstitutions(const FText& Text, UWidget* Widget) const;
 
 	/**
 	 * Ensures the text we've set against the internal SWidget has static content substitutions applied.
@@ -147,5 +164,9 @@ private:
 	TSharedPtr<SWidget> DecorateTooltip(const FTextRunInfo& RunInfo, const FTextBlockStyle& InDefaultTextStyle);
 
 	const TArray<FVulDynamicTooltipResolver>& DynamicTooltips() const;
+	const TMap<FString, FVulRichTextDynamicContent> DynamicContent() const;
+	const TMap<FString, FString> StaticContent() const;
 	mutable TOptional<TArray<FVulDynamicTooltipResolver>> CachedDynamicTooltips;
+	mutable TOptional<TMap<FString, FVulRichTextDynamicContent>> CachedDynamicContent;
+	mutable TOptional<TMap<FString, FString>> CachedStaticContent;
 };

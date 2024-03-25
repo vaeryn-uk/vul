@@ -9,12 +9,6 @@
 #include "UserInterface/RichText/VulRichTextTooltipWrapper.h"
 #include "Widgets/Text/SRichTextBlock.h"
 
-const TMap<FString, FString>& UVulRichTextBlock::StaticContent() const
-{
-	const static TMap<FString, FString> Empty = {};
-	return Empty;
-}
-
 const TMap<FString, TSharedPtr<const FVulTooltipData>>& UVulRichTextBlock::StaticTooltips() const
 {
 	const static TMap<FString, TSharedPtr<const FVulTooltipData>> Empty = {};
@@ -65,9 +59,9 @@ float UVulRichTextBlock::RecommendedHeight(const FTextBlockStyle& TextStyle)
 	return FontMeasure.Get().GetMaxCharacterHeight(Font);
 }
 
-FString UVulRichTextBlock::StaticContentMarker(const FString& Str)
+FString UVulRichTextBlock::ContentMarker(const FString& Str)
 {
-	return FString::Printf(TEXT("%%static(%s)%%"), *Str);
+	return FString::Printf(TEXT("%%content(%s)%%"), *Str);
 }
 
 TSharedPtr<SWidget> UVulRichTextBlock::DecorateTooltip(
@@ -175,7 +169,29 @@ const TArray<UVulRichTextBlock::FVulDynamicTooltipResolver>& UVulRichTextBlock::
 	return CachedDynamicTooltips.GetValue();
 }
 
-FText UVulRichTextBlock::ApplyStaticSubstitutions(const FText& InText) const
+const TMap<FString, UVulRichTextBlock::FVulRichTextDynamicContent> UVulRichTextBlock::DynamicContent() const
+{
+	if (!CachedDynamicContent.IsSet())
+	{
+		CachedDynamicContent = TMap<FString, FVulRichTextDynamicContent>();
+		CreateDynamicContent(CachedDynamicContent.GetValue());
+	}
+
+	return CachedDynamicContent.GetValue();
+}
+
+const TMap<FString, FString> UVulRichTextBlock::StaticContent() const
+{
+	if (!CachedStaticContent.IsSet())
+	{
+		CachedStaticContent = TMap<FString, FString>();
+		CreateStaticContent(CachedStaticContent.GetValue());
+	}
+
+	return CachedStaticContent.GetValue();
+}
+
+FText UVulRichTextBlock::ApplyContentSubstitutions(const FText& InText, UWidget* Widget) const
 {
 	// This implementation feels heavy with all this string searching.
 	// Might be a candidate for perf changes in the future.
@@ -195,6 +211,19 @@ FText UVulRichTextBlock::ApplyStaticSubstitutions(const FText& InText) const
 		}
 	}
 
+	for (const auto& Entry : DynamicContent())
+	{
+		if (Str.Find(Entry.Key) != INDEX_NONE)
+		{
+			if (FString New; Entry.Value.Execute(Widget, New))
+			{
+				Replaced = true;
+				Str = Str.Replace(*Entry.Key, *New);
+				break;
+			}
+		}
+	}
+
 	if (!Replaced)
 	{
 		// If nothing modified, use the untouched FText.
@@ -208,7 +237,7 @@ void UVulRichTextBlock::ApplySWidgetText()
 {
 	if (MyRichTextBlock.IsValid())
 	{
-		MyRichTextBlock->SetText(ApplyStaticSubstitutions(GetText()));
+		MyRichTextBlock->SetText(ApplyContentSubstitutions(GetText(), this));
 	}
 }
 
