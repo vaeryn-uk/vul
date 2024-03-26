@@ -185,3 +185,7 @@ spawning widgets when certain levels are shown.
 A reusable variation of a border widget that allows defining multiple, overlaid borders in its style definition.
 
 See `UVulMultiBorder`.
+
+### Centralization of random number generation
+
+See `TVulRngManager` for more information.
