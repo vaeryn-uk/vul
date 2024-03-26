@@ -5,12 +5,32 @@
 
 /**
  * Extends UE's native FRandomStream with some additional useful functionality.
- *
- * TODO
  */
 struct FVulRandomStream : FRandomStream
 {
+	/**
+	 * Shuffles any contiguous container randomly.
+	 *
+	 * Copied from UE's Algo::RandomShuffle, but uses our stream's RNG instead.
+	 */
+	template <typename RangeType>
+	void Shuffle(RangeType& Range) const
+	{
+		auto Data = GetData(Range);
 
+		using SizeType = decltype(GetNum(Range));
+		const SizeType Num = GetNum(Range);
+
+		for (SizeType Index = 0; Index < Num - 1; ++Index)
+		{
+			// Get a random integer in [Index, Num)
+			const SizeType RandomIndex = Index + (SizeType)RandHelper(Num - Index);
+			if (RandomIndex != Index)
+			{
+				Swap(Data[Index], Data[RandomIndex]);
+			}
+		}
+	}
 };
 
 /**
@@ -32,7 +52,9 @@ struct FVulRandomStream : FRandomStream
  *
  * The only exception to the seeding logic is the special SeedlessStream() which is
  * provided for convenience. This is useful when your RNG use-case is truly independent
- * of any seeding (and any of your project-specific streams).
+ * of any seeding (and any of your project-specific streams). Note that this stream
+ * and the default constructor's random seed are both beholden to FMath::SRand so can
+ * be seeded globally if needed (e.g. for tests).
  *
  * To use this in your project, define a UENUM which specifies each of your streams.
  * Construct a new manager and pass in that enumtype, e.g.
@@ -70,7 +92,7 @@ struct VULRUNTIME_API TVulRngManager
 		Seed(RandomSeed());
 
 		Seedless = FVulRandomStream();
-		Seedless.Initialize(FMath::Rand());
+		Seedless.Initialize(RandomNumber());
 	}
 
 	// Disable copying.
@@ -85,7 +107,7 @@ struct VULRUNTIME_API TVulRngManager
 	static FString RandomSeed()
 	{
 		// TODO: Something more human-memorable?
-		return FString::Printf(TEXT("%X"), FMath::Rand());
+		return FString::Printf(TEXT("%X"), RandomNumber());
 	}
 
 	/**
@@ -137,6 +159,16 @@ private:
 		FVulRandomStream Stream;
 		int32 Offset;
 	};
+
+	/**
+	 * When the manager needs a random value independent of seeded streams.
+	 *
+	 * Uses FMath::SRand, so can be controlled by FMath::SRandInit if needed.
+	 */
+	static int32 RandomNumber()
+	{
+		return FMath::SRand() * RAND_MAX;
+	}
 
 	TMap<EnumType, FVulStreamEntry> Entries;
 	FString CurrentSeed;

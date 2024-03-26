@@ -23,25 +23,38 @@ namespace VulTest
 		 * Override asserts that two arrays have the same length and each element is equal.
 		 */
 		template<typename Type>
-		void Equal(TArray<Type> Actual, TArray<Type> Expected, const FString Message = FString()) const
+		bool Equal(TArray<Type> Actual, TArray<Type> Expected, const FString Message = FString()) const
 		{
+			bool Ok = true;
+
 			if (TestInstance->TestEqual(FormatTestTitle(Message + "Array num"), Actual.Num(), Expected.Num()))
 			{
 				for (auto N = 0; N < Actual.Num(); ++N)
 				{
-					TestInstance->TestEqual(
+					if (!TestInstance->TestEqual(
 						FormatTestTitle(Message + FString::Printf(TEXT("Item #%d"), N)),
 						Actual[N],
 						Expected[N]
-					);
+					))
+					{
+						Ok = false;
+					}
 				}
 			}
+
+			return Ok;
 		}
 
 		template <typename Type>
-		void NearlyEqual(Type Actual, Type Expected, const FString Message = FString()) const
+		bool NotEqual(Type A, Type B, const FString Message = FString()) const
 		{
-			TestInstance->TestNearlyEqual(FormatTestTitle(Message), Actual, Expected);
+			return TestInstance->TestNotEqual(FormatTestTitle(Message), A, B);
+		}
+
+		template <typename Type>
+		bool NearlyEqual(Type Actual, Type Expected, const FString Message = FString()) const
+		{
+			return TestInstance->TestNearlyEqual(FormatTestTitle(Message), Actual, Expected);
 		}
 
 	private:
