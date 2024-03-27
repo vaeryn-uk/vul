@@ -183,8 +183,11 @@ spawning widgets when certain levels are shown.
 ### MultiBorder widget
 
 A reusable variation of a border widget that allows defining multiple, overlaid borders in its style definition.
-
 See `UVulMultiBorder`.
+
+### Collapsed panel widget
+
+Contains content that is shown/hidden when a connected button is pushed. See `UVulCollapsedPanel`.
 
 ### Centralization of random number generation
 
