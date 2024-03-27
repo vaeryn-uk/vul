@@ -75,7 +75,7 @@ struct FVulRandomStream : FRandomStream
  * where random numbers are needed.
  */
 template <typename EnumType, typename = typename TEnableIf<TIsEnum<EnumType>::Value>::Type>
-struct VULRUNTIME_API TVulRngManager
+struct TVulRngManager
 {
 	/**
 	 * Creates a new manager and seeds all streams with a random seed.
