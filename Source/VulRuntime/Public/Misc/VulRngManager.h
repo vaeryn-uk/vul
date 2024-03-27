@@ -167,7 +167,7 @@ private:
 	 */
 	static int32 RandomNumber()
 	{
-		return FMath::SRand() * RAND_MAX;
+		return FMath::SRand() * INT_MAX;
 	}
 
 	TMap<EnumType, FVulStreamEntry> Entries;
