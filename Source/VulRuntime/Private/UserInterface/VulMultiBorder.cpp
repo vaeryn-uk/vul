@@ -47,24 +47,3 @@ TSharedRef<SBorder> UVulMultiBorder::CreateBorder(TAttribute<const FSlateBrush*>
 
 	return Ret;
 }
-
-void UVulMultiBorder::PostLoad()
-{
-	Super::PostLoad();
-
-	// Initialize our slot to be a border slot. Copied from UBorder.
-	if ( GetChildrenCount() > 0 )
-	{
-		if ( UPanelSlot* PanelSlot = GetContentSlot() )
-		{
-			UBorderSlot* BorderSlot = Cast<UBorderSlot>(PanelSlot);
-			if ( BorderSlot == NULL )
-			{
-				BorderSlot = NewObject<UBorderSlot>(this);
-				BorderSlot->Content = GetContentSlot()->Content;
-				BorderSlot->Content->Slot = BorderSlot;
-				Slots[0] = BorderSlot;
-			}
-		}
-	}
-}

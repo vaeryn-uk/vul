@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
-#include "Components/ContentWidget.h"
+#include "Components/Border.h"
 #include "VulMultiBorder.generated.h"
 
 /**
@@ -20,8 +20,6 @@ class VULRUNTIME_API UVulMultiBorder : public UContentWidget
 	GENERATED_BODY()
 
 public:
-	virtual void PostLoad() override;
-
 	/**
 	 * The multi border style to apply.
 	 *
