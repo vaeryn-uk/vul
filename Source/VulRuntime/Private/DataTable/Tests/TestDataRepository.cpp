@@ -1,4 +1,5 @@
-﻿#include "TestVulDataStructs.h"
+﻿#include "TestCase.h"
+#include "TestVulDataStructs.h"
 #include "DataTable/VulDataRepository.h"
 #include "Misc/AutomationTest.h"
 
@@ -140,6 +141,53 @@ bool TestDataRepository::RunTest(const FString& Parameters)
 		Child1AsChild1 = Child1AsParent;
 		TestEqual("implicit down cast", Child1AsParent.Get()->ParentField, "parent 1 field");
 	}
+
+	VulTest::Case(this, "indirect referencing", [](VulTest::TC TC)
+	{
+		// Tests that references on embedded objects are traversed & resolved.
+
+		auto RowTable = NewObject<UDataTable>();
+		RowTable->RowStruct = FTestTableRow1::StaticStruct();
+
+		FTestTableRow1 Data;
+		Data.Value = 13;
+		RowTable->AddRow(FName("data"), Data);
+
+		auto ReferencingTable = NewObject<UDataTable>();
+		ReferencingTable->RowStruct = FVulIndirectRefParent::StaticStruct();
+
+		FVulDirectRef Direct;
+		Direct.Data = FVulDataPtr("data");
+
+		FVulIndirectRefParent Parent;
+		Parent.Property = Direct;
+		Parent.Array = {Direct, Direct, Direct};
+		Parent.Map = {{1, Direct}, {2, Direct}, {3, Direct}};
+
+		ReferencingTable->AddRow("parent", Parent);
+
+		auto Repo = NewObject<UVulDataRepository>();
+		Repo->DataTables.Add("RowTable", RowTable);
+		Repo->DataTables.Add("Referencing", ReferencingTable);
+
+		const auto Found = Repo->FindChecked<FVulIndirectRefParent>("Referencing", "parent");
+
+		TC.Equal(Found.Get()->Property.Data.Get<FTestTableRow1>()->Value, 13);
+
+		if (TC.Equal(3, Found->Array.Num()))
+		{
+			TC.Equal(13, Found->Array[0].Data.Get<FTestTableRow1>()->Value);
+			TC.Equal(13, Found->Array[1].Data.Get<FTestTableRow1>()->Value);
+			TC.Equal(13, Found->Array[2].Data.Get<FTestTableRow1>()->Value);
+		}
+
+		if (TC.Equal(3, Found->Map.Num()))
+		{
+			TC.Equal(13, Found->Map[1].Data.Get<FTestTableRow1>()->Value);
+			TC.Equal(13, Found->Map[2].Data.Get<FTestTableRow1>()->Value);
+			TC.Equal(13, Found->Map[3].Data.Get<FTestTableRow1>()->Value);
+		}
+	});
 
 	return !HasAnyErrors();
 }

@@ -83,3 +83,27 @@ struct FVulTestChild2Struct : public FVulTestBaseStruct
 
 	FString Child2Field;
 };
+
+USTRUCT()
+struct FVulDirectRef
+{
+	GENERATED_BODY()
+
+	UPROPERTY(meta=(VulDataTable="RowTable"))
+	FVulDataPtr Data;
+};
+
+USTRUCT()
+struct FVulIndirectRefParent : public FTableRowBase
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	FVulDirectRef Property;
+
+	UPROPERTY()
+	TArray<FVulDirectRef> Array;
+
+	UPROPERTY()
+	TMap<int, FVulDirectRef> Map;
+};

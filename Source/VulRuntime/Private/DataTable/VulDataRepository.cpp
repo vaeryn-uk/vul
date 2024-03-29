@@ -22,19 +22,24 @@ void UVulDataRepository::RebuildReferenceCache()
 
 	for (const auto& [Name, Table] : DataTables)
 	{
-		for (TFieldIterator<FProperty> It(Table->RowStruct); It; ++It)
+		RebuildReferenceCache(Table->RowStruct);
+	}
+
+	ReferencesCached = true;
+}
+
+void UVulDataRepository::RebuildReferenceCache(UScriptStruct* Struct)
+{
+	for (TFieldIterator<FProperty> It(Struct); It; ++It)
+	{
+		const auto Property = *It;
+
+		if (IsReferenceProperty(Property))
 		{
-			const auto Property = *It;
-
-			if (!IsReferenceProperty(Property))
-			{
-				continue;
-			}
-
 			checkf(
 				Property->HasMetaData(TEXT("VulDataTable")),
 				TEXT("%s: meta field VulDataTable must be specified on FVulDataRef properties"),
-				*Table->RowStruct->GetStructCPPName()
+				*Struct->GetStructCPPName()
 			);
 
 			const auto RefTable = FName(Property->GetMetaData(FName(TEXT("VulDataTable"))));
@@ -43,13 +48,19 @@ void UVulDataRepository::RebuildReferenceCache()
 			FVulDataRepositoryReference Ref;
 			Ref.Property = Property->GetName();
 			Ref.ReferencedTable = RefTable;
-			Ref.PropertyTable = Name;
+			Ref.PropertyStruct = Struct->GetStructCPPName();
 
 			ReferenceCache.Add(Ref);
+
+			continue;
+		}
+
+		if (const auto StructProperty = GetStruct(Property))
+		{
+			// This is an embedded struct. Need to check there for more references too.
+			RebuildReferenceCache(StructProperty);
 		}
 	}
-
-	ReferencesCached = true;
 }
 #endif
 
@@ -89,6 +100,30 @@ bool UVulDataRepository::IsReferenceProperty(const FProperty* Property) const
 	return false;
 }
 
+UScriptStruct* UVulDataRepository::GetStruct(const FProperty* Property) const
+{
+	const FProperty* PropertyToCheck;
+
+	if (const auto ArrayProperty = CastField<FArrayProperty>(Property); ArrayProperty)
+	{
+		PropertyToCheck = ArrayProperty->Inner;
+	} else if (const auto MapProperty = CastField<FMapProperty>(Property); MapProperty)
+	{
+		// TODO: Key support too?
+		PropertyToCheck = MapProperty->ValueProp;
+	} else
+	{
+		PropertyToCheck = Property;
+	}
+
+	if (const auto StructProperty = CastField<FStructProperty>(PropertyToCheck); StructProperty)
+	{
+		return StructProperty->Struct;
+	}
+
+	return nullptr;
+}
+
 void UVulDataRepository::InitPtrProperty(const FName& TableName, const FProperty* Property, FVulDataPtr* Ptr, const UScriptStruct* Struct)
 {
 	if (!Ptr->IsPendingInitialization())
@@ -102,7 +137,7 @@ void UVulDataRepository::InitPtrProperty(const FName& TableName, const FProperty
 	FName ReferencedTableName;
 	for (const auto& Reference : ReferenceCache)
 	{
-		if (Reference.PropertyTable == TableName && Reference.Property == Property->GetName())
+		if (Reference.PropertyStruct == Struct->GetStructCPPName() && Reference.Property == Property->GetName())
 		{
 			ReferencedTableName = Reference.ReferencedTable;
 			break;
@@ -170,6 +205,10 @@ void UVulDataRepository::InitStruct(const FName& TableName, const UDataTable* Ta
 					InitStruct(TableName, Table, ValueProp->Struct, ValueData);
 				}
 			}
+		} else if (const auto StructProperty = CastField<FStructProperty>(*It))
+		{
+			// need to seek out more pointers in embedded structs.
+			InitStruct(TableName, Table, StructProperty->Struct, StructProperty->ContainerPtrToValuePtr<void>(Data));
 		}
 	}
 }

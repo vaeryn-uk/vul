@@ -14,10 +14,10 @@ struct FVulDataRepositoryReference
 	GENERATED_BODY()
 
 	/**
-	 * The name of the table that owns the property.
+	 * The CPP name of the struct that owns the property that is a reference.
 	 */
 	UPROPERTY()
-	FName PropertyTable;
+	FString PropertyStruct;
 
 	/**
 	 * The name of the property is a reference to another table.
@@ -64,6 +64,7 @@ public:
 	 * editor, then serialized down with the asset so that it can function in a game build.
 	 */
 	void RebuildReferenceCache();
+	void RebuildReferenceCache(UScriptStruct* Struct);
 #endif
 
 	/**
@@ -108,6 +109,13 @@ private:
 	 * Checks for map and arrays too.
 	 */
 	bool IsReferenceProperty(const FProperty* Property) const;
+
+	/**
+	 * Returns the struct type associated with this property, if any.
+	 *
+	 * This checks the property's type, or the contained type for TMap and TArray.
+	 */
+	UScriptStruct* GetStruct(const FProperty* Property) const;
 
 	void InitPtrProperty(const FName& TableName, const FProperty* Property, FVulDataPtr* Ptr, const UScriptStruct* Struct);
 };
