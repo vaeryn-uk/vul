@@ -61,7 +61,7 @@ struct VULRUNTIME_API FVulDataPtr
 
 private:
 	FVulDataPtr(
-		const TSoftObjectPtr<UVulDataRepository>& InRepository,
+		UVulDataRepository* InRepository,
 		const FName& InTableName,
 		const FName& InRowName,
 		const void* Data = nullptr) : Repository(InRepository),
@@ -83,7 +83,7 @@ private:
 	const void* EnsurePtr() const;
 
 	UPROPERTY()
-	TSoftObjectPtr<UVulDataRepository> Repository;
+	UVulDataRepository* Repository;
 	UPROPERTY(VisibleAnywhere)
 	FName TableName;
 	UPROPERTY(EditAnywhere)

@@ -19,12 +19,12 @@ const FName& FVulDataPtr::GetTableName() const
 TObjectPtr<UScriptStruct> FVulDataPtr::StructType() const
 {
 	checkf(IsValid(), TEXT("attempt to resolve struct type for invalid FVulDataPtr"))
-	return Repository.LoadSynchronous()->StructType(TableName);
+	return Repository->StructType(TableName);
 }
 
 bool FVulDataPtr::IsPendingInitialization() const
 {
-	return IsSet() && (Repository.IsNull() || TableName.IsNone());
+	return IsSet() && TableName.IsNone();
 }
 
 bool FVulDataPtr::IsValid() const
@@ -36,16 +36,12 @@ const void* FVulDataPtr::EnsurePtr() const
 {
 	checkf(IsValid(), TEXT("Attempt to load ptr for invalid FVulDataPtr"))
 
-	// TODO: Caching this Ptr causes issues when garbage collecting. It looks like
-	// the underlying row data is disappearing so we can't just keep a raw pointer
-	// like this. Disabling this fixes the issue, but means we'll be re-initing
-	// the struct every time we need it.
-	// if (Ptr != nullptr)
-	// {
-	// 	return Ptr;
-	// }
+	if (Ptr != nullptr)
+	{
+		return Ptr;
+	}
 
-	Ptr = Repository.LoadSynchronous()->FindRaw<FTableRowBase>(TableName, RowName);
+	Ptr = Repository->FindRaw<FTableRowBase>(TableName, RowName);
 	checkf(Ptr != nullptr, TEXT("Failed to load row: %s"), *RowName.ToString())
 
 	return Ptr;

@@ -67,7 +67,7 @@ void UVulDataRepository::RebuildReferenceCache(UScriptStruct* Struct)
 FVulDataPtr UVulDataRepository::FindPtrChecked(const FName& TableName, const FName& RowName)
 {
 	return FVulDataPtr(
-		TSoftObjectPtr<UVulDataRepository>(this),
+		this,
 		TableName,
 		RowName,
 		FindRaw<FTableRowBase>(TableName, RowName)

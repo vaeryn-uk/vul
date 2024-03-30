@@ -35,6 +35,11 @@ struct FVulDataRepositoryReference
 /**
  * A data repository provides access to one or more data tables that may have references
  * between their rows.
+ *
+ * Note that it is expected that this repository persists in memory for as long as its rows
+ * are used. Add repositories you use as UPROPERTYs in a game singleton/subsystem, or add
+ * this object to the root. Keeping this in memory is critical for the correct behaviour
+ * of FVulDataPtr.
  */
 UCLASS()
 class VULRUNTIME_API UVulDataRepository : public UObject
