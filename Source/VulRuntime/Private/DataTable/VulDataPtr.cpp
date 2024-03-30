@@ -36,10 +36,14 @@ const void* FVulDataPtr::EnsurePtr() const
 {
 	checkf(IsValid(), TEXT("Attempt to load ptr for invalid FVulDataPtr"))
 
-	if (Ptr != nullptr)
-	{
-		return Ptr;
-	}
+	// TODO: Caching this Ptr causes issues when garbage collecting. It looks like
+	// the underlying row data is disappearing so we can't just keep a raw pointer
+	// like this. Disabling this fixes the issue, but means we'll be re-initing
+	// the struct every time we need it.
+	// if (Ptr != nullptr)
+	// {
+	// 	return Ptr;
+	// }
 
 	Ptr = Repository.LoadSynchronous()->FindRaw<FTableRowBase>(TableName, RowName);
 	checkf(Ptr != nullptr, TEXT("Failed to load row: %s"), *RowName.ToString())

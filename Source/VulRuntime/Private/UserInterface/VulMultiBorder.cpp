@@ -8,7 +8,7 @@ TSharedRef<SWidget> UVulMultiBorder::RebuildWidget()
 
 	if (!Style.IsNull())
 	{
-		const auto LoadedStyle = Style.LoadSynchronous()->GetDefaultObject<UVulMultiBorderStyle>();
+		LoadedStyle = Style.LoadSynchronous()->GetDefaultObject<UVulMultiBorderStyle>();
 
 		for (const auto& Brush : LoadedStyle->Brushes)
 		{
@@ -47,3 +47,5 @@ TSharedRef<SBorder> UVulMultiBorder::CreateBorder(TAttribute<const FSlateBrush*>
 
 	return Ret;
 }
+
+FSlateBrush UVulMultiBorder::DefaultBrush = FSlateBrush();

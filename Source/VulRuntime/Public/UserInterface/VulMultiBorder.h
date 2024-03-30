@@ -32,9 +32,12 @@ protected:
 	virtual TSharedRef<SWidget> RebuildWidget() override;
 
 private:
+	UPROPERTY()
+	UVulMultiBorderStyle* LoadedStyle;
+
 	TSharedPtr<SBorder> MyRootBorder;
 
-	static inline FSlateBrush DefaultBrush = FSlateBrush();
+	static FSlateBrush DefaultBrush;
 
 	TSharedRef<SBorder> CreateBorder(TAttribute<const FSlateBrush*> Brush);
 };
