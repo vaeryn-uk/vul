@@ -114,7 +114,20 @@ features over & above native UE data table functionality:
 `TVulMeasure` and `TVulNumber` provide functionality for representing and modifying numeric
 values in game logic, such as health and stats in an RPG system.
 
-### UI Notifications
+### Level management
+
+A `AVulLevelManager` can be dropped in to a root level and levels configured. Management of streaming the
+data in/out will be handled for you and a loading screen can be displayed whilst this occurs. Additional
+support is provided for useful functionality such as hooking in to when levels are loaded and automatically
+spawning widgets when certain levels are shown.
+
+### Centralization of random number generation
+
+See `TVulRngManager` for more information.
+
+### User Interface
+
+#### UI Notifications
 
 `FVulUiNotification` and `TVulNotificationCollection` provide an efficient creation and storage
 of temporary notifications to a player. This provides functionality such as:
@@ -124,7 +137,16 @@ of temporary notifications to a player. This provides functionality such as:
 * Extensibility for implementation of different notification types; `FVulHeadlineNotification` is
   the provided implementation.
 
-### Tooltip
+#### MultiBorder widget
+
+A reusable variation of a border widget that allows defining multiple, overlaid borders in its style definition.
+See `UVulMultiBorder`.
+
+#### Collapsed panel widget
+
+Contains content that is shown/hidden when a connected button is pushed. See `UVulCollapsedPanel`.
+
+#### Tooltip
 
 `UVulTooltipSubsystem` provides a simple API for displaying a tooltip to the user as they interact
 with the world/interface. This is implemented independently of Unreal's native tooltip support for now,
@@ -145,7 +167,7 @@ data that widget will trigger.
 
 This tooltip system also integrates with Vul's Rich Text support.
 
-### Rich Text
+#### Rich Text
 
 `UVulRichTextBlock` seeks to simplify customization and workflows when using Unreal's rich text system.
 This encapsulates a bunch of boilerplate code and allows your project to extend this widget class
@@ -161,10 +183,10 @@ See the code in `UVulRichTextBlock` for customization documentation, but as a qu
   - `Common UI Editor` -> `Template Text Style`. This will be applied as the rich text default style override
     for newly created rich text blocks.
   -  Create a BP that extends `UCommonUIRichTextData`
-    - Select this in `Common UI Framework` -> `Default Rich Text Data Class`
-    - If you want CommonUI's icon support:
-      - Create a data table asset with `RowStruct=RichTextIconData`
-      - Select this in your BP.
+  - Select this in `Common UI Framework` -> `Default Rich Text Data Class`
+  - If you want CommonUI's icon support:
+    - Create a data table asset with `RowStruct=RichTextIconData`
+    - Select this in your BP.
   - You may define a rich text styles table as per CommonUI, although the Vul rich text support
     doesn't utilize or enhance this in any way.
 - Create a widget blueprint with parent `UVulRichTextTooltipWrapper`. This is used whenever
@@ -173,22 +195,7 @@ See the code in `UVulRichTextBlock` for customization documentation, but as a qu
 - Review `UVulRichTextBlock` comments, and override relevant methods to add rich text support
   specific for your project.
 
-### Level management
+#### Generic Horizontal/Vertical Box Spacing
 
-A `AVulLevelManager` can be dropped in to a root level and levels configured. Management of streaming the
-data in/out will be handled for you and a loading screen can be displayed whilst this occurs. Additional
-support is provided for useful functionality such as hooking in to when levels are loaded and automatically
-spawning widgets when certain levels are shown.
-
-### MultiBorder widget
-
-A reusable variation of a border widget that allows defining multiple, overlaid borders in its style definition.
-See `UVulMultiBorder`.
-
-### Collapsed panel widget
-
-Contains content that is shown/hidden when a connected button is pushed. See `UVulCollapsedPanel`.
-
-### Centralization of random number generation
-
-See `TVulRngManager` for more information.
+A property that allows you to control spacing between elements in a container that can
+be seamlessly switched between horizontal and vertical boxes. See `FVulElementSpacer`.
