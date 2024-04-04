@@ -48,6 +48,14 @@ public:
 	}
 
 	/**
+	 * True if this toggle is enabled for the given context.
+	 */
+	bool IsEnabled(const ContextType& Context) const
+	{
+		return Contexts.Contains(Context);
+	}
+
+	/**
 	 * Resets the toggle, forcibly disabling all contexts.
 	 */
 	void Reset()

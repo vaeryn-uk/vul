@@ -69,6 +69,23 @@ void UVulTooltipSubsystem::Show(
 
 	auto& [Contexts, Widget, Hash, _, ExistingData, Anchor] = GetState(Controller);
 
+	if (Contexts.IsEnabled() && ExistingData != nullptr)
+	{
+		if (Data->GetTooltipPriority() < ExistingData->GetTooltipPriority())
+		{
+			// Current widget has a higher priority than the one being requested. Ignore.
+			return;
+		}
+
+		if (Data->GetTooltipPriority() > ExistingData->GetTooltipPriority())
+		{
+			// If we're receiving an increased priority tooltip, clear any previous contexts
+			// to ensure that when this higher-priority tooltip is later hidden, we don't use
+			// a lower-priority context to keep this one open.
+			Contexts.Reset();
+		}
+	}
+
 	Contexts.Enable(Context);
 
 	if (Hash.IsSet() && Hash.GetValue() == Data->Hash() && Anchor == InAnchor)
@@ -123,7 +140,6 @@ void UVulTooltipSubsystem::Hide(const FString& Context, const APlayerController*
 		OnDataHidden.Broadcast(State.Data);
 
 		State.Hash.Reset();
-
 		State.Data = nullptr;
 	}
 }

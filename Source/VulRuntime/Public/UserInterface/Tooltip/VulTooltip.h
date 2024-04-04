@@ -20,6 +20,12 @@ struct VULRUNTIME_API FVulTooltipData
 
 	virtual ~FVulTooltipData() = default;
 	virtual FString Hash() const PURE_VIRTUAL(, return "";);
+
+	/**
+	 * The priority of this tooltip. Requests to show a lower-priority tooltip will be
+	 * ignored if showing a higher-priority one.
+	 */
+	virtual int GetTooltipPriority() const;
 };
 
 /**
