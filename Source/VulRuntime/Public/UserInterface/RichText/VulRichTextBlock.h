@@ -20,7 +20,10 @@
  *
  * Syntax guide for text content:
  *
- *   - <ICON_NAME scale="XX">CONTENT</>
+ *   - <vi i="icon_row_name" scale="custom_scale"/> for a Vul-rendered icon.
+ *     See UVulRuntimeSettings::IconWidget.
+ *     Note this is offered as an alternative to the CommonUI icon syntax:
+ *     <ICON_NAME scale="XX">CONTENT</>
  *     ICON_NAME is the RowName of an icon defined in the Vul settings' RichTextIcons
  *     data table. Scale is an optional attribute to scale the icon; a value between 0
  *     and 1. Content is also optional, and is displayed based on the text block's inline
@@ -40,8 +43,6 @@
  *     Similar to above, but for dynamic tooltips where your project has more control over the
  *     widget that is inlined in the text. Implement CreateDynamicTooltips() and provide delegates
  *     for how these are resolved.
- *   - <vi i="icon_row_name" scale="custom_scale"/> for a Vul-rendered icon.
- *     See UVulRuntimeSettings::IconWidget.
  */
 UCLASS()
 class VULRUNTIME_API UVulRichTextBlock : public UCommonRichTextBlock
