@@ -15,6 +15,8 @@
  *     that is used in multiple places throughout a game.
  *   - Retains CommonUI functionality for icons, which reads icons from the Vul setting's
  *     RichTextIcons data table.
+ *   - An alternative for CommonUI's icon support that allows scaling of icons beyond the
+ *     bounds of the surrounding text size.
  *
  * Syntax guide for text content:
  *
@@ -38,6 +40,8 @@
  *     Similar to above, but for dynamic tooltips where your project has more control over the
  *     widget that is inlined in the text. Implement CreateDynamicTooltips() and provide delegates
  *     for how these are resolved.
+ *   - <vi i="icon_row_name" scale="custom_scale"/> for a Vul-rendered icon.
+ *     See UVulRuntimeSettings::IconWidget.
  */
 UCLASS()
 class VULRUNTIME_API UVulRichTextBlock : public UCommonRichTextBlock
@@ -80,8 +84,6 @@ public:
 		const FRunInfo&,
 		const FTextBlockStyle&
 	);
-
-	static float RecommendedHeight(const FTextBlockStyle& TextStyle);
 
 	/**
 	 * Utility function when defining static or dynamic content markets in your project.

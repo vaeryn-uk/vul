@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Object.h"
+#include "UserInterface/RichText/VulRichTextIcon.h"
 #include "UserInterface/RichText/VulRichTextTooltipWrapper.h"
 #include "VulRuntimeSettings.generated.h"
 
@@ -49,6 +50,20 @@ public:
 	UPROPERTY(EditAnywhere, Config, Category="User Interface|Rich Text")
 	TSoftClassPtr<UVulRichTextTooltipWrapper> RichTextTooltipWrapper;
 
+	/**
+	 * The icon widget we use to render icons in rich text.
+	 *
+	 * This is an extension/replacement of CommonUI's icon rich text support to facilitate custom
+	 * scaling, as well as control in extending the icon widget if you would like to.
+	 *
+	 * Rich text syntax: <vi i="icon_row_name" scale="custom_scale"/>
+	 *
+	 * Where icon_row_name matches a row name in the CommonUI's rich text icons table (see CommonUI settings).
+	 * custom_scale can be used to change the scale of this single icon as required. Can be greater than 1,
+	 * unlike common UI.
+	 */
+	UPROPERTY(EditAnywhere, Config, Category="User Interface|Rich Text")
+	TSoftClassPtr<UVulRichTextIcon> IconWidget = UVulRichTextIcon::StaticClass();
 
 // Editor integration
 	virtual FName GetCategoryName() const override { return FName("Game"); }

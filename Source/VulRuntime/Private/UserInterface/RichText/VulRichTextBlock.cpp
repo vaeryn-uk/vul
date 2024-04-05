@@ -4,8 +4,6 @@
 #include "Components/RichTextBlockDecorator.h"
 #include "Reflection/VulReflection.h"
 #include "CommonTextBlock.h"
-#include "Fonts/FontMeasure.h"
-#include "Misc/DefaultValueHelper.h"
 #include "UserInterface/RichText/VulRichTextTooltipWrapper.h"
 #include "Widgets/Text/SRichTextBlock.h"
 
@@ -45,18 +43,12 @@ void UVulRichTextBlock::CreateDecorators(TArray<TSharedRef<ITextDecorator>>& Out
 	Super::CreateDecorators(OutDecorators);
 
 	OutDecorators.Add(MakeShared<FVulTooltipDecorator>(this));
+	OutDecorators.Add(MakeShared<FVulIconDecorator>(this));
 }
 
 void UVulRichTextBlock::CreateDynamicTooltips(TArray<FVulDynamicTooltipResolver>&) const
 {
 
-}
-
-float UVulRichTextBlock::RecommendedHeight(const FTextBlockStyle& TextStyle)
-{
-	const FSlateFontInfo Font = TextStyle.Font;
-	const TSharedRef<FSlateFontMeasure> FontMeasure = FSlateApplication::Get().GetRenderer()->GetFontMeasureService();
-	return FontMeasure.Get().GetMaxCharacterHeight(Font);
 }
 
 FString UVulRichTextBlock::ContentMarker(const FString& Str)
@@ -128,32 +120,8 @@ TSharedPtr<SWidget> UVulRichTextBlock::DecorateTooltip(
 		Widget = Tooltip.GetSubtype<UWidget*>();
 	}
 
-	// Apply scaling to the widget.
-	if (const auto AutoSized = dynamic_cast<IVulAutoSizedInlineWidget*>(Widget); AutoSized != nullptr)
-	{
-		auto CustomScale = 1.f;
-		if (RunInfo.MetaData.Contains("scale"))
-		{
-			FDefaultValueHelper::ParseFloat(RunInfo.MetaData["scale"], CustomScale);
-		}
-
-		if (const auto SizeBox = AutoSized->GetAutoSizeBox(); IsValid(SizeBox))
-		{
-			const auto TextHeight = RecommendedHeight(InDefaultTextStyle);
-			const auto WidgetHeight = TextHeight * AutoSized->GetAutoSizeDefaultScale() * CustomScale;
-			SizeBox->SetHeightOverride(WidgetHeight);
-
-			// If the widget requests it, apply some translation to vertically center it.
-			// Not sure that this is the best way to do achieve this (via render transform),
-			// but some testing suggests that this render translation is respected for mouse
-			// hover detection and layouts around the widget.
-			if (AutoSized->AutoSizeVerticallyCentre())
-			{
-				const auto Correction = FVector2D(0, (WidgetHeight - TextHeight) / 2);
-				SizeBox->SetRenderTranslation(SizeBox->GetRenderTransform().Translation + Correction);
-			}
-		}
-	}
+	// Apply scaling to the widget if specified.
+	IVulAutoSizedInlineWidget::ApplyAutoSizing(Widget, RunInfo, InDefaultTextStyle);
 
 	return Widget->TakeWidget();
 }

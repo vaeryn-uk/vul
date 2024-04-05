@@ -1,4 +1,8 @@
 ﻿#include "UserInterface/RichText/VulRichTextTooltipWrapper.h"
+
+#include "Components/SizeBoxSlot.h"
+#include "Fonts/FontMeasure.h"
+#include "Misc/DefaultValueHelper.h"
 #include "UserInterface/RichText/VulRichTextBlock.h"
 #include "UserInterface/Tooltip/VulTooltipSubsystem.h"
 
@@ -38,4 +42,56 @@ void UVulRichTextTooltipWrapper::NativeOnMouseLeave(const FPointerEvent& InMouse
 	}
 
 	VulRuntime::Tooltip(this)->Hide("RichText", GetOwningPlayer());
+}
+
+float IVulAutoSizedInlineWidget::RecommendedHeight(const FTextBlockStyle& TextStyle)
+{
+	const FSlateFontInfo Font = TextStyle.Font;
+	const TSharedRef<FSlateFontMeasure> FontMeasure = FSlateApplication::Get().GetRenderer()->GetFontMeasureService();
+	return FontMeasure.Get().GetMaxCharacterHeight(Font);
+}
+
+void IVulAutoSizedInlineWidget::ApplyAutoSizing(
+	UWidget* Widget,
+	const FTextRunInfo& RunInfo,
+	const FTextBlockStyle& TextStyle
+) {
+	const auto AutoSized = dynamic_cast<IVulAutoSizedInlineWidget*>(Widget);
+	if (AutoSized == nullptr)
+	{
+		return;
+	}
+
+	auto CustomScale = 1.f;
+	if (RunInfo.MetaData.Contains("scale"))
+	{
+		FDefaultValueHelper::ParseFloat(RunInfo.MetaData["scale"], CustomScale);
+	}
+
+	if (const auto SizeBox = AutoSized->GetAutoSizeBox(); IsValid(SizeBox))
+	{
+		// Keep the size box the same height as the widget to ensure this flows
+		// with the text in terms of layout. We then mess with negative padding
+		// of the contents to center it, breaking out of the laid-out size.
+		const auto TextHeight = RecommendedHeight(TextStyle);
+		const auto WidgetHeight = TextHeight * AutoSized->GetAutoSizeDefaultScale() * CustomScale;
+		SizeBox->SetHeightOverride(TextHeight);
+
+		if (const auto WidthRatio = AutoSized->GetAutoSizeAspectRatio(); WidthRatio.IsSet())
+		{
+			// Also override width too if the widget requests it.
+			SizeBox->SetWidthOverride(WidgetHeight * WidthRatio.GetValue());
+		}
+
+		// If the widget requests it, apply some translation to vertically center it.
+		// Not sure that this is the best way to do achieve this (via render transform),
+		// but some testing suggests that this render translation is respected for mouse
+		// hover detection and layouts around the widget.
+		if (AutoSized->AutoSizeVerticallyCentre())
+		{
+			const auto Correction = (WidgetHeight - TextHeight) / 2;
+			const auto Slot = Cast<USizeBoxSlot>(SizeBox->GetContentSlot());
+			Slot->SetPadding(Slot->GetPadding() + FMargin(0, -Correction, 0, -Correction));
+		}
+	}
 }

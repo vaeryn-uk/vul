@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "CommonUserWidget.h"
 #include "Components/SizeBox.h"
+#include "Framework/Text/ITextDecorator.h"
 #include "UObject/Object.h"
 #include "UserInterface/Tooltip/VulTooltip.h"
 #include "VulRichTextTooltipWrapper.generated.h"
@@ -47,10 +48,25 @@ public:
 	virtual ~IVulAutoSizedInlineWidget() = default;
 
 	/**
+	 * Sizes the widget given the inline text rendering info, if the widget supports it.
+	 */
+	static void ApplyAutoSizing(UWidget* Widget, const FTextRunInfo& RunInfo, const FTextBlockStyle& TextStyle);
+
+	static float RecommendedHeight(const FTextBlockStyle& TextStyle);
+
+	/**
 	 * When the rich text system adds this widget in line in text, this SizeBox (if not null)
 	 * will have its max height override set based on the surrounding rich text.
 	 */
-	virtual USizeBox* GetAutoSizeBox() { return nullptr; };
+	virtual USizeBox* GetAutoSizeBox() { return nullptr; }
+
+	/**
+	 * When applying an automatic size to GetAutoSizeBox, optionally return a proportion
+	 * here that indicates the width of the widget based on the calculated height.
+	 *
+	 * An unset return leaves this as the default.
+	 */
+	virtual TOptional<float> GetAutoSizeAspectRatio() { return {}; }
 
 	/**
 	 * Implement this to scale the widget by some constant factor.
