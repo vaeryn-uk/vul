@@ -32,6 +32,14 @@ public:
 	virtual USizeBox* GetAutoSizeBox() override;
 
 	virtual TOptional<float> GetAutoSizeAspectRatio() override;
+
+	/**
+	 * Override this to provide an fallback icon when no icon is found. Useful as a visual
+	 * indication that an icon is missing or an icon rich text syntax is wrong.
+	 *
+	 * Default is to return nullptr, where no icon is rendered.
+	 */
+	virtual TObjectPtr<UObject> FallbackIcon() const;
 };
 
 class FVulIconDecorator : public FRichTextDecorator
