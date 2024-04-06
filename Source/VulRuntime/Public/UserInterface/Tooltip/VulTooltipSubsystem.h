@@ -172,4 +172,8 @@ namespace VulRuntime
 	 * them in your own projects to get at the handlers.
 	 */
 	VULRUNTIME_API void Tooltipify(const FString& Context, UWidget* Widget, FVulGetTooltipData Getter);
+	/**
+	 * Tooltipify a widget with some static tooltip data. No need for a delegate.
+	 */
+	VULRUNTIME_API void Tooltipify(const FString& Context, UWidget* Widget, TSharedPtr<const FVulTooltipData> Data);
 }

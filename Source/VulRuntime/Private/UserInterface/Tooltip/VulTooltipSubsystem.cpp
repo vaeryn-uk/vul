@@ -266,3 +266,8 @@ void VulRuntime::Tooltipify(const FString& Context, UWidget* Widget, FVulGetTool
 		}
 	));
 }
+
+void VulRuntime::Tooltipify(const FString& Context, UWidget* Widget, TSharedPtr<const FVulTooltipData> Data)
+{
+	return Tooltipify(Context, Widget, FVulGetTooltipData::CreateWeakLambda(Widget, [Data] { return Data; }));
+}
