@@ -114,6 +114,9 @@ features over & above native UE data table functionality:
 `TVulMeasure` and `TVulNumber` provide functionality for representing and modifying numeric
 values in game logic, such as health and stats in an RPG system.
 
+`TVulCharacterStat` is similar to above, but is simplified for stats that have modifications
+bucketed by defined sources, which are each tracked independently.
+
 ### Level management
 
 A `AVulLevelManager` can be dropped in to a root level and levels configured. Management of streaming the

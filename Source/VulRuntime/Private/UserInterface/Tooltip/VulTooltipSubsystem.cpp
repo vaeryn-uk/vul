@@ -144,6 +144,48 @@ void UVulTooltipSubsystem::Hide(const FString& Context, const APlayerController*
 	}
 }
 
+FText UVulTooltipSubsystem::PrepareCachedTooltip(const UObject* Widget, TSharedPtr<FVulTooltipData> Data)
+{
+	if (!Data.IsValid())
+	{
+		return FText::FromString("{content}");
+	}
+
+	if (CachedTooltips.Contains(Data->Hash()))
+	{
+		CachedTooltips.FindChecked(Data->Hash()).Value.Add(Widget);
+	} else
+	{
+		TSet<TWeakObjectPtr<const UObject>> Objs;
+		Objs.Add(Widget);
+		CachedTooltips.Add(Data->Hash(), {Data, Objs});
+	}
+
+	GarbageCollectCachedTooltips();
+
+	return FText::FromString(FString::Printf(TEXT("<tt cached=\"%s\">{content}</>"), *Data->Hash()));
+}
+
+FText UVulTooltipSubsystem::PrepareCachedTooltip(
+	const UObject* Widget,
+	TSharedPtr<FVulTooltipData> Data,
+	const FText& Content
+) {
+	FFormatNamedArguments Args;
+	Args.Add("content", Content);
+	return FText::Format(PrepareCachedTooltip(Widget, Data), Args);
+}
+
+TSharedPtr<FVulTooltipData> UVulTooltipSubsystem::LookupCachedTooltip(const FString& Id)
+{
+	if (CachedTooltips.Contains(Id))
+	{
+		return CachedTooltips[Id].Key;
+	}
+
+	return nullptr;
+}
+
 UVulTooltipSubsystem::FWidgetState& UVulTooltipSubsystem::GetState(const APlayerController* Controller) const
 {
 	const auto PlayerIndex = Controller->GetLocalPlayer()->GetLocalPlayerIndex();
@@ -241,6 +283,35 @@ FVector2D UVulTooltipSubsystem::GetWidgetScreenCoords(const UWidget* Widget, con
 	);
 
 	return Out;
+}
+
+void UVulTooltipSubsystem::GarbageCollectCachedTooltips()
+{
+	// TODO: Test this.
+	TArray<FString> ToRemove;
+	for (const auto& Entry : CachedTooltips)
+	{
+		// We remove unless any UObject reference is still valid.
+		auto Remove = true;
+		for (const auto& Obj : Entry.Value.Value)
+		{
+			if (Obj.IsValid())
+			{
+				Remove = false;
+				break;
+			}
+		}
+
+		if (Remove)
+		{
+			ToRemove.Add(Entry.Key);
+		}
+	}
+
+	for (const auto& Key : ToRemove)
+	{
+		CachedTooltips.Remove(Key);
+	}
 }
 
 UVulTooltipSubsystem* VulRuntime::Tooltip(const UObject* WorldCtx)

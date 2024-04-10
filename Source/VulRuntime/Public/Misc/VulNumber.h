@@ -89,6 +89,9 @@ struct TVulNumberModification
  * - Ability to clamp the value with another TVulNumber for dynamic bound setting. Clamps are applied against the
  *   base and when calculating all modifications.
  * - Access to WatchCollection for registering callbacks for when the number is changed through any means.
+ *
+ * Note that you may want to consider TVulCharacterStat as a simpler replacement for this implementation
+ * if you are dealing with RPG stats in your game.
  */
 template <typename NumberType>
 class TVulNumber

@@ -5,7 +5,9 @@
 #include "Reflection/VulReflection.h"
 #include "CommonTextBlock.h"
 #include "UserInterface/RichText/VulRichTextTooltipWrapper.h"
+#include "UserInterface/Tooltip/VulTooltipSubsystem.h"
 #include "Widgets/Text/SRichTextBlock.h"
+#include "World/VulWorldGlobals.h"
 
 const TMap<FString, TSharedPtr<const FVulTooltipData>>& UVulRichTextBlock::StaticTooltips() const
 {
@@ -71,6 +73,18 @@ TSharedPtr<SWidget> UVulRichTextBlock::DecorateTooltip(
 				Tooltip = FVulRichTextDynamicData(StaticTooltips()[Entry.Value]);
 				break;
 			}
+		}
+
+		if (Entry.Key == "cached")
+		{
+			const auto Tooltips = VulRuntime::WorldGlobals::GetGameInstanceSubsystemChecked<UVulTooltipSubsystem>(this);
+			const auto Data = Tooltips->LookupCachedTooltip(Entry.Value);
+			if (Data == nullptr)
+			{
+				break;
+			}
+
+			Tooltip = FVulRichTextDynamicData(Data);
 		}
 	}
 

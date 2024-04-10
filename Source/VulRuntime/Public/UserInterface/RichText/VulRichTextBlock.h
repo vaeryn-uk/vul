@@ -43,6 +43,9 @@
  *     Similar to above, but for dynamic tooltips where your project has more control over the
  *     widget that is inlined in the text. Implement CreateDynamicTooltips() and provide delegates
  *     for how these are resolved.
+ *   - <tt cached="[tooltip-id]">CONTENT</> will render pre-prepared tooltip data, saving having to
+ *     pack all relevant data in to the rich text syntax then unpack & render in a decorator.
+ *     See UVulTooltipSubsystem for using these.
  */
 UCLASS()
 class VULRUNTIME_API UVulRichTextBlock : public UCommonRichTextBlock
