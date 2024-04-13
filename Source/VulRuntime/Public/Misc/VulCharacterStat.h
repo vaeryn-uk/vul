@@ -55,9 +55,32 @@ public:
 	NumberType GetBase() const { return Base; }
 
 	/**
+	 * Gets the current value of base, or a specific source.
+	 *
+	 * Note this is not the final value; see Value().
+	 */
+	NumberType Get(const TOptional<SourceType>& Source = {})
+	{
+		if (Source.IsSet())
+		{
+			return Buckets.Contains(Source.GetValue()) ? Buckets[Source.GetValue()] : 0;
+		}
+
+		return Base;
+	}
+
+	/**
 	 * Returns each modification source mapped to the amount attributed to that source.
 	 */
 	const TMap<SourceType, NumberType>& GetSources() const { return Buckets; }
+
+	/**
+	 * Sets the base or source to the given value, overriding any previous value.
+	 */
+	void Set(const NumberType N, const TOptional<SourceType>& Source = {})
+	{
+		Delta(N - Get(Source));
+	}
 
 	/**
 	 * Applies a change to the stat by the provided value, optionally bucketed to Source.
