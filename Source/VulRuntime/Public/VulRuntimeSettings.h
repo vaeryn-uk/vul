@@ -65,6 +65,14 @@ public:
 	UPROPERTY(EditAnywhere, Config, Category="User Interface|Rich Text")
 	TSoftClassPtr<UVulRichTextIcon> IconWidget = UVulRichTextIcon::StaticClass();
 
+	/**
+	 * Enhanced icon support for rich text when using `UVulRichTextBlock`.
+	 *
+	 * <vi i=\"row-name\"></> will render the icon in the table matching that row name.
+	 */
+	UPROPERTY(EditAnywhere, Config, Category="User Interface|Rich Text")
+	TSoftObjectPtr<UDataTable> IconSet;
+
 // Editor integration
 	virtual FName GetCategoryName() const override { return FName("Game"); }
 	virtual FName GetContainerName() const override { return FName("Project"); };

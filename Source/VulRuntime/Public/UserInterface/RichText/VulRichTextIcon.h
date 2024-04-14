@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "VulRichTextTooltipWrapper.h"
+#include "Components/Border.h"
 #include "Components/Image.h"
 #include "Components/RichTextBlockDecorator.h"
 #include "VulRichTextIcon.generated.h"
@@ -26,6 +27,9 @@ public:
 
 	UPROPERTY(meta=(BindWidget), EditAnywhere)
 	UImage* Icon;
+
+	UPROPERTY(meta=(BindWidget), EditAnywhere)
+	UBorder* Border;
 
 	virtual bool Initialize() override;
 

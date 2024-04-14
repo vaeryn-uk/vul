@@ -1,10 +1,9 @@
 ﻿#include "UserInterface/RichText/VulRichTextIcon.h"
-#include "CommonUISettings.h"
-#include "ICommonUIModule.h"
 #include "VulRuntimeSettings.h"
 #include "Blueprint/WidgetTree.h"
+#include "Components/BorderSlot.h"
 #include "Components/SizeBoxSlot.h"
-#include "DeveloperSettings/VulDeveloperSettings.h"
+#include "UserInterface/RichText/VulRichTextIconDefinition.h"
 
 bool UVulRichTextIcon::Initialize()
 {
@@ -14,9 +13,14 @@ bool UVulRichTextIcon::Initialize()
 	{
 		Size = WidgetTree->ConstructWidget<USizeBox>(USizeBox::StaticClass(), FName("Size"));
 		WidgetTree->RootWidget = Size;
-		Icon = WidgetTree->ConstructWidget<UImage>(UImage::StaticClass(), FName("Icon"));
-		const auto SizeBoxSlot = Size->SetContent(Icon);
+
+		Border = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), FName("Outline"));
+		const auto SizeBoxSlot = Size->SetContent(Border);
 		Cast<USizeBoxSlot>(SizeBoxSlot)->SetPadding(FMargin(0));
+
+		Icon = WidgetTree->ConstructWidget<UImage>(UImage::StaticClass(), FName("Icon"));
+		const auto BorderSlot = Border->SetContent(Icon);
+		Cast<UBorderSlot>(BorderSlot)->SetPadding(FMargin(0));
 	}
 
 	return Ret;
@@ -57,14 +61,37 @@ TSharedPtr<SWidget> FVulIconDecorator::CreateDecoratorWidget(
 	// If not, and this Umg is not used, it will be cleaned up by GC.
 	const auto Umg = CreateWidget<UVulRichTextIcon>(Owner, VulRuntime::Settings()->IconWidget.LoadSynchronous());
 
-	const auto Found = ICommonUIModule::GetSettings().GetRichTextData()->FindIcon(FName(RunInfo.MetaData["i"]));
+	if (!ensureMsgf(!VulRuntime::Settings()->IconSet.IsNull(), TEXT("Must set an IconSet in VulRuntime settings")))
+	{
+		return TSharedPtr<SWidget>();
+	}
+
+	const auto Found = VulRuntime::Settings()->IconSet.LoadSynchronous()->FindRow<FVulRichTextIconDefinition>(
+		FName(RunInfo.MetaData["i"]),
+		"VulRichTextIconDecorator"
+	);
+
 	UObject* Icon;
+	FLinearColor Tint = FLinearColor::White;
+
+	FSlateBrush BackgroundBrush;
+	BackgroundBrush.TintColor = FLinearColor::Transparent;
+
+	FMargin BackgroundPadding = FMargin(0);
+
 	if (!Found || Found->ResourceObject.IsNull())
 	{
 		Icon = Umg->FallbackIcon();
 	} else
 	{
 		Icon = Found->ResourceObject.LoadSynchronous();
+		Tint = Found->Tint;
+
+		if (Found->ShowBackground)
+		{
+			BackgroundBrush = Found->BackgroundBrush;
+			BackgroundPadding = Found->BackgroundPadding;
+		}
 	}
 
 	if (!IsValid(Icon))
@@ -73,6 +100,9 @@ TSharedPtr<SWidget> FVulIconDecorator::CreateDecoratorWidget(
 	}
 
 	Umg->Icon->SetBrushResourceObject(Icon);
+	Umg->Icon->SetBrushTintColor(Tint.ToFColor(false));
+	Umg->Border->SetBrush(BackgroundBrush);
+	Umg->Border->SetPadding(BackgroundPadding);
 
 	IVulAutoSizedInlineWidget::ApplyAutoSizing(Umg, RunInfo, DefaultTextStyle);
 

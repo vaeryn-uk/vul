@@ -187,9 +187,13 @@ See the code in `UVulRichTextBlock` for customization documentation, but as a qu
     for newly created rich text blocks.
   -  Create a BP that extends `UCommonUIRichTextData`
   - Select this in `Common UI Framework` -> `Default Rich Text Data Class`
-  - If you want CommonUI's icon support:
-    - Create a data table asset with `RowStruct=RichTextIconData`
-    - Select this in your BP.
+  - If you want icon support, create a data table with a row structure of `FVulRichTextIconDefinition`.
+    - Set this table in Vul library settings, `IconSet`.
+    - Use syntax `<vi i=\"<row-name>\"</>` to render icons
+    - Optionally override `UVulRichTextIcon` to further customize appearance, then select your override 
+      in Vul library settings. Note currently widget blueprints extensions of this icon widget do not work;
+      they must be in CPP.
+    - These icons extend Rich Text Icons with support for color and background configuration.
   - You may define a rich text styles table as per CommonUI, although the Vul rich text support
     doesn't utilize or enhance this in any way.
 - Create a widget blueprint with parent `UVulRichTextTooltipWrapper`. This is used whenever
