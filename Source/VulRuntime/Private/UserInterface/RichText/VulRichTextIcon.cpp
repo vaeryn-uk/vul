@@ -4,6 +4,9 @@
 #include "Components/BorderSlot.h"
 #include "Components/SizeBoxSlot.h"
 #include "UserInterface/RichText/VulRichTextIconDefinition.h"
+#if WITH_EDITORONLY_DATA
+#include "VulEditorUtil.h"
+#endif
 
 bool UVulRichTextIcon::Initialize()
 {
@@ -36,6 +39,72 @@ TOptional<float> UVulRichTextIcon::GetAutoSizeAspectRatio()
 	// Assumes icons are 1:1.
 	return 1;
 }
+
+bool UVulRichTextIcon::ApplyIcon(const FVulRichTextIconDefinition* Definition)
+{
+	UObject* IconToRender;
+	FLinearColor Tint = FLinearColor::White;
+
+	FSlateBrush BackgroundBrush;
+	BackgroundBrush.TintColor = FLinearColor::Transparent;
+
+	FMargin BackgroundPadding = FMargin(0);
+
+	if (!Definition || Definition->ResourceObject.IsNull())
+	{
+		IconToRender = FallbackIcon();
+	} else
+	{
+		IconToRender = Definition->ResourceObject.LoadSynchronous();
+		Tint = Definition->Tint;
+
+		if (Definition->ShowBackground)
+		{
+			BackgroundBrush = Definition->BackgroundBrush;
+			BackgroundPadding = Definition->BackgroundPadding;
+		}
+	}
+
+	if (!IsValid(IconToRender))
+	{
+		return false;
+	}
+
+	Icon->SetBrushResourceObject(IconToRender);
+	Icon->SetBrushTintColor(Tint.ToFColor(false));
+	Border->SetBrush(BackgroundBrush);
+	Border->SetPadding(BackgroundPadding);
+
+	return true;
+}
+
+#if WITH_EDITORONLY_DATA
+void UVulRichTextIcon::TestIcon()
+{
+	if (TestIconRowName.IsNone())
+	{
+		FVulEditorUtil::Output("Icon Test", "No row name selected", EAppMsgCategory::Error);
+		return;
+	}
+
+	const auto Found = VulRuntime::Settings()->IconSet->FindRow<FVulRichTextIconDefinition>(
+		TestIconRowName,
+		"UVulRichTextIcon::TestIcon"
+	);
+
+	if (Found == nullptr)
+	{
+		FVulEditorUtil::Output(
+			"Icon Test",
+			FString::Printf(TEXT("Could not find icon with row name=%s"), *TestIconRowName.ToString()),
+			EAppMsgCategory::Error
+		);
+		return;
+	}
+
+	ApplyIcon(Found);
+}
+#endif
 
 TObjectPtr<UObject> UVulRichTextIcon::FallbackIcon() const
 {
@@ -71,38 +140,10 @@ TSharedPtr<SWidget> FVulIconDecorator::CreateDecoratorWidget(
 		"VulRichTextIconDecorator"
 	);
 
-	UObject* Icon;
-	FLinearColor Tint = FLinearColor::White;
-
-	FSlateBrush BackgroundBrush;
-	BackgroundBrush.TintColor = FLinearColor::Transparent;
-
-	FMargin BackgroundPadding = FMargin(0);
-
-	if (!Found || Found->ResourceObject.IsNull())
-	{
-		Icon = Umg->FallbackIcon();
-	} else
-	{
-		Icon = Found->ResourceObject.LoadSynchronous();
-		Tint = Found->Tint;
-
-		if (Found->ShowBackground)
-		{
-			BackgroundBrush = Found->BackgroundBrush;
-			BackgroundPadding = Found->BackgroundPadding;
-		}
-	}
-
-	if (!IsValid(Icon))
+	if (!Umg->ApplyIcon(Found))
 	{
 		return TSharedPtr<SWidget>();
 	}
-
-	Umg->Icon->SetBrushResourceObject(Icon);
-	Umg->Icon->SetBrushTintColor(Tint.ToFColor(false));
-	Umg->Border->SetBrush(BackgroundBrush);
-	Umg->Border->SetPadding(BackgroundPadding);
 
 	IVulAutoSizedInlineWidget::ApplyAutoSizing(Umg, RunInfo, DefaultTextStyle);
 

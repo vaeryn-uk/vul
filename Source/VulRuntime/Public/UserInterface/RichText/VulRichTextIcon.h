@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "VulRichTextIconDefinition.h"
 #include "VulRichTextTooltipWrapper.h"
 #include "Components/Border.h"
 #include "Components/Image.h"
@@ -22,13 +23,13 @@ class VULRUNTIME_API UVulRichTextIcon : public UCommonUserWidget, public IVulAut
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(meta=(BindWidget), EditAnywhere)
+	UPROPERTY(meta=(BindWidget))
 	USizeBox* Size;
 
-	UPROPERTY(meta=(BindWidget), EditAnywhere)
+	UPROPERTY(meta=(BindWidget))
 	UImage* Icon;
 
-	UPROPERTY(meta=(BindWidget), EditAnywhere)
+	UPROPERTY(meta=(BindWidget))
 	UBorder* Border;
 
 	virtual bool Initialize() override;
@@ -36,6 +37,22 @@ public:
 	virtual USizeBox* GetAutoSizeBox() override;
 
 	virtual TOptional<float> GetAutoSizeAspectRatio() override;
+
+	bool ApplyIcon(const FVulRichTextIconDefinition* Definition);
+
+#if WITH_EDITORONLY_DATA
+	/**
+	 * The icon to preview when TestIcon is selected.
+	 */
+	UPROPERTY(EditAnywhere, Category="Test")
+	FName TestIconRowName;
+
+	/**
+	 * Loads & previews the icon indicated by TestIconRowName.
+	 */
+	UFUNCTION(CallInEditor, Category="Test")
+	void TestIcon();
+#endif
 
 	/**
 	 * Override this to provide an fallback icon when no icon is found. Useful as a visual

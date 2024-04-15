@@ -30,5 +30,10 @@ public class VulRuntime : ModuleRules
                 "UMG",
             }
         );
+
+        if (Target.bBuildEditor)
+        {
+            PrivateDependencyModuleNames.Add("EditorScriptingUtilities");
+        }
     }
 }

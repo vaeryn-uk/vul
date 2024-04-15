@@ -1,6 +1,7 @@
-﻿#include "VulEditorUtil.h"
+﻿#if WITH_EDITOR
+#include "VulEditorUtil.h"
+#include "VulRuntime.h"
 #include "EditorDialogLibrary.h"
-#include "VulEditor.h"
 
 void FVulEditorUtil::Output(
 	const FText& Title,
@@ -10,13 +11,13 @@ void FVulEditorUtil::Output(
 	UObject* Details)
 {
 	if (Category == EAppMsgCategory::Warning) {
-		UE_LOG(LogVulEditor, Warning, TEXT("%s: %s"), *Title.ToString(), *Message.ToString());
+		UE_LOG(LogVul, Warning, TEXT("%s: %s"), *Title.ToString(), *Message.ToString());
 	} else if (Category == EAppMsgCategory::Info || Category == EAppMsgCategory::Success)
 	{
-		UE_LOG(LogVulEditor, Display, TEXT("%s: %s"), *Title.ToString(), *Message.ToString());
+		UE_LOG(LogVul, Display, TEXT("%s: %s"), *Title.ToString(), *Message.ToString());
 	} else
 	{
-		UE_LOG(LogVulEditor, Error, TEXT("%s: %s"), *Title.ToString(), *Message.ToString());
+		UE_LOG(LogVul, Error, TEXT("%s: %s"), *Title.ToString(), *Message.ToString());
 	}
 
 	// TODO: Print details object in log message?
@@ -41,3 +42,15 @@ void FVulEditorUtil::Output(
 		);
 	}
 }
+
+void FVulEditorUtil::Output(
+	const FString& Title,
+	const FString& Message,
+	const EAppMsgCategory& Category,
+	bool ShowDialog,
+	UObject* Details
+) {
+	return Output(FText::FromString(Title), FText::FromString(Message), Category, ShowDialog, Details);
+}
+
+#endif
