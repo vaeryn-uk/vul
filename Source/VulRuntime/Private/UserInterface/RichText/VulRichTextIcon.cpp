@@ -87,10 +87,7 @@ void UVulRichTextIcon::TestIcon()
 		return;
 	}
 
-	const auto Found = VulRuntime::Settings()->IconSet->FindRow<FVulRichTextIconDefinition>(
-		TestIconRowName,
-		"UVulRichTextIcon::TestIcon"
-	);
+	const auto Found = VulRuntime::Settings()->ResolveIcon(TestIconRowName);
 
 	if (Found == nullptr)
 	{
@@ -130,17 +127,13 @@ TSharedPtr<SWidget> FVulIconDecorator::CreateDecoratorWidget(
 	// If not, and this Umg is not used, it will be cleaned up by GC.
 	const auto Umg = CreateWidget<UVulRichTextIcon>(Owner, VulRuntime::Settings()->IconWidget.LoadSynchronous());
 
-	if (!ensureMsgf(!VulRuntime::Settings()->IconSet.IsNull(), TEXT("Must set an IconSet in VulRuntime settings")))
+	const auto Resolved = VulRuntime::Settings()->ResolveIcon(FName(RunInfo.MetaData["i"]));
+	if (Resolved == nullptr)
 	{
 		return TSharedPtr<SWidget>();
 	}
 
-	const auto Found = VulRuntime::Settings()->IconSet.LoadSynchronous()->FindRow<FVulRichTextIconDefinition>(
-		FName(RunInfo.MetaData["i"]),
-		"VulRichTextIconDecorator"
-	);
-
-	if (!Umg->ApplyIcon(Found))
+	if (!Umg->ApplyIcon(Resolved))
 	{
 		return TSharedPtr<SWidget>();
 	}

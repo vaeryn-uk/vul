@@ -73,6 +73,13 @@ public:
 	UPROPERTY(EditAnywhere, Config, Category="User Interface|Rich Text")
 	TSoftObjectPtr<UDataTable> IconSet;
 
+	/**
+	 * Returns the data for an icon in the configured icon set, by its row name.
+	 *
+	 * nullptr if not found, or icons have not been configured.
+	 */
+	const FVulRichTextIconDefinition* ResolveIcon(const FName& RowName) const;
+
 // Editor integration
 	virtual FName GetCategoryName() const override { return FName("Game"); }
 	virtual FName GetContainerName() const override { return FName("Project"); };
