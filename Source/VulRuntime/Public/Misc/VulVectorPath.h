@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "Time/VulTime.h"
 #include "UObject/Object.h"
 #include "VulVectorPath.generated.h"
 
@@ -48,4 +49,40 @@ private:
 	float Distance;
 
 	void CalculateDistance();
+};
+
+/**
+ * Models movement along a vector path over the provided duration.
+ *
+ * Can be used by Unreal actors to reposition themselves every tick to have them move along the provided path.
+ */
+struct VULRUNTIME_API FVulPathMovement
+{
+	FVulPathMovement() = default;
+
+	/**
+	 * Constructs a new path movement which starts immediately.
+	 */
+	FVulPathMovement(const FVulVectorPath& InPath, const FVulTime& Now, float InDuration) : Path(InPath), Started(Now),
+		Duration(InDuration)
+	{
+	}
+
+	/**
+	 * Moves the provided actor to the correct place on this path for the current time.
+	 *
+	 * Will not move the actor if the movement path is complete.
+	 *
+	 * Faces the actor in the direction it's travelling.
+	 */
+	void Apply(AActor* ToMove);
+
+	/**
+	 * Returns true if the movement is completed. Usually this means this movement object can be trashed.
+	 */
+	bool IsComplete() const;
+private:
+	FVulVectorPath Path;
+	FVulTime Started;
+	float Duration;
 };

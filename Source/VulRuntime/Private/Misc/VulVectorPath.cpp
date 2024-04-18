@@ -1,4 +1,5 @@
 ﻿#include "Misc/VulVectorPath.h"
+#include "Kismet/KismetMathLibrary.h"
 
 FVector FVulVectorPath::Interpolate(const float Alpha) const
 {
@@ -52,4 +53,22 @@ void FVulVectorPath::CalculateDistance()
 
 		Distance += (Curr - Prev).Length();
 	}
+}
+
+void FVulPathMovement::Apply(AActor* ToMove)
+{
+	if (IsComplete())
+	{
+		// Make sure we're at the end.
+		ToMove->SetActorLocation(Path.Interpolate(1));
+		return;
+	}
+
+	const auto New = Path.Interpolate(Started.Alpha(Duration));
+	ToMove->SetActorLocationAndRotation(New, UKismetMathLibrary::FindLookAtRotation(ToMove->GetActorLocation(), New));
+}
+
+bool FVulPathMovement::IsComplete() const
+{
+	return Started.Alpha(Duration) >= 1;
 }
