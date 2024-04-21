@@ -45,6 +45,11 @@ struct VULRUNTIME_API FVulTime
 	float Alpha(const float TotalSeconds) const;
 
 	/**
+	 * Returns Alpha, clamped between 0-1.
+	 */
+	float ClampedAlpha(const float TotalSeconds) const;
+
+	/**
 	 * Checks if we are after Seconds after we last started.
 	 *
 	 * False if we haven't started or is not valid.

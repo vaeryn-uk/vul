@@ -35,6 +35,11 @@ float FVulTime::Alpha(const float TotalSeconds) const
 	return (NowFn() - Time) / TotalSeconds;
 }
 
+float FVulTime::ClampedAlpha(const float TotalSeconds) const
+{
+	return FMath::Clamp(Alpha(TotalSeconds), 0, 1);
+}
+
 bool FVulTime::IsAfter(const float Seconds) const
 {
 	if (!IsValid())
