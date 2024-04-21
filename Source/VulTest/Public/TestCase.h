@@ -19,6 +19,22 @@ namespace VulTest
 			return TestInstance->TestEqual(FormatTestTitle(Message), Actual, Expected);
 		}
 
+		template <typename Type>
+		bool Equal(const TOptional<Type>& Actual, const TOptional<Type>& Expected, const FString Message = FString()) const
+		{
+			if (!TestInstance->TestEqual(FormatTestTitle("TOptional IsSet check " + Message), Actual.IsSet(), Expected.IsSet()))
+			{
+				return false;
+			}
+
+			if (!Actual.IsSet())
+			{
+				return true;
+			}
+
+			return TestInstance->TestEqual(FormatTestTitle("TOptional value check " + Message), Actual.GetValue(), Expected.GetValue());
+		}
+
 		/**
 		 * Override asserts that two arrays have the same length and each element is equal.
 		 */
