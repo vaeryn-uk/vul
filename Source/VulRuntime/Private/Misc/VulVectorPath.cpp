@@ -249,7 +249,7 @@ void FVulVectorPath::CalculateDistance()
 	}
 }
 
-FTransform FVulPathMovement::Apply(const FTransform& Current)
+FTransform FVulPathMovement::Apply(const FTransform& Current) const
 {
 	auto Ret = Current;
 
@@ -257,8 +257,6 @@ FTransform FVulPathMovement::Apply(const FTransform& Current)
 
 	Ret.SetLocation(Path.Interpolate(Alpha));
 	Ret.SetRotation(Path.Direction(Alpha).Quaternion());
-
-	LastAppliedAlpha = Alpha;
 
 	return Ret;
 }

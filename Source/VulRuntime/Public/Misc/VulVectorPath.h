@@ -136,7 +136,7 @@ struct VULRUNTIME_API FVulPathMovement
 	 *
 	 * Faces the transform in the direction it's travelling.
 	 */
-	FTransform Apply(const FTransform& Current);
+	FTransform Apply(const FTransform& Current) const;
 
 	/**
 	 * Returns true if the movement is completed. Usually this means this movement object can be trashed.
@@ -146,5 +146,4 @@ private:
 	FVulVectorPath Path;
 	FVulTime Started;
 	float Duration;
-	float LastAppliedAlpha = 0;
 };
