@@ -36,6 +36,13 @@ struct VULRUNTIME_API FVulVectorPath
 	TArray<FVector> GetPoints() const;
 
 	/**
+	 * Returns a new path whose points are randomized within the given box around each point.
+	 *
+	 * First and last are not randomized.
+	 */
+	FVulVectorPath Randomize(const FRandomStream& Stream, const FBox& Box) const;
+
+	/**
 	 * Returns a new path which takes a curved route along this path.
 	 *
 	 * The curves taken are defined by TurnDegsPerWorldUnit. The route will head for the next
