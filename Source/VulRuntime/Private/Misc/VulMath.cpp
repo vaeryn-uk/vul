@@ -35,3 +35,13 @@ TOptional<FVector> FVulMath::LinePlaneIntersection(
 
 	return LineStart + T * Direction.Vector();
 }
+
+FVector FVulMath::ClosestPointOnLineSegment(const FVector& A, const FVector& B, const FVector& P)
+{
+	const FVector AB = B - A;
+	const float Dot = FVector::DotProduct(P - A, AB);
+
+	const float T = Dot / (AB.X * AB.X + AB.Y * AB.Y + AB.Z * AB.Z);
+
+	return A + AB * FMath::Clamp(T, 0.0f, 1.0f);
+}

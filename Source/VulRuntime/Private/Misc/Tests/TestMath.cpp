@@ -59,11 +59,25 @@ bool TestMath::RunTest(const FString& Parameters)
 			Test.Equal(Result, Case.ExpectedResult);
 		});
 
-		Ddt.Run("simple", {
+		Ddt.Run("#1", {
 			.Plane = FPlane(FVector(0, -1, 0), -1),
 			.LineStart = FVector(1, 0, 0),
 			.Direction = FVector(1, -1, 0).Rotation(),
 			.ExpectedResult = {FVector(2, -1, 0)},
+		});
+
+		Ddt.Run("#2", {
+			.Plane = FPlane(FVector(0, -1, 0), -3),
+			.LineStart = FVector(1, 0, 0),
+			.Direction = FVector(1, -1, 0).Rotation(),
+			.ExpectedResult = {FVector(4, -3, 0)},
+		});
+
+		Ddt.Run("#3", {
+			.Plane = FPlane(FVector(1, 1, 0).GetSafeNormal(), 0),
+			.LineStart = FVector(-2, -1, 0),
+			.Direction = FVector(4, -1, 0).Rotation(),
+			.ExpectedResult = {FVector(2, -2, 0)},
 		});
 
 		Ddt.Run("no intersection", {
@@ -72,6 +86,44 @@ bool TestMath::RunTest(const FString& Parameters)
 			.Direction = FVector(1, 0, 0).Rotation(),
 			.ExpectedResult = {},
 		});
+	}
+
+	{
+		struct Data
+		{
+			FVector A;
+			FVector B;
+			FVector P;
+			FVector ExpectedResult;
+		};
+
+		auto Ddt = DDT<Data>(this, "ClosestPointOnLineSegment", [](TC Test, Data Case)
+		{
+			const auto Result = FVulMath::ClosestPointOnLineSegment(Case.A, Case.B, Case.P);
+
+			Test.Equal(Result, Case.ExpectedResult);
+		});
+
+		Ddt.Run("#1", {
+			.A = FVector(0, 0, 0),
+			.B = FVector(1, 0, 0),
+			.P = FVector(2, 0, 0),
+			.ExpectedResult = FVector(1, 0, 0)}
+		);
+
+		Ddt.Run("#2", {
+			.A = FVector(0, 0, 0),
+			.B = FVector(2, 0, 0),
+			.P = FVector(1, 1, 0),
+			.ExpectedResult = FVector(1, 0, 0)}
+		);
+
+		Ddt.Run("#3", {
+			.A = FVector(0, 0, 0),
+			.B = FVector(2, 0, 0),
+			.P = FVector(0.75, 1, 0),
+			.ExpectedResult = FVector(0.75, 0, 0)}
+		);
 	}
 
 	return !HasAnyErrors();

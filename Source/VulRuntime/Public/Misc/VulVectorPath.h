@@ -31,11 +31,56 @@ struct VULRUNTIME_API FVulVectorPath
 	FVector Interpolate(const float Alpha) const;
 
 	/**
-	 * Gets the next point along the path given the position indicated by Alpha (same as is used in Interpolate).
-	 *
-	 * If Alpha is >=1, this returns the last point of the path.
+	 * Returns the underlying points that make up this path.
 	 */
-	FVector NextPoint(const float Alpha) const;
+	TArray<FVector> GetPoints() const;
+
+	/**
+	 * Returns a new path which takes a curved route along this path.
+	 *
+	 * The curves taken are defined by TurnDegsPerWorldUnit. The route will head for the next
+	 * point along the path, turning as much as is allowed to track towards it, when passing
+	 * a point, we track towards the next one. Note this does not turn early ahead of corners,
+	 * but will only initiate a turn after passing a point.
+	 *
+	 * The returned path is a still series of points (so technically no curves are present).
+	 * Samples controls the maximum number of points we sample along the route we travel.
+	 * If a curve isn't necessary (e.g. we're travelling in a straight line to the
+	 * next point), we won't add these points. A higher Samples value will produce smoother
+	 * curves, at the cost of calculation time.
+	 *
+	 * Samples is divided by the average segment length to produce the distance between
+	 * each sample. For this reason, this produces better outputs when segments along
+	 * the path are roughly equal distance. This algorithm is quite heavy, and can produce
+	 * paths with a much higher number of points that this path. This is particularly
+	 * true for higher sample counts along winding paths.
+	 *
+	 * This algorithm walks the path, turning and sampling as we go. To find the end of the
+	 * path, we check if we've come close to the last point in the path. TerminationFactor
+	 * is multiplied by the whole path's distance to determine how close we must be to
+	 * consider the path ended. Note that the final point of the curved path will always
+	 * be the final point of this path.
+	 *
+	 * MaxLengthFactor is a control to ensure that we don't infinite loop. It is
+	 * possible that given a limited turn value, or very low sampling, or a minuscule
+	 * termination factor, the curved path we walk never actually meets its end criteria.
+	 * As a failsafe, MaxLengthFactor is multiplied by this path's distance; if the curved
+	 * path we're producing becomes long that this max length, we bail and return an
+	 * invalid path.
+	 */
+	FVulVectorPath Curve(
+		const float TurnDegsPerWorldUnit,
+		const int Samples = 24,
+		const float TerminationFactor = 0.01,
+		const float MaxLengthFactor = 3
+	) const;
+
+	/**
+	 * Returns a new path with any redundant points removed, i.e. removes any points
+	 * that don't impact the direction of travel because 3 consecutive points sit
+	 * in a straight line.
+	 */
+	FVulVectorPath Simplify() const;
 
 	/**
 	 * Returns the rotation that an object would be at for the given alpha value.
@@ -92,22 +137,6 @@ struct VULRUNTIME_API FVulPathMovement
 	 * Faces the transform in the direction it's travelling.
 	 */
 	FTransform Apply(const FTransform& Current);
-
-	/**
-	 * Moves the transform along the path with a limit on the ability to turn by some amount.
-	 *
-	 * RotationLimit is the maximum number of degrees the rotation will be adjusted towards
-	 * the next point on the path. This results in a curved travel path, rather than following the
-	 * path exactly (assuming the RotationLimit is insufficient to turn on-path directly.
-	 *
-	 * When called in a Tick function, RotationLimit will often be calculated by:
-	 *
-	 *    RotationDegreesPerSecond * DeltaSeconds
-	 *
-	 * Internally this tracks when we last applied and each call is built off the last to
-	 * produce a smooth movement.
-	 */
-	FTransform Apply(const FTransform& Current, const float RotationLimit);
 
 	/**
 	 * Returns true if the movement is completed. Usually this means this movement object can be trashed.

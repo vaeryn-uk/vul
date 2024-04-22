@@ -38,4 +38,9 @@ public:
 	 * no intersection occurs.
 	 */
 	static TOptional<FVector> LinePlaneIntersection(const FVector& LineStart, const FRotator& Direction, const FPlane& Plane);
+
+	/**
+	 * Returns the point along line segment AB that is closest to P.
+	 */
+	static FVector ClosestPointOnLineSegment(const FVector& A, const FVector& B, const FVector& P);
 };

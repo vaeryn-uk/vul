@@ -45,5 +45,69 @@ bool TestVectorPath::RunTest(const FString& Parameters)
 		Ddt.Run("invalid alpha=1", {.Path = InvalidPath, .Alpha = 1, .Expected = {0, 0, 0}});
 	}
 
+	{
+		struct Data
+		{
+			TArray<FVector> Path;
+			float TurnDegsPerWorldUnit;
+			float Samples;
+			TArray<FVector> Expected;
+		};
+		auto Ddt = DDT<Data>(this, "Curve", [](TC Test, Data Case)
+		{
+			const auto Path = FVulVectorPath(Case.Path);
+			const auto Curved = Path.Curve(Case.TurnDegsPerWorldUnit, Case.Samples);
+
+			Test.Equal(Curved.GetPoints(), Case.Expected);
+		});
+
+		Ddt.Run("#1", {
+			.Path = {FVector(0, 0, 0), FVector(4, 0, 0), FVector(4, 4, 0)},
+			.TurnDegsPerWorldUnit = 45,
+			.Samples = 4,
+			.Expected = {
+				FVector(0, 0, 0),
+				FVector(4, 0, 0),
+				FVector(4.7071, 0.7071, 0),
+				FVector(4.7071, 1.7071, 0),
+				FVector(4, 4, 0),
+			},
+		});
+	}
+
+	{
+		struct Data
+		{
+			TArray<FVector> Path;
+			TArray<FVector> Expected;
+		};
+		auto Ddt = DDT<Data>(this, "Simplify", [](TC Test, Data Case)
+		{
+			const auto Path = FVulVectorPath(Case.Path);
+
+			Test.Equal(Path.Simplify().GetPoints(), Case.Expected);
+		});
+
+		Ddt.Run("#1", {
+			.Path = {FVector(0, 0, 0), FVector(1, 0, 0), FVector(2, 0, 0)},
+			.Expected = {FVector(0, 0, 0), FVector(2, 0, 0)}
+		});
+
+		Ddt.Run("#2", {
+			.Path = {FVector(0, 0, 0), FVector(.5, 0, 0), FVector(1, 0, 0), FVector(1.5, 0, 0), FVector(2, 0, 0)},
+			.Expected = {FVector(0, 0, 0), FVector(2, 0, 0)}
+		});
+
+		Ddt.Run("#3", {
+			.Path = {FVector(0, 0, 0), FVector(1, 0, 0), FVector(2, 0, 0), FVector(2, 1, 0), FVector(2, 2, 0)},
+			.Expected = {FVector(0, 0, 0), FVector(2, 0, 0), FVector(2, 2, 0)}
+		});
+
+		Ddt.Run("#4", {
+			.Path = {FVector(0, 0, 0), FVector(1, 0, 0), FVector(1, 1, 0), FVector(1, 2, 0), FVector(2, 2, 0)},
+			.Expected = {FVector(0, 0, 0), FVector(1, 0, 0), FVector(1, 2, 0), FVector(2, 2, 0)}
+		});
+	}
+
 	return !HasAnyErrors();
 }
