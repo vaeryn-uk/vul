@@ -1,12 +1,13 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "Kismet/KismetMathLibrary.h"
 #include "UObject/Object.h"
 
 /**
  * Extends UE's native FRandomStream with some additional useful functionality.
  */
-struct FVulRandomStream : FRandomStream
+struct VULRUNTIME_API FVulRandomStream : FRandomStream
 {
 	/**
 	 * Shuffles any contiguous container randomly.
@@ -31,6 +32,17 @@ struct FVulRandomStream : FRandomStream
 			}
 		}
 	}
+
+	/**
+	 * Returns a random rotation produces from values from this stream.
+	 *
+	 * Each parameter controls whether each axis is randomized. If not, that axis is 0.
+	 *
+	 * Yaw=turn left/right.
+	 * Pitch=look up/down.
+	 * Roll=roll clockwise/anticlockwise.
+	 */
+	FRotator RandomRotation(bool bYaw = true, bool bPitch = true, bool bRoll = false) const;
 };
 
 /**

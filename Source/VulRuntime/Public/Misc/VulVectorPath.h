@@ -79,6 +79,18 @@ struct VULRUNTIME_API FVulVectorPath
 		const float TurnDegsPerWorldUnit,
 		const int Samples = 24,
 		const float TerminationFactor = 0.01,
+		const float MaxLengthFactor = 3,
+		const TOptional<FRotator>& StartDirection = {}
+	) const;
+
+	/**
+	 * An overload that curves starting from the specified direction.
+	 */
+	FVulVectorPath Curve(
+		const float TurnDegsPerWorldUnit,
+		const FRotator& StartDirection,
+		const int Samples = 24,
+		const float TerminationFactor = 0.01,
 		const float MaxLengthFactor = 3
 	) const;
 

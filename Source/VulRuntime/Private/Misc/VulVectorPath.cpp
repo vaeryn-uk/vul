@@ -55,7 +55,8 @@ FVulVectorPath FVulVectorPath::Curve(
 	const float TurnDegsPerWorldUnit,
 	const int Samples,
 	const float TerminationFactor,
-	const float MaxLengthFactor
+	const float MaxLengthFactor,
+	const TOptional<FRotator>& StartDirection
 ) const
 {
 	if (!IsValid())
@@ -81,8 +82,9 @@ FVulVectorPath FVulVectorPath::Curve(
 	// The point in the path we have most-recently passed.
 	auto PreviousTarget = Points[CurrentIndex];
 
-	// The current direction of our travel. Start with the starting direction of the path at alpha=0.
-	auto CurrentDirection = Direction(0);
+	// The current direction of our travel. Start with the starting direction of the path at alpha=0,
+	// unless otherwise specified.
+	auto CurrentDirection = StartDirection.IsSet() ? StartDirection.GetValue() : Direction(0);
 
 	// Where we're heading towards.
 	auto Target = Points[CurrentIndex + 1];
@@ -161,6 +163,17 @@ FVulVectorPath FVulVectorPath::Curve(
 	}
 
 	return FVulVectorPath(OutPath);
+}
+
+FVulVectorPath FVulVectorPath::Curve(
+	const float TurnDegsPerWorldUnit,
+	const FRotator& StartDirection,
+	const int Samples,
+	const float TerminationFactor,
+	const float MaxLengthFactor
+) const
+{
+	return Curve(TurnDegsPerWorldUnit, Samples, TerminationFactor, MaxLengthFactor, StartDirection);
 }
 
 FVulVectorPath FVulVectorPath::Simplify() const
