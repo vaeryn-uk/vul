@@ -285,7 +285,12 @@ FTransform FVulPathMovement::Apply(const FTransform& Current) const
 {
 	auto Ret = Current;
 
-	const auto Alpha = Started.ClampedAlpha(Duration);
+	auto Alpha = Started.ClampedAlpha(Duration);
+
+	if (MovementCurve != nullptr)
+	{
+		Alpha = MovementCurve(Alpha);
+	}
 
 	Ret.SetLocation(Path.Interpolate(Alpha));
 	Ret.SetRotation(Path.Direction(Alpha).Quaternion());

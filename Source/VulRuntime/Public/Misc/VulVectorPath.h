@@ -143,12 +143,17 @@ struct VULRUNTIME_API FVulPathMovement
 
 	/**
 	 * Constructs a new path movement which starts immediately.
+	 *
+	 * InMovementCurve can be provided to vary the speed of travel as an object progresses
+	 * along the path. The linear alpha value (between 0-1) will be mapped via this function
+	 * and the returned result is used instead.
 	 */
 	FVulPathMovement(
 		const FVulVectorPath& InPath,
 		const FVulTime& Now,
-		float InDuration
-	) : Path(InPath), Started(Now), Duration(InDuration) {}
+		float InDuration,
+		const TFunction<float (float)>& InMovementCurve = {}
+	) : Path(InPath), Started(Now), Duration(InDuration), MovementCurve(InMovementCurve) {}
 
 	/**
 	 * Moves the provided transform to the correct place on this path for the current time.
@@ -165,4 +170,5 @@ private:
 	FVulVectorPath Path;
 	FVulTime Started;
 	float Duration;
+	TFunction<float (float)> MovementCurve;
 };
