@@ -126,13 +126,5 @@ bool TestMath::RunTest(const FString& Parameters)
 		);
 	}
 
-	{ // Sigmoid Curve.
-		TestNearlyEqual("Sigmoid Curve:    0", FVulMath::SigmoidCurve(0),    0.0003f);
-		TestNearlyEqual("Sigmoid Curve: 0.25", FVulMath::SigmoidCurve(.25),  0.0179f);
-		TestNearlyEqual("Sigmoid Curve:  0.5", FVulMath::SigmoidCurve(.5),  .5f);
-		TestNearlyEqual("Sigmoid Curve: 0.75", FVulMath::SigmoidCurve(.75),  0.9820f);
-		TestNearlyEqual("Sigmoid Curve:    1", FVulMath::SigmoidCurve(1),    0.9996f);
-	}
-
 	return !HasAnyErrors();
 }

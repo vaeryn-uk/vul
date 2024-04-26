@@ -45,8 +45,3 @@ FVector FVulMath::ClosestPointOnLineSegment(const FVector& A, const FVector& B, 
 
 	return A + AB * FMath::Clamp(T, 0.0f, 1.0f);
 }
-
-float FVulMath::SigmoidCurve(const float Alpha, const float Slope)
-{
-	return 1 / (1 + exp(-Slope * (Alpha - .5)));
-}
