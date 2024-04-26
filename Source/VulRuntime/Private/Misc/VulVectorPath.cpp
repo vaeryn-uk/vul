@@ -183,29 +183,28 @@ FVulVectorPath FVulVectorPath::Simplify() const
 		return FVulVectorPath();
 	}
 
-	TArray New = Points;
+	// We always start from the beginning.
+	TArray Simplified = {Points[0]};
 
-	// Crude algorithm here where we pass over the array, checking for points
-	// which are in a straight line. Repeats this process until we don't remove
-	// any elements in a single pass.
-	bool Reduced;
-	do
+	// If any non-start/end point does not lie on a straight line, we include it in the
+	// simplified path.
+	for (auto Index = 1; Index < Points.Num() - 1; ++Index)
 	{
-		Reduced = false;
-		for (auto Index = 1; Index < New.Num() - 1; Index++)
+		const auto Closest = FVulMath::ClosestPointOnLineSegment(Points[Index - 1], Points[Index + 1], Points[Index]);
+
+		if (Closest.Equals(Points[Index]))
 		{
-			const auto Ahead = UKismetMathLibrary::FindLookAtRotation(New[Index - 1], New[Index]);
-			const auto Behind = UKismetMathLibrary::FindLookAtRotation(New[Index], New[Index + 1]);
-
-			if (Ahead.Equals(Behind))
-			{
-				New.RemoveAt(Index);
-				Reduced = true;
-			}
+			// Straight line. Skip it.
+			continue;
 		}
-	} while (Reduced);
 
-	return FVulVectorPath(New);
+		Simplified.Add(Points[Index]);
+	}
+
+	// We always finish at the end.
+	Simplified.Add(Points.Last());
+
+	return FVulVectorPath(Simplified);
 }
 
 FRotator FVulVectorPath::Direction(const float Alpha) const

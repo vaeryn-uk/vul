@@ -72,7 +72,7 @@ struct VULRUNTIME_API FVulVectorPath
 	 * possible that given a limited turn value, or very low sampling, or a minuscule
 	 * termination factor, the curved path we walk never actually meets its end criteria.
 	 * As a failsafe, MaxLengthFactor is multiplied by this path's distance; if the curved
-	 * path we're producing becomes long that this max length, we bail and return an
+	 * path we're producing becomes longer than this max length, we bail and return an
 	 * invalid path.
 	 */
 	FVulVectorPath Curve(
