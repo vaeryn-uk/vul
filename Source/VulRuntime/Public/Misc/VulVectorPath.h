@@ -116,6 +116,11 @@ struct VULRUNTIME_API FVulVectorPath
 	 */
 	bool IsValid() const;
 
+	/**
+	 * Returns a copy of this path with its final point moved to NewEnd.
+	 */
+	FVulVectorPath RelocateEnd(const FVector& NewEnd) const;
+
 private:
 	/**
 	 * For the given alpha, returns the index of the last point on the path passed through.

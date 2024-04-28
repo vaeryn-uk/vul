@@ -237,6 +237,13 @@ bool FVulVectorPath::IsValid() const
 	return Points.Num() > 1;
 }
 
+FVulVectorPath FVulVectorPath::RelocateEnd(const FVector& NewEnd) const
+{
+	auto New = *this;
+	New.Points[New.Points.Num() - 1] = NewEnd;
+	return MoveTemp(New);
+}
+
 int FVulVectorPath::LastPointIndex(const float Alpha) const
 {
 	if (!IsValid())

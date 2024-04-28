@@ -60,4 +60,32 @@ public:
 
 		return Spawned;
 	}
+
+	template <typename T>
+	std::enable_if_t<std::is_base_of_v<UActorComponent, T>, TArray<T*>>
+	static GetComponentsByTag(AActor* Actor, const FName& Tag)
+	{
+		TArray<T*> Out;
+
+		for (const auto& Component : Actor->GetComponentsByTag(T::StaticClass(), Tag))
+		{
+			Out.Add(Cast<T>(Component));
+		}
+
+		return Out;
+	}
+
+	template <typename T>
+	std::enable_if_t<std::is_base_of_v<UActorComponent, T>, TArray<T*>>
+	static GetComponentsByClass(AActor* Actor)
+	{
+		TArray<T*> Out;
+
+		for (const auto& Component : Actor->K2_GetComponentsByClass(T::StaticClass()))
+		{
+			Out.Add(Cast<T>(Component));
+		}
+
+		return Out;
+	}
 };

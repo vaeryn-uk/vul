@@ -43,6 +43,11 @@ struct VULRUNTIME_API FVulRandomStream : FRandomStream
 	 * Roll=roll clockwise/anticlockwise.
 	 */
 	FRotator RandomRotation(bool bYaw = true, bool bPitch = true, bool bRoll = false) const;
+
+	/**
+	 * Returns a random point on a surface of the provided box.
+	 */
+	FVector RandPointOnBoxSurface(const FBox& Box) const;
 };
 
 /**
