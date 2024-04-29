@@ -38,9 +38,14 @@ struct VULRUNTIME_API FVulVectorPath
 	/**
 	 * Returns a new path whose points are randomized within the given box around each point.
 	 *
-	 * First and last are not randomized.
+	 * By default, first and last are not randomized.
 	 */
-	FVulVectorPath Randomize(const FRandomStream& Stream, const FBox& Box) const;
+	FVulVectorPath Randomize(
+		const FRandomStream& Stream,
+		const FBox& Box,
+		const bool First = false,
+		const bool Last = false
+	) const;
 
 	/**
 	 * Returns a new path which takes a curved route along this path.

@@ -52,6 +52,15 @@ struct VULRUNTIME_API FVulDataPtr
 		return static_cast<const T*>(EnsurePtr());
 	}
 
+	/**
+	 * Returns the referenced data if the reference is set, else nullptr.
+	 */
+	template <typename T, typename = TEnableIf<TIsDerivedFrom<T, FTableRowBase>::Value>>
+	const T* GetIfSet() const
+	{
+		return IsSet() ? Get<T>() : nullptr;
+	}
+
 	const FName& GetRowName() const;
 	const FName& GetTableName() const;
 

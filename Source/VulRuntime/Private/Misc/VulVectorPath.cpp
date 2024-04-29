@@ -32,21 +32,36 @@ TArray<FVector> FVulVectorPath::GetPoints() const
 	return Points;
 }
 
-FVulVectorPath FVulVectorPath::Randomize(const FRandomStream& Stream, const FBox& Box) const
-{
+FVulVectorPath FVulVectorPath::Randomize(
+	const FRandomStream& Stream,
+	const FBox& Box,
+	const bool First,
+	const bool Last
+) const {
 	if (!IsValid())
 	{
 		return FVulVectorPath();
 	}
 
-	TArray Out = {Points[0]};
+	TArray<FVector> Out = {};
 
-	for (auto Index = 1; Index < Points.Num() - 1; Index++)
+	if (!First)
+	{
+		Out.Add(Points[0]);
+	}
+
+	const auto StartIndex = First ? 0 : 1;
+	const auto EndIndex = Last ? Points.Num() : Points.Num() - 1;
+
+	for (auto Index = StartIndex; Index < EndIndex; ++Index)
 	{
 		Out.Add(Stream.RandPointInBox(Box.MoveTo(Points[Index])));
 	}
 
-	Out.Add(Points.Last());
+	if (!Last)
+	{
+		Out.Add(Points.Last());
+	}
 
 	return FVulVectorPath(Out);
 }
