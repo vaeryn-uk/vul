@@ -88,4 +88,9 @@ public:
 
 		return Out;
 	}
+
+	/**
+	 * Returns an actor's bound box as an FBox.
+	 */
+	static FBox BoundingBox(AActor* Actor, const bool OnlyColliding = false, const bool IncludeChildActors = false);
 };

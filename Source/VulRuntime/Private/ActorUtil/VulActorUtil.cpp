@@ -23,3 +23,12 @@ UActorComponent* FVulActorUtil::SpawnDynamicComponent(
 
 	return Spawned;
 }
+
+FBox FVulActorUtil::BoundingBox(AActor* Actor, const bool OnlyColliding, const bool IncludeChildActors)
+{
+	FVector Origin;
+	FVector Extent;
+	Actor->GetActorBounds(OnlyColliding, Origin, Extent, IncludeChildActors);
+
+	return FBox::BuildAABB(Origin, Extent);
+}
