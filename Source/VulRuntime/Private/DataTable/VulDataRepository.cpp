@@ -151,10 +151,15 @@ void UVulDataRepository::InitPtrProperty(const FName& TableName, const FProperty
 		*Property->GetName()
 	);
 
-	Ptr->Repository = this;
-	Ptr->TableName = ReferencedTableName;
+	InitPtr(ReferencedTableName, Ptr);
+}
 
-	checkf(Ptr->IsValid(), TEXT("InitPtrProperty resulted in an invalid FVulDataPtr"))
+void UVulDataRepository::InitPtr(const FName& TableName, FVulDataPtr* Ptr)
+{
+	Ptr->Repository = this;
+	Ptr->TableName = TableName;
+
+	checkf(Ptr->IsValid(), TEXT("InitPtr resulted in an invalid FVulDataPtr"))
 }
 
 void UVulDataRepository::InitStruct(const FName& TableName, const UDataTable* Table, UScriptStruct* Struct, void* Data)

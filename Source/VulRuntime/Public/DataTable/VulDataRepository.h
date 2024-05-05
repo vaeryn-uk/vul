@@ -95,6 +95,14 @@ public:
 	UPROPERTY()
 	bool ReferencesCached = false;
 
+	/**
+	 * Loads all rows from the specified table in this repository.
+	 *
+	 * Returns each row as a lazily-loaded, typed FVulDataPtr.
+	 */
+	template <typename RowType>
+	TArray<TVulDataPtr<RowType>> LoadAllPtrs(const FName& TableName);
+
 private:
 	friend FVulDataPtr;
 
@@ -123,7 +131,26 @@ private:
 	UScriptStruct* GetStruct(const FProperty* Property) const;
 
 	void InitPtrProperty(const FName& TableName, const FProperty* Property, FVulDataPtr* Ptr, const UScriptStruct* Struct);
+
+	void InitPtr(const FName& TableName, FVulDataPtr* Ptr);
 };
+
+template <typename RowType>
+TArray<TVulDataPtr<RowType>> UVulDataRepository::LoadAllPtrs(const FName& TableName)
+{
+	const auto Rows = DataTables[TableName]->GetRowNames();
+
+	TArray<TVulDataPtr<RowType>> Ret;
+
+	for (const auto& RowName : Rows)
+	{
+		auto Ptr = FVulDataPtr(RowName);
+		InitPtr(TableName, &Ptr);
+		Ret.Add(Ptr);
+	}
+
+	return Ret;
+}
 
 template <typename RowType>
 const RowType* UVulDataRepository::FindRaw(const FName& TableName, const FName& RowName)

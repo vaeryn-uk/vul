@@ -34,6 +34,74 @@ struct VULRUNTIME_API FVulRandomStream : FRandomStream
 	}
 
 	/**
+	 * Returns random element from the provided range.
+	 */
+	template <typename RangeType>
+	auto RandomItem(RangeType& Range) const -> decltype(*std::begin(Range))
+	{
+		return Range[RandRange(0, Range.Num() - 1)];
+	}
+
+	/**
+	 * Returns a randomly selected index based on the weights provided.
+	 *
+	 * Entries with higher values are more likely to be selected.
+	 */
+	int Weighted(const TArray<float>& Weights) const
+	{
+		if (Weights.IsEmpty())
+		{
+			return INDEX_NONE;
+		}
+
+		float Sum = 0;
+		for (const auto& Item : Weights)
+		{
+			checkf(Item >= 0, TEXT("FVulRandomStream::Weight does not accept negative weights"))
+			Sum += Item;
+		}
+
+		const auto Rand = FMath::FRand() * Sum;
+		float CurrentSum = 0;
+
+		for (auto Index = 0; Index < Weights.Num(); ++Index)
+		{
+			CurrentSum += Weights[Index];
+			if (Rand <= CurrentSum)
+			{
+				return Index;
+			}
+		}
+
+		return INDEX_NONE;
+	}
+
+	/**
+	 * Selects a random element from Range, where each item has a weight which controls
+	 * the likelihood it is selected. GetWeight is responsible for returning a weight
+	 * value for each entry.
+	 */
+	template <typename RangeType>
+	auto Weighted(
+		RangeType& Range,
+		TFunction<float (const decltype(*std::begin(Range)))> GetWeight
+	) const -> const std::decay_t<decltype(*std::begin(Range))>* {
+		TArray<float> Values;
+		for (const auto& Entry : Range)
+		{
+			Values.Add(GetWeight(Entry));
+		}
+
+		int Index = Weighted(Values);
+		if (Index == INDEX_NONE)
+		{
+			return nullptr;
+		}
+
+		return &Range[Index];
+	}
+
+	/**
 	 * Returns a random rotation produces from values from this stream.
 	 *
 	 * Each parameter controls whether each axis is randomized. If not, that axis is 0.
