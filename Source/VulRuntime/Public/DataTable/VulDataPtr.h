@@ -92,7 +92,7 @@ private:
 	const void* EnsurePtr() const;
 
 	UPROPERTY()
-	UVulDataRepository* Repository;
+	UVulDataRepository* Repository = nullptr;
 	UPROPERTY(VisibleAnywhere)
 	FName TableName;
 	UPROPERTY(EditAnywhere)
