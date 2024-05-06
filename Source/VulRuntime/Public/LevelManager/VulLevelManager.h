@@ -72,14 +72,12 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 	/**
-	 * Load a level by its name.
-	 */
-	void LoadLevel(const FName& LevelName);
-
-	/**
 	 * Load a level by its name, invoking OnComplete when it is finished.
+	 *
+	 * If LevelName is already loaded, this will force a reload, destroying the
+	 * existing level and streaming it in again fresh.
 	 */
-	void LoadLevel(const FName& LevelName, FVulLevelDelegate::FDelegate OnComplete);
+	void LoadLevel(const FName& LevelName, FVulLevelDelegate::FDelegate OnComplete = FVulLevelDelegate::FDelegate());
 
 protected:
 	// Called when the game starts or when spawned
@@ -108,9 +106,9 @@ private:
 	/**
 	 * The previously loaded CurrentLevel. We use this to track its unload state.
 	 *
-	 * Only set whilst loading.
+	 * Only set whilst an unload is in progress.
 	 */
-	TOptional<FName> PreviousLevel = {};
+	TOptional<FName> WaitForUnload = {};
 
 	/**
 	 * Maintains a unique value so our streamed load requests don't collide with one another.
@@ -142,7 +140,10 @@ private:
 	 */
 	struct FLoadRequest
 	{
-		FName LevelName;
+		/**
+		 * If not set, a request is simply a request to unload the current level.
+		 */
+		TOptional<FName> LevelName;
 		FVulLevelDelegate Delegate;
 		TOptional<FVulTime> StartedAt;
 		bool IsLoadingLevel;
@@ -154,4 +155,6 @@ private:
 	void StartProcessing(FLoadRequest* Request);
 	void Process(FLoadRequest* Request);
 	void NextRequest();
+
+	bool IsReloadOfSameLevel(const FName& LevelName) const;
 };

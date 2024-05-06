@@ -72,6 +72,12 @@ void AVulLevelManager::ShowLevel(const FName& LevelName)
 
 	const auto Level = ResolvedData->Level;
 
+	if (GetLevelStreaming(LevelName)->GetShouldBeVisibleFlag())
+	{
+		// Already shown.
+		return;
+	}
+
 	UE_LOG(LogVul, Display, TEXT("Showing level %s"), *LevelName.ToString())
 
 	// Remove all widgets from the viewport from previous levels.
@@ -188,15 +194,6 @@ AVulLevelManager::FLoadRequest* AVulLevelManager::CurrentRequest()
 
 void AVulLevelManager::StartProcessing(FLoadRequest* Request)
 {
-	const auto LevelName = Request->LevelName;
-	const auto Data = ResolveData(LevelName);
-	if (!ensureMsgf(Data != nullptr, TEXT("Invalid level name request for load: %s"), *LevelName.ToString()))
-	{
-		return;
-	}
-
-	UE_LOG(LogVul, Display, TEXT("Beginning loading of %s"), *LevelName.ToString())
-
 	Request->StartedAt = FVulTime::WorldTime(GetWorld());
 
 	if (CurrentLevel.IsSet())
@@ -210,16 +207,33 @@ void AVulLevelManager::StartProcessing(FLoadRequest* Request)
 		UnloadStreamingLevel(CurrentLevel.GetValue(), Current->Level);
 	}
 
+	if (!LoadingLevelName.IsNone())
+	{
+		// Show the loading level this whilst we load.
+		ShowLevel(LoadingLevelName);
+	}
+
+	if (!Request->LevelName.IsSet())
+	{
+		// If this is just a request to unload, stop now.
+		WaitForUnload = CurrentLevel;
+		CurrentLevel.Reset();
+		return;
+	}
+
+	const auto LevelName = Request->LevelName.GetValue();
+	const auto Data = ResolveData(LevelName);
+	if (!ensureMsgf(Data != nullptr, TEXT("Invalid level name request for load: %s"), *LevelName.ToString()))
+	{
+		return;
+	}
+
+	UE_LOG(LogVul, Display, TEXT("Beginning loading of %s"), *LevelName.ToString())
+
 	if (!Request->IsLoadingLevel)
 	{
-		if (!LoadingLevelName.IsNone())
-		{
-			// If we're not loading the loading level itself, and we have a loading level, show this whilst we load.
-			ShowLevel(LoadingLevelName);
-		}
-
-		PreviousLevel = CurrentLevel;
-		CurrentLevel = LevelName;
+		WaitForUnload = CurrentLevel;
+		CurrentLevel = Request->LevelName;
 	}
 
 	// Actually load the requested level.
@@ -233,6 +247,31 @@ void AVulLevelManager::Process(FLoadRequest* Request)
 	if (!Request->StartedAt.IsSet())
 	{
 		// No load in progress. Nothing to do.
+		return;
+	}
+
+	if (WaitForUnload.IsSet())
+	{
+		const auto StreamingState = GetLevelStreaming(WaitForUnload.GetValue())->GetLevelStreamingState();
+		if (StreamingState != ELevelStreamingState::Unloaded && StreamingState != ELevelStreamingState::Removed)
+		{
+			// Previous level unload is not complete.
+			return;
+		}
+
+		// Completely cleanup the previous world.
+		if (const auto Resolved = ResolveData(WaitForUnload.GetValue()); Resolved->Level.IsValid())
+		{
+			Resolved->Level->DestroyWorld(true);
+		}
+	}
+
+	WaitForUnload.Reset();
+
+	if (!Request->LevelName.IsSet())
+	{
+		// If simply an unload request, we're done at this stage.
+		NextRequest();
 		return;
 	}
 
@@ -251,41 +290,23 @@ void AVulLevelManager::Process(FLoadRequest* Request)
 		return;
 	}
 
-	if (!GetLevelStreaming(Request->LevelName)->IsLevelLoaded() || bIsLoadingAssets)
+	if (!GetLevelStreaming(Request->LevelName.GetValue())->IsLevelLoaded() || bIsLoadingAssets)
 	{
 		// Loading is not complete.
 		return;
 	}
 
-	if (PreviousLevel.IsSet())
-	{
-		const auto StreamingState = GetLevelStreaming(PreviousLevel.GetValue())->GetLevelStreamingState();
-		if (StreamingState != ELevelStreamingState::Unloaded && StreamingState != ELevelStreamingState::Removed)
-		{
-			// Previous level unload is not complete.
-			return;
-		}
-
-		// Completely cleanup the previous world.
-		if (const auto Resolved = ResolveData(PreviousLevel.GetValue()); Resolved->Level.IsValid())
-		{
-			Resolved->Level->DestroyWorld(true);
-		}
-	}
-
 	// Otherwise we're done. Boot it up.
-	PreviousLevel.Reset();
-
 	if (!LoadingLevelName.IsNone() && !Request->IsLoadingLevel)
 	{
 		HideLevel(LoadingLevelName);
 	}
 
-	ShowLevel(Request->LevelName);
+	ShowLevel(Request->LevelName.GetValue());
 
-	UE_LOG(LogVul, Display, TEXT("Completed loading of %s"), *Request->LevelName.ToString())
+	UE_LOG(LogVul, Display, TEXT("Completed loading of %s"), *Request->LevelName.GetValue().ToString())
 
-	const auto Resolved = ResolveData(Request->LevelName);
+	const auto Resolved = ResolveData(Request->LevelName.GetValue());
 	OnLevelLoadComplete.Broadcast(Resolved);
 	Request->Delegate.Broadcast(Resolved);
 
@@ -295,6 +316,21 @@ void AVulLevelManager::Process(FLoadRequest* Request)
 void AVulLevelManager::NextRequest()
 {
 	Queue.RemoveAt(0);
+}
+
+bool AVulLevelManager::IsReloadOfSameLevel(const FName& LevelName) const
+{
+	if (LevelName == LoadingLevelName)
+	{
+		return false;
+	}
+
+	if (Queue.IsEmpty() && CurrentLevel == LevelName)
+	{
+		return true;
+	}
+
+	return !Queue.IsEmpty() && Queue.Last().LevelName == LevelName;
 }
 
 ULevelStreaming* AVulLevelManager::GetLevelStreaming(const FName& LevelName, const TCHAR* Reason)
@@ -335,16 +371,23 @@ void AVulLevelManager::Tick(float DeltaTime)
 	}
 }
 
-void AVulLevelManager::LoadLevel(const FName& LevelName)
+void AVulLevelManager::LoadLevel(const FName& LevelName, FVulLevelDelegate::FDelegate OnComplete)
 {
+	// Special case: if LevelName is the same as the level we're loading, add an unload
+	// and a load entry.
+	if (IsReloadOfSameLevel(LevelName))
+	{
+		FLoadRequest& New = Queue.AddDefaulted_GetRef();
+		New.LevelName = TOptional<FName>();
+	}
+
 	FLoadRequest& New = Queue.AddDefaulted_GetRef();
 	New.LevelName = LevelName;
 	New.IsLoadingLevel = LevelName == LoadingLevelName;
-}
 
-void AVulLevelManager::LoadLevel(const FName& LevelName, FVulLevelDelegate::FDelegate OnComplete)
-{
-	LoadLevel(LevelName);
-	Queue.Last().Delegate.Add(OnComplete);
+	if (OnComplete.IsBound())
+	{
+		Queue.Last().Delegate.Add(OnComplete);
+	}
 }
 
