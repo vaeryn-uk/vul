@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "EngineUtils.h"
 
 /**
  * Utility functions for AActor classes.
@@ -93,4 +94,18 @@ public:
 	 * Returns an actor's bound box as an FBox.
 	 */
 	static FBox BoundingBox(AActor* Actor, const bool OnlyColliding = false, const bool IncludeChildActors = false);
+
+	/**
+	 * Finds the first actor in the provided world of the requested type, or nullptr.
+	 */
+	template <typename ActorType, typename = TEnableIf<TIsDerivedFrom<ActorType, AActor>::Value>>
+	static ActorType* FindFirstActor(UWorld* World)
+	{
+		for (TActorIterator<ActorType> It(World); It; ++It)
+		{
+			return *It;
+		}
+
+		return nullptr;
+	};
 };

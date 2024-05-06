@@ -29,6 +29,13 @@ public:
 	// Sets default values for this actor's properties
 	AVulLevelManager();
 
+	/**
+	 * Attempts to retrieve a level manager in the given world. This is a convenience
+	 * function for easy global access to a level manager. Expects a level manager
+	 * actor in the root world.
+	 */
+	static AVulLevelManager* Get(UWorld* World);
+
 	UPROPERTY(EditAnywhere)
 	TMap<FName, TSubclassOf<UVulLevelData>> LevelData;
 
@@ -46,10 +53,7 @@ public:
 	UPROPERTY(EditAnywhere)
 	FName StartingLevelName = NAME_None;
 
-	FVulLevelDelegate OnLevelLoadBegin;
 	FVulLevelDelegate OnLevelLoadComplete;
-
-	ULevelStreaming* GetLevelStreaming(const FName& LevelName, const TCHAR* FailReason = TEXT(""));
 
 	/**
 	 * If showing the load screen, this is the minimum amount of time it will be displayed.
@@ -65,7 +69,6 @@ public:
 	UPROPERTY(EditAnywhere)
 	FTimespan LoadTimeout = FTimespan::FromSeconds(10);
 
-	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
 	/**
@@ -73,12 +76,19 @@ public:
 	 */
 	void LoadLevel(const FName& LevelName);
 
+	/**
+	 * Load a level by its name, invoking OnComplete when it is finished.
+	 */
+	void LoadLevel(const FName& LevelName, FVulLevelDelegate::FDelegate OnComplete);
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
 private:
 	UVulLevelData* ResolveData(const FName& LevelName);
+
+	ULevelStreaming* GetLevelStreaming(const FName& LevelName, const TCHAR* FailReason = TEXT(""));
 
 	void ShowLevel(const FName& LevelName);
 	void HideLevel(const FName& LevelName);
@@ -89,21 +99,18 @@ private:
 	FLatentActionInfo NextLatentAction();
 
 	/**
-	 * If set, indicates we're currently loading a level.
-	 */
-	TOptional<FVulTime> LevelLoadStartedAt;
-
-	/**
 	 * The current level being loaded or has loaded.
+	 *
+	 * This will only be explicitly loaded levels (not the loading screen).
 	 */
-	TOptional<FName> CurrentLevel;
+	TOptional<FName> CurrentLevel = {};
 
 	/**
-	 * The previously loaded level. We use this to track its unload state.
+	 * The previously loaded CurrentLevel. We use this to track its unload state.
 	 *
 	 * Only set whilst loading.
 	 */
-	TOptional<FName> PreviousLevel;
+	TOptional<FName> PreviousLevel = {};
 
 	/**
 	 * Maintains a unique value so our streamed load requests don't collide with one another.
@@ -121,4 +128,30 @@ private:
 	FStreamableManager StreamableManager;
 
 	bool bIsLoadingAssets = false;
+
+	void LoadStreamingLevel(const FName& Name, TSoftObjectPtr<UWorld> Level);
+	void UnloadStreamingLevel(const FName& Name, TSoftObjectPtr<UWorld> Level);
+
+	/**
+	 * Removes all widgets from all contained levels' viewports.
+	 */
+	static void RemoveAllWidgets(UWorld* World);
+
+	/**
+	 * Each request is stored in a queue internally.
+	 */
+	struct FLoadRequest
+	{
+		FName LevelName;
+		FVulLevelDelegate Delegate;
+		TOptional<FVulTime> StartedAt;
+		bool IsLoadingLevel;
+	};
+
+	FLoadRequest* CurrentRequest();
+	TArray<FLoadRequest> Queue;
+
+	void StartProcessing(FLoadRequest* Request);
+	void Process(FLoadRequest* Request);
+	void NextRequest();
 };
