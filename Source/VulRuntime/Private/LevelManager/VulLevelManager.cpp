@@ -373,6 +373,9 @@ void AVulLevelManager::Tick(float DeltaTime)
 
 void AVulLevelManager::LoadLevel(const FName& LevelName, FVulLevelDelegate::FDelegate OnComplete)
 {
+	// Validate the level name.
+	GetLevelStreaming(LevelName);
+
 	// Special case: if LevelName is the same as the level we're loading, add an unload
 	// and a load entry.
 	if (IsReloadOfSameLevel(LevelName))
@@ -389,5 +392,16 @@ void AVulLevelManager::LoadLevel(const FName& LevelName, FVulLevelDelegate::FDel
 	{
 		Queue.Last().Delegate.Add(OnComplete);
 	}
+}
+
+FActorSpawnParameters AVulLevelManager::SpawnParams()
+{
+	checkf(CurrentLevel.IsSet(), TEXT("Cannot create SpawnParams as no level is loaded"))
+	const auto Level = GetLevelStreaming(CurrentLevel.GetValue(), TEXT("SpawnParams"));
+
+	FActorSpawnParameters Params;
+	Params.OverrideLevel = Level->GetLoadedLevel();
+
+	return Params;
 }
 

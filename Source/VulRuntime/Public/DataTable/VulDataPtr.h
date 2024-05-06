@@ -138,6 +138,9 @@ struct TVulDataPtr
 		return Get();
 	}
 
+	/**
+	 * Returns true if this is capable of returning data (i.e. is not null).
+	 */
 	bool IsSet() const
 	{
 		return DataPtr.IsSet();

@@ -79,6 +79,37 @@ public:
 	 */
 	void LoadLevel(const FName& LevelName, FVulLevelDelegate::FDelegate OnComplete = FVulLevelDelegate::FDelegate());
 
+	/**
+	 * Loads a level by an enum value.
+	 *
+	 * This allows for a stronger binding of CPP code to well-known levels. Instead of passing in magic names,
+	 * you can define a UENUM of your game's levels, then pass in these enum values.
+	 *
+	 * The level manager is still expected to have its level data configured correctly in the editor.
+	 *
+	 * For example,
+	 *
+	 *   UENUM()
+	 *   class enum EMyProjectLevels : uint8
+	 *   {
+	 *       LevelOne,
+	 *       LevelTwo,
+	 *   }
+	 *
+	 * In level manager actor, you'll need to define level data for "LevelOne" and "LevelTwo" to use these.
+	 */
+	template <typename EnumType>
+	void LoadLevel(const EnumType Level, FVulLevelDelegate::FDelegate OnComplete = FVulLevelDelegate::FDelegate())
+	{
+		FName LevelName = FName(StaticEnum<EnumType>()->GetNameStringByValue(static_cast<int64>(Level)));
+		LoadLevel(LevelName, OnComplete);
+	}
+
+	/**
+	 * Returns parameters for spawning in an actor that belongs to the currently-loaded level.
+	 */
+	FActorSpawnParameters SpawnParams();
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -115,8 +146,11 @@ private:
 	 */
 	int32 LoadingUuid;
 
+	/**
+	 * Caches the level data defined for each level.
+	 */
 	UPROPERTY()
-	TMap<FName, UVulLevelData*> LevelDataInstances;
+	mutable TMap<FName, UVulLevelData*> LevelDataInstances;
 
 	void LoadAssets(const TArray<FSoftObjectPath>& Paths);
 	void OnAssetLoaded();
