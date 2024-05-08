@@ -101,6 +101,13 @@ namespace VulTest
 	constexpr auto C = Case;
 
 	/**
+	 * Logs some information output. Not for errors or problems.
+	 *
+	 * Note this logs messages at a warning level so they are included in output.
+	 */
+	void VULTEST_API Log(FAutomationTestBase* TestInstance, const FString& Message);
+
+	/**
 	 * Wraps up a repeatable test, @see DataDriven.
 	 */
 	template <typename TestData>

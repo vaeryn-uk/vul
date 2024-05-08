@@ -1,4 +1,4 @@
-﻿#include "TestCase.h"
+﻿#include "VulTest/Public/TestCase.h"
 #include "Misc/AutomationTest.h"
 #include "Types.h"
 #include "Misc/VulRngManager.h"

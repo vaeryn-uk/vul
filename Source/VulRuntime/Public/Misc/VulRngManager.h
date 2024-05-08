@@ -77,6 +77,22 @@ struct VULRUNTIME_API FVulRandomStream : FRandomStream
 	}
 
 	/**
+	 * Chooses a random key from the provided Map based on their probabilistic weights.
+	 */
+	template <typename KeyType>
+	KeyType Weighted(const TMap<KeyType, float>& Map) const
+	{
+		TArray<float> Weights;
+		TArray<KeyType> Keys = Map.GetKeys();
+		for (const auto Key : Keys)
+		{
+			Weights.Add(Map[Key]);
+		}
+
+		return Keys[Weighted(Weights)];
+	}
+
+	/**
 	 * Selects a random element from Range, where each item has a weight which controls
 	 * the likelihood it is selected. GetWeight is responsible for returning a weight
 	 * value for each entry.

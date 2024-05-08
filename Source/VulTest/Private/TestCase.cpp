@@ -11,3 +11,11 @@ void VulTest::Case(
 
 	TestFn(Wrapper);
 }
+
+void VulTest::Log(FAutomationTestBase* TestInstance, const FString& Message)
+{
+	TestInstance->AddEvent(FAutomationEvent(
+		EAutomationEventType::Warning,
+		FString::Printf(TEXT("[VULTEST LOG] %s"), *Message)
+	));
+}
