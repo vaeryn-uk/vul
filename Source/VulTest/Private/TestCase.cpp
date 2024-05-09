@@ -1,5 +1,23 @@
 ﻿#include "TestCase.h"
 
+void VulTest::TestCase::Log(const FString& Message) const
+{
+	TestInstance->AddEvent(FAutomationEvent(
+		EAutomationEventType::Warning,
+		FString::Printf(TEXT("[VULTEST] %ls LOG: %ls"), *Name, *Message)
+	));
+}
+
+FString VulTest::TestCase::FormatTestTitle(const FString Message) const
+{
+	if (!Message.IsEmpty())
+	{
+		return FString::Printf(TEXT("[VULTEST] %ls: %ls"), *Name, *Message);
+	}
+
+	return FString::Printf(TEXT("[VULTEST] %ls"), *Name);
+}
+
 void VulTest::Case(
 	FAutomationTestBase* TestInstance,
 	const FString& Name,

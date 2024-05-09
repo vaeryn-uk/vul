@@ -7,6 +7,9 @@ namespace VulTest
 {
 	/**
 	 * Provides an alternative test API for writing Unreal unit tests.
+	 *
+	 * Groups related assertions in single test cases, within a wider Unreal test class.
+	 * Offers extra assertions and improved output.
 	 */
 	struct TestCase
 	{
@@ -33,6 +36,37 @@ namespace VulTest
 			}
 
 			return TestInstance->TestEqual(FormatTestTitle("TOptional value check " + Message), Actual.GetValue(), Expected.GetValue());
+		}
+
+		/**
+		 * Asserts two TMap values are equal.
+		 */
+		template <typename KeyType, typename ValueType>
+		bool Equal(
+			const TMap<KeyType, ValueType>& Actual,
+			const TMap<KeyType, ValueType>& Expected,
+			FString Message = FString()
+		) const {
+			TArray<KeyType> ExpectedKeys;
+			Expected.GetKeys(ExpectedKeys);
+
+			TArray<KeyType> ActualKeys;
+			Actual.GetKeys(ActualKeys);
+
+			if (!Equal(ActualKeys, ExpectedKeys, Message + "TMap Keys"))
+			{
+				return false;
+			}
+
+			for (const auto& Entry : Expected)
+			{
+				if (!Equal(Actual[Entry.Key], Entry.Value, Message + "TMap entry"))
+				{
+					return false;
+				}
+			}
+
+			return true;
 		}
 
 		/**
@@ -73,16 +107,12 @@ namespace VulTest
 			return TestInstance->TestNearlyEqual(FormatTestTitle(Message), Actual, Expected);
 		}
 
+		/**
+		 * Logs a message, as warning to ensure it's included in output.
+		 */
+		void VULTEST_API Log(const FString& Message) const;
 	private:
-		FString FormatTestTitle(const FString Message) const
-		{
-			if (!Message.IsEmpty())
-			{
-				return FString::Printf(TEXT("[VULTEST] %ls: %ls"), *Name, *Message);
-			}
-
-			return FString::Printf(TEXT("[VULTEST] %ls"), *Name);
-		}
+		FString VULTEST_API FormatTestTitle(const FString Message) const;
 	};
 
 	/**

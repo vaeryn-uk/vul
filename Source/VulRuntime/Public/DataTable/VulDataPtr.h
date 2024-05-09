@@ -139,6 +139,15 @@ struct TVulDataPtr
 	}
 
 	/**
+	 * Creates a TSharedPtr from this pointer. This creates a new instance of the row data,
+	 * ensuring that the two pointers never interfere with one another.
+	 */
+	TSharedPtr<RowType> MakeSharedPtr() const
+	{
+		return MakeShared<RowType>(*Get());
+	}
+
+	/**
 	 * Returns true if this is capable of returning data (i.e. is not null).
 	 */
 	bool IsSet() const
@@ -155,7 +164,7 @@ struct TVulDataPtr
 	}
 
 	/**
-	 * Converts an array of pointers.
+	 * Converts an array of untyped to typed pointers.
 	 */
 	static TArray<TVulDataPtr> Convert(const TArray<FVulDataPtr>& Array)
 	{
