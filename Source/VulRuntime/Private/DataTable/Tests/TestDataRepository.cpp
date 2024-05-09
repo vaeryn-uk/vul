@@ -142,8 +142,7 @@ bool TestDataRepository::RunTest(const FString& Parameters)
 		TestEqual("implicit down cast", Child1AsParent.Get()->ParentField, "parent 1 field");
 	}
 
-	VulTest::Case(this, "indirect referencing", [](VulTest::TC TC)
-	{
+	VulTest::Case(this, "indirect referencing", [](VulTest::TC TC) {
 		// Tests that references on embedded objects are traversed & resolved.
 
 		auto RowTable = NewObject<UDataTable>();
@@ -187,6 +186,56 @@ bool TestDataRepository::RunTest(const FString& Parameters)
 			TC.Equal(13, Found->Map[2].Data.Get<FTestTableRow1>()->Value);
 			TC.Equal(13, Found->Map[3].Data.Get<FTestTableRow1>()->Value);
 		}
+	});
+
+	// Ensures that FVulDataPtr conversions and shared ptr generation operate correctly.
+	VulTest::Case(this, "Pointer behaviour", [](VulTest::TC TC)
+	{
+		auto DT1 = NewObject<UDataTable>();
+		DT1->RowStruct = FTestTableRow1::StaticStruct();
+		auto DT2 = NewObject<UDataTable>();
+		DT2->RowStruct = FTestTableRow2::StaticStruct();
+
+		DT1->AddRow(FName("Table1Row1"), FTestTableRow1(10));
+
+		auto TTR2 = FTestTableRow2();
+		TTR2.ARef = FVulDataPtr("Table1Row1");
+		DT2->AddRow(FName("Table2Row1"), TTR2);
+
+		auto Repo = NewObject<UVulDataRepository>();
+
+		Repo->DataTables = {
+			{FName("T1"), DT1},
+			{FName("T2"), DT2},
+		};
+
+		const auto Row2 = Repo->FindChecked<FTestTableRow2>("T2", "Table2Row1");
+
+		TC.Equal(
+			FString::Printf(TEXT("%p"), Row2.SharedPtr().Get()),
+			FString::Printf(TEXT("%p"), Row2.SharedPtr().Get()),
+			"shared ptr is created once"
+		);
+
+		TC.NotEqual(
+			FString::Printf(TEXT("%p"), Row2.Get()),
+			FString::Printf(TEXT("%p"), Row2.SharedPtr().Get()),
+			"shared ptr is not raw ptr"
+		);
+
+		const auto ReferencedRow = Cast<FTestTableRow1>(Row2->ARef);
+		// Check again with the referenced table.
+		TC.Equal(
+			FString::Printf(TEXT("%p"), ReferencedRow.SharedPtr().Get()),
+			FString::Printf(TEXT("%p"), ReferencedRow.SharedPtr().Get()),
+			"referenced shared ptr is created once"
+		);
+
+		TC.NotEqual(
+			FString::Printf(TEXT("%p"), ReferencedRow.SharedPtr().Get()),
+			FString::Printf(TEXT("%p"), ReferencedRow.Get()),
+			"referenced shared ptr is not raw ptr"
+		);
 	});
 
 	return !HasAnyErrors();

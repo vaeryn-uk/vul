@@ -52,6 +52,24 @@ struct VULRUNTIME_API FVulDataPtr
 		return static_cast<const T*>(EnsurePtr());
 	}
 
+	template <typename T, typename = TEnableIf<TIsDerivedFrom<T, FTableRowBase>::Value>>
+	const TSharedPtr<T> GetSharedPtr() const
+	{
+		checkf(
+			StructType()->IsChildOf(T::StaticStruct()),
+			TEXT("FVulDataPtr: %s is not a %s"),
+			*T::StaticStruct()->GetStructCPPName(),
+			*StructType()->GetStructCPPName()
+		);
+
+		if (SharedPtr == nullptr)
+		{
+			SharedPtr = MakeShared<T>(*Get<T>());
+		}
+
+		return StaticCastSharedPtr<T, void>(SharedPtr);
+	}
+
 	/**
 	 * Returns the referenced data if the reference is set, else nullptr.
 	 */
@@ -99,6 +117,8 @@ private:
 	FName RowName;
 
 	mutable const void* Ptr = nullptr;
+
+	mutable TSharedPtr<void> SharedPtr = nullptr;
 };
 
 /**
@@ -139,12 +159,13 @@ struct TVulDataPtr
 	}
 
 	/**
-	 * Creates a TSharedPtr from this pointer. This creates a new instance of the row data,
-	 * ensuring that the two pointers never interfere with one another.
+	 * Returns a TSharedPtr from this pointer. This creates a new instance of the row data,
+	 * ensuring that the two pointers never interfere with one another. This shared ptr is
+	 * cached, thus only 1 extra row data is copied.
 	 */
-	TSharedPtr<RowType> MakeSharedPtr() const
+	TSharedPtr<RowType> SharedPtr() const
 	{
-		return MakeShared<RowType>(*Get());
+		return DataPtr.GetSharedPtr<RowType>();
 	}
 
 	/**
