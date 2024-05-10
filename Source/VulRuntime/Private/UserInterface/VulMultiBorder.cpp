@@ -23,6 +23,11 @@ TSharedRef<SWidget> UVulMultiBorder::RebuildWidget()
 		ContentPadding = LoadedStyle->Padding;
 	}
 
+	if (bOverridePadding)
+	{
+		ContentPadding = Padding;
+	}
+
 	// No/invalid style.
 	if (Borders.IsEmpty())
 	{

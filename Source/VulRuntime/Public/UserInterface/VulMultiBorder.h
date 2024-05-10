@@ -28,6 +28,21 @@ public:
 	UPROPERTY(EditAnywhere)
 	TSoftClassPtr<class UVulMultiBorderStyle> Style;
 
+	/**
+	 * The padding to apply between the border and its content. By default
+	 * this is ignored and the padding in the style is used, but this can
+	 * override if OverridePadding is checked.
+	 */
+	UPROPERTY(EditAnywhere)
+	FMargin Padding;
+
+	/**
+	 * Enable to override the border style's padding and apply the Padding
+	 * specified for this instance only.
+	 */
+	UPROPERTY(EditAnywhere)
+	bool bOverridePadding = false;
+
 protected:
 	virtual TSharedRef<SWidget> RebuildWidget() override;
 

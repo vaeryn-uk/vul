@@ -82,8 +82,15 @@ struct VULRUNTIME_API FVulRandomStream : FRandomStream
 	template <typename KeyType>
 	KeyType Weighted(const TMap<KeyType, float>& Map) const
 	{
+		if (Map.IsEmpty())
+		{
+			return KeyType();
+		}
+
 		TArray<float> Weights;
-		TArray<KeyType> Keys = Map.GetKeys();
+		TArray<KeyType> Keys;
+		Map.GetKeys(Keys);
+
 		for (const auto Key : Keys)
 		{
 			Weights.Add(Map[Key]);

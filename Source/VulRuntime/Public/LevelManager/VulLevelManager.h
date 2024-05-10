@@ -7,7 +7,7 @@
 #include "Time/VulTime.h"
 #include "VulLevelManager.generated.h"
 
-DECLARE_MULTICAST_DELEGATE_OneParam(FVulLevelDelegate, const UVulLevelData*)
+DECLARE_MULTICAST_DELEGATE_TwoParams(FVulLevelDelegate, const UVulLevelData*, const AVulLevelManager*)
 
 /**
  * Responsible for loading levels using Unreal's streaming level model.
@@ -97,6 +97,9 @@ public:
 	 *   }
 	 *
 	 * In level manager actor, you'll need to define level data for "LevelOne" and "LevelTwo" to use these.
+	 *
+	 * TODO: Could simply offer a EnumToName function in Vul to easily reuse this concept across
+	 * other use-cases, rather than needing to embed it in vul level manager directly.
 	 */
 	template <typename EnumType>
 	void LoadLevel(const EnumType Level, FVulLevelDelegate::FDelegate OnComplete = FVulLevelDelegate::FDelegate())
@@ -109,6 +112,14 @@ public:
 	 * Returns parameters for spawning in an actor that belongs to the currently-loaded level.
 	 */
 	FActorSpawnParameters SpawnParams();
+
+	/**
+	 * Gets a widget spawned as a result of the last level load of the given type.
+	 *
+	 * Returns nullptr if a suitable widget cannot be found.
+	 */
+	template <typename WidgetType>
+	WidgetType* LastSpawnedWidget() const;
 
 protected:
 	// Called when the game starts or when spawned
@@ -191,4 +202,28 @@ private:
 	void NextRequest();
 
 	bool IsReloadOfSameLevel(const FName& LevelName) const;
+
+	/**
+	 * Tracks the widgets spawned when showing the last level.
+	 */
+	TArray<TWeakObjectPtr<UWidget>> Widgets;
 };
+
+template <typename WidgetType>
+WidgetType* AVulLevelManager::LastSpawnedWidget() const
+{
+	for (const auto& Widget : Widgets)
+	{
+		if (!Widget.IsValid())
+		{
+			continue;
+		}
+
+		if (const auto Casted = Cast<WidgetType>(Widget.Get()); IsValid(Casted))
+		{
+			return Casted;
+		}
+	}
+
+	return nullptr;
+}

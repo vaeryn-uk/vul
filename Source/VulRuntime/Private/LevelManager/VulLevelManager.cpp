@@ -25,10 +25,13 @@ void AVulLevelManager::BeginPlay()
 	if (!LoadingLevelName.IsNone())
 	{
 		// If we have a loading level. Display this first.
-		LoadLevel(LoadingLevelName, FVulLevelDelegate::FDelegate::CreateWeakLambda(this, [this](const UVulLevelData*)
-		{
-			LoadLevel(StartingLevelName);
-		}));
+		LoadLevel(LoadingLevelName, FVulLevelDelegate::FDelegate::CreateWeakLambda(
+			this,
+			[this](const UVulLevelData*, const AVulLevelManager*)
+			{
+				LoadLevel(StartingLevelName);
+			}
+		));
 	} else if (!StartingLevelName.IsNone())
 	{
 		// Else just load the starting level without a loading screen.
@@ -89,6 +92,8 @@ void AVulLevelManager::ShowLevel(const FName& LevelName)
 	// always available.
 	GetWorld()->FlushLevelStreaming();
 
+	Widgets.Reset();
+
 	// Spawn any widgets defined for this level.
 	for (const auto& Widget : ResolvedData->Widgets)
 	{
@@ -104,6 +109,8 @@ void AVulLevelManager::ShowLevel(const FName& LevelName)
 		}
 
 		SpawnedWidget->AddToViewport(Widget.ZOrder);
+
+		Widgets.Add(SpawnedWidget);
 	}
 
 	ResolvedData->OnLevelShown();
@@ -307,8 +314,8 @@ void AVulLevelManager::Process(FLoadRequest* Request)
 	UE_LOG(LogVul, Display, TEXT("Completed loading of %s"), *Request->LevelName.GetValue().ToString())
 
 	const auto Resolved = ResolveData(Request->LevelName.GetValue());
-	OnLevelLoadComplete.Broadcast(Resolved);
-	Request->Delegate.Broadcast(Resolved);
+	OnLevelLoadComplete.Broadcast(Resolved, this);
+	Request->Delegate.Broadcast(Resolved, this);
 
 	NextRequest();
 }
