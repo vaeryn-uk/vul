@@ -34,7 +34,7 @@ UVerticalBoxSlot* FVulElementSpacer::AddToContainer(UVerticalBox* Container, UWi
 {
 	const auto Slot = Container->AddChildToVerticalBox(Element);
 
-	Slot->SetPadding(FMargin(Spacing / 2, 0));
+	Slot->SetPadding(FMargin(0, Spacing / 2));
 
 	return Slot;
 }
