@@ -17,6 +17,8 @@ struct FVulLevelDataWidget
 
 	/**
 	 * The widget we'll create a new instance of and display.
+	 *
+	 * Note this is will be spawned and added to the first player controller's screen.
 	 */
 	UPROPERTY(EditAnywhere)
 	TSoftClassPtr<UUserWidget> Widget;

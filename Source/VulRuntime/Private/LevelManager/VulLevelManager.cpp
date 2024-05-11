@@ -1,6 +1,7 @@
 ﻿#include "LevelManager/VulLevelManager.h"
 #include "VulRuntime.h"
 #include "ActorUtil/VulActorUtil.h"
+#include "Blueprint/GameViewportSubsystem.h"
 #include "Blueprint/UserWidget.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
 #include "Engine/StreamableManager.h"
@@ -94,23 +95,27 @@ void AVulLevelManager::ShowLevel(const FName& LevelName)
 
 	Widgets.Reset();
 
-	// Spawn any widgets defined for this level.
-	for (const auto& Widget : ResolvedData->Widgets)
+	const auto ViewportSS = UGameViewportSubsystem::Get(GetWorld());
+	const auto Ctrl = VulRuntime::WorldGlobals::GetFirstPlayerController(this);
+	if (ensureMsgf(IsValid(Ctrl), TEXT("Cannot find player controller to spawn level load widgets")))
 	{
-		const auto Ctrl = VulRuntime::WorldGlobals::GetFirstPlayerController(this);
-		if (!ensureMsgf(IsValid(Ctrl), TEXT("Cannot find player controller to spawn level load widgets")))
+		// Spawn any widgets defined for this level.
+		for (const auto& Widget : ResolvedData->Widgets)
 		{
-			continue;
-		}
-		const auto SpawnedWidget = CreateWidget(Ctrl, Widget.Widget.LoadSynchronous());
-		if (!ensureMsgf(IsValid(SpawnedWidget), TEXT("Failed to spawn level widget")))
-		{
-			continue;
-		}
+			const auto SpawnedWidget = CreateWidget(Ctrl, Widget.Widget.LoadSynchronous());
+			if (!ensureMsgf(IsValid(SpawnedWidget), TEXT("Failed to spawn level widget")))
+			{
+				continue;
+			}
 
-		SpawnedWidget->AddToViewport(Widget.ZOrder);
+			ViewportSS->AddWidgetForPlayer(
+				SpawnedWidget,
+				Ctrl->GetLocalPlayer(),
+				ViewportSS->GetWidgetSlot(SpawnedWidget)
+			);
 
-		Widgets.Add(SpawnedWidget);
+			Widgets.Add(SpawnedWidget);
+		}
 	}
 
 	ResolvedData->OnLevelShown();
