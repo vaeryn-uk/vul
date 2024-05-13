@@ -54,3 +54,20 @@ public:
 		UObject* Context,
 		FFeedbackContext* Warn) override;
 };
+
+UCLASS()
+class UVulTextStyleGeneratorFactory : public UFactory
+{
+	GENERATED_BODY()
+
+public:
+	UVulTextStyleGeneratorFactory();
+
+	virtual UObject* FactoryCreateNew(
+		UClass* InClass,
+		UObject* InParent,
+		FName InName,
+		EObjectFlags Flags,
+		UObject* Context,
+		FFeedbackContext* Warn) override;
+};

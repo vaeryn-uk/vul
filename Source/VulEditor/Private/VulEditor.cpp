@@ -15,6 +15,9 @@ void FVulEditorModule::StartupModule()
 	ButtonStyleGeneratorAssetTypeActions = MakeShared<FVulButtonStyleGeneratorAssetTypeActions>();
 	FAssetToolsModule::GetModule().Get().RegisterAssetTypeActions(ButtonStyleGeneratorAssetTypeActions.ToSharedRef());
 
+	TextStyleGeneratorAssetTypeActions = MakeShared<FVulTextStyleGeneratorAssetTypeActions>();
+	FAssetToolsModule::GetModule().Get().RegisterAssetTypeActions(TextStyleGeneratorAssetTypeActions.ToSharedRef());
+
 	FVulEditorCommands::Register();
 }
 
@@ -28,6 +31,7 @@ void FVulEditorModule::ShutdownModule()
 	FAssetToolsModule::GetModule().Get().UnregisterAssetTypeActions(DataTableSourceAssetTypeActions.ToSharedRef());
 	FAssetToolsModule::GetModule().Get().UnregisterAssetTypeActions(DataRepositoryAssetTypeActions.ToSharedRef());
 	FAssetToolsModule::GetModule().Get().UnregisterAssetTypeActions(ButtonStyleGeneratorAssetTypeActions.ToSharedRef());
+	FAssetToolsModule::GetModule().Get().UnregisterAssetTypeActions(TextStyleGeneratorAssetTypeActions.ToSharedRef());
 }
 
 #undef LOCTEXT_NAMESPACE

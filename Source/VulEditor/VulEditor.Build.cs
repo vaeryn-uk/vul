@@ -9,7 +9,7 @@ public class VulEditor : ModuleRules
         PublicDependencyModuleNames.AddRange(
             new string[]
             {
-                "Core", "AssetTools", "UnrealYAML",
+                "Core", "AssetTools", "UnrealYAML", "VulRuntime",
             }
         );
 
@@ -21,7 +21,7 @@ public class VulEditor : ModuleRules
                 "Slate",
                 "SlateCore",
                 "UnrealEd", "EditorScriptingUtilities",
-                "VulRuntime", "Json", "UnrealYAML", "ToolMenus", "Blutility",
+                "Json", "UnrealYAML", "ToolMenus", "Blutility",
                 "CommonUI",
             }
         );

@@ -66,9 +66,4 @@ public:
 	 */
 	UFUNCTION(CallInEditor)
 	void Generate();
-
-private:
-	FString Directory();
-
-	void ApplyVariation(const FVulButtonStyleVariation& Variation, UVulButtonStyle* Style);
 };

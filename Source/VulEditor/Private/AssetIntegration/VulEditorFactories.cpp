@@ -2,6 +2,7 @@
 #include "DataTable/VulDataRepository.h"
 #include "DataTable/VulDataTableSource.h"
 #include "StyleGenerator/VulButtonStyleGenerator.h"
+#include "StyleGenerator/VulTextStyleGenerator.h"
 
 UVulDataTableSourceFactory::UVulDataTableSourceFactory()
 {
@@ -52,4 +53,21 @@ UObject* UVulButtonStyleGeneratorFactory::FactoryCreateNew(
 	FFeedbackContext* Warn)
 {
 	return NewObject<UVulButtonStyleGenerator>(InParent, InClass, InName, Flags, Context);
+}
+
+UVulTextStyleGeneratorFactory::UVulTextStyleGeneratorFactory()
+{
+	SupportedClass = UVulTextStyleGenerator::StaticClass();
+	bCreateNew = true;
+}
+
+UObject* UVulTextStyleGeneratorFactory::FactoryCreateNew(
+	UClass* InClass,
+	UObject* InParent,
+	FName InName,
+	EObjectFlags Flags,
+	UObject* Context,
+	FFeedbackContext* Warn)
+{
+	return NewObject<UVulTextStyleGenerator>(InParent, InClass, InName, Flags, Context);
 }

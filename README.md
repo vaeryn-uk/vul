@@ -213,8 +213,13 @@ This editor functionality aims to improve the creation & maintenance of a consis
 set of styles for CommonUI UI components. For example, your project may have primary,
 secondary and danger buttons. These three styles would be defined as variations in
 a generator, then you can use the in-editor `Generate` functionality to create or
-update the corresponding button styles. This takes the manual work out
-of updating all of your styles.
+update the corresponding button styles. This takes the manual work out of updating 
+all of your styles, and provides a single editor pane where all your style diffferences
+are listed in place.
 
 Generators provided:
 - `VulButtonStyleGenerator`
+- `VulTextStyleGenerator`
+
+Note that generators only allow variation of a small subset of available properties right
+now. These may be expanded as use-cases arise.

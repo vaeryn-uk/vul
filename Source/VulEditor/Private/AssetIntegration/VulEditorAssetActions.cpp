@@ -6,6 +6,7 @@
 #include "Subsystems/EditorAssetSubsystem.h"
 #include "VulEditorUtil.h"
 #include "StyleGenerator/VulButtonStyleGenerator.h"
+#include "StyleGenerator/VulTextStyleGenerator.h"
 
 void FVulDataRepositoryAssetTypeActions::GetActions(const TArray<UObject*>& InObjects, FToolMenuSection& Section)
 {
@@ -141,6 +142,26 @@ FColor FVulButtonStyleGeneratorAssetTypeActions::GetTypeColor() const
 }
 
 uint32 FVulButtonStyleGeneratorAssetTypeActions::GetCategories()
+{
+	return EAssetTypeCategories::UI;
+}
+
+UClass* FVulTextStyleGeneratorAssetTypeActions::GetSupportedClass() const
+{
+	return UVulTextStyleGenerator::StaticClass();
+}
+
+FText FVulTextStyleGeneratorAssetTypeActions::GetName() const
+{
+	return INVTEXT("Vul Text Style Generator");
+}
+
+FColor FVulTextStyleGeneratorAssetTypeActions::GetTypeColor() const
+{
+	return FColor::Orange;
+}
+
+uint32 FVulTextStyleGeneratorAssetTypeActions::GetCategories()
 {
 	return EAssetTypeCategories::UI;
 }
