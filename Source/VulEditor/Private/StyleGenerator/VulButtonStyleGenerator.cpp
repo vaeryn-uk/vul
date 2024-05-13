@@ -62,9 +62,7 @@ void UVulButtonStyleGenerator::Generate()
 
 		UEngine::CopyPropertiesForUnrelatedObjects(Template, Styles);
 
-		Styles->NormalBase.SetResourceObject(Variation.Value.NormalBackground);
-		Styles->NormalHovered.SetResourceObject(Variation.Value.HoveredBackground);
-		Styles->NormalPressed.SetResourceObject(Variation.Value.PressedBackground);
+		ApplyVariation(Variation.Value, Styles);
 
 		Styles->MarkPackageDirty();
 
@@ -75,4 +73,12 @@ void UVulButtonStyleGenerator::Generate()
 FString UVulButtonStyleGenerator::Directory()
 {
 	return FPaths::GetPath(GetPathNameSafe(this));
+}
+
+void UVulButtonStyleGenerator::ApplyVariation(const FVulButtonStyleVariation& Variation, UVulButtonStyle* Style)
+{
+	Style->NormalBase.SetResourceObject(Variation.NormalBackground);
+	Style->NormalHovered.SetResourceObject(Variation.HoveredBackground);
+	Style->NormalPressed.SetResourceObject(Variation.PressedBackground);
+	Style->Disabled.SetResourceObject(Variation.DisabledBackground);
 }

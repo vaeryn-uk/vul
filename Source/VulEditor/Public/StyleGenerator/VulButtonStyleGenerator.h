@@ -1,11 +1,14 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "VulButtonStyle.h"
 #include "VulButtonStyleGenerator.generated.h"
 
 /**
  * Defines a single variation to a button style. This is
  * applied over the template specified in VulButtonStyleGenerator.
+ *
+ * Only background images are supported for now.
  */
 USTRUCT()
 struct FVulButtonStyleVariation
@@ -20,6 +23,9 @@ struct FVulButtonStyleVariation
 
 	UPROPERTY(EditAnywhere)
 	UTexture2D* HoveredBackground;
+
+	UPROPERTY(EditAnywhere)
+	UTexture2D* DisabledBackground;
 };
 
 /**
@@ -63,4 +69,6 @@ public:
 
 private:
 	FString Directory();
+
+	void ApplyVariation(const FVulButtonStyleVariation& Variation, UVulButtonStyle* Style);
 };
