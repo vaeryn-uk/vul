@@ -5,6 +5,7 @@
 #include "DataTable/VulDataTableSource.h"
 #include "Subsystems/EditorAssetSubsystem.h"
 #include "VulEditorUtil.h"
+#include "StyleGenerator/VulButtonStyleGenerator.h"
 
 void FVulDataRepositoryAssetTypeActions::GetActions(const TArray<UObject*>& InObjects, FToolMenuSection& Section)
 {
@@ -122,4 +123,24 @@ FColor FVulDataTableSourceAssetTypeActions::GetTypeColor() const
 uint32 FVulDataTableSourceAssetTypeActions::GetCategories()
 {
 	return EAssetTypeCategories::Misc;
+}
+
+UClass* FVulButtonStyleGeneratorAssetTypeActions::GetSupportedClass() const
+{
+	return UVulButtonStyleGenerator::StaticClass();
+}
+
+FText FVulButtonStyleGeneratorAssetTypeActions::GetName() const
+{
+	return INVTEXT("Vul Button Style Generator");
+}
+
+FColor FVulButtonStyleGeneratorAssetTypeActions::GetTypeColor() const
+{
+	return FColor::Orange;
+}
+
+uint32 FVulButtonStyleGeneratorAssetTypeActions::GetCategories()
+{
+	return EAssetTypeCategories::UI;
 }

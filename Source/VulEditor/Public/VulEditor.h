@@ -13,6 +13,7 @@ public:
 private:
 	TSharedPtr<FVulDataTableSourceAssetTypeActions> DataTableSourceAssetTypeActions;
 	TSharedPtr<FVulDataRepositoryAssetTypeActions> DataRepositoryAssetTypeActions;
+	TSharedPtr<FVulButtonStyleGeneratorAssetTypeActions> ButtonStyleGeneratorAssetTypeActions;
 };
 
 DECLARE_LOG_CATEGORY_EXTERN(LogVulEditor, Display, Display)

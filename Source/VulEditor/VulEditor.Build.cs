@@ -22,6 +22,7 @@ public class VulEditor : ModuleRules
                 "SlateCore",
                 "UnrealEd", "EditorScriptingUtilities",
                 "VulRuntime", "Json", "UnrealYAML", "ToolMenus", "Blutility",
+                "CommonUI",
             }
         );
     }

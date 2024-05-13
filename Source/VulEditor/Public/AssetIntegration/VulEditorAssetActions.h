@@ -24,3 +24,12 @@ public:
 	virtual FColor GetTypeColor() const override;
 	virtual uint32 GetCategories() override;
 };
+
+class FVulButtonStyleGeneratorAssetTypeActions : public FAssetTypeActions_Base
+{
+public:
+	virtual UClass* GetSupportedClass() const override;
+	virtual FText GetName() const override;
+	virtual FColor GetTypeColor() const override;
+	virtual uint32 GetCategories() override;
+};

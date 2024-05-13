@@ -206,3 +206,15 @@ See the code in `UVulRichTextBlock` for customization documentation, but as a qu
 
 A property that allows you to control spacing between elements in a container that can
 be seamlessly switched between horizontal and vertical boxes. See `FVulElementSpacer`.
+
+#### Style Generation
+
+This editor functionality aims to improve the creation & maintenance of a consistent
+set of styles for CommonUI UI components. For example, your project may have primary,
+secondary and danger buttons. These three styles would be defined as variations in
+a generator, then you can use the in-editor `Generate` functionality to create or
+update the corresponding button styles. This takes the manual work out
+of updating all of your styles.
+
+Generators provided:
+- `VulButtonStyleGenerator`

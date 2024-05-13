@@ -12,6 +12,9 @@ void FVulEditorModule::StartupModule()
 	DataRepositoryAssetTypeActions = MakeShared<FVulDataRepositoryAssetTypeActions>();
 	FAssetToolsModule::GetModule().Get().RegisterAssetTypeActions(DataRepositoryAssetTypeActions.ToSharedRef());
 
+	ButtonStyleGeneratorAssetTypeActions = MakeShared<FVulButtonStyleGeneratorAssetTypeActions>();
+	FAssetToolsModule::GetModule().Get().RegisterAssetTypeActions(ButtonStyleGeneratorAssetTypeActions.ToSharedRef());
+
 	FVulEditorCommands::Register();
 }
 
@@ -24,6 +27,7 @@ void FVulEditorModule::ShutdownModule()
 
 	FAssetToolsModule::GetModule().Get().UnregisterAssetTypeActions(DataTableSourceAssetTypeActions.ToSharedRef());
 	FAssetToolsModule::GetModule().Get().UnregisterAssetTypeActions(DataRepositoryAssetTypeActions.ToSharedRef());
+	FAssetToolsModule::GetModule().Get().UnregisterAssetTypeActions(ButtonStyleGeneratorAssetTypeActions.ToSharedRef());
 }
 
 #undef LOCTEXT_NAMESPACE

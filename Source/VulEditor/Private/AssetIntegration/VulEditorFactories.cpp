@@ -1,7 +1,7 @@
 ﻿#include "AssetIntegration/VulEditorFactories.h"
-
 #include "DataTable/VulDataRepository.h"
 #include "DataTable/VulDataTableSource.h"
+#include "StyleGenerator/VulButtonStyleGenerator.h"
 
 UVulDataTableSourceFactory::UVulDataTableSourceFactory()
 {
@@ -35,4 +35,21 @@ UObject* UVulDataRepositoryFactory::FactoryCreateNew(
 	FFeedbackContext* Warn)
 {
 	return NewObject<UVulDataRepository>(InParent, InClass, InName, Flags, Context);
+}
+
+UVulButtonStyleGeneratorFactory::UVulButtonStyleGeneratorFactory()
+{
+	SupportedClass = UVulButtonStyleGenerator::StaticClass();
+	bCreateNew = true;
+}
+
+UObject* UVulButtonStyleGeneratorFactory::FactoryCreateNew(
+	UClass* InClass,
+	UObject* InParent,
+	FName InName,
+	EObjectFlags Flags,
+	UObject* Context,
+	FFeedbackContext* Warn)
+{
+	return NewObject<UVulButtonStyleGenerator>(InParent, InClass, InName, Flags, Context);
 }
