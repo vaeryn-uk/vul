@@ -9,7 +9,9 @@
  *
  * This varies, however, in that the styles may define multiple borders. Internally,
  * this widget overlays separate SBorder widgets on top of each other based on the
- * number of borders specified in the style.
+ * number of borders specified in the style. A single border may be used, where this
+ * offers no immediate advantage other than those borders being made layered in the
+ * future with changes only to the style.
  *
  * This is useful for a common scenario where a visual containing element is made up of
  * multiple textures, e.g. a boundary around the edge, then a background image.

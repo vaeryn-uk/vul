@@ -18,9 +18,10 @@ public:
 		UObject* Generator,
 		const FString& Prefix,
 		const TMap<FString, VariantClass>& Variations,
-		const TFunction<void (StyleClass*, const VariantClass&)> Apply
+		const TFunction<void (StyleClass*, const VariantClass&)> Apply,
+		bool RequireTemplate = true
 	) {
-		if (!IsValid(Template))
+		if (RequireTemplate && !IsValid(Template))
 		{
 			FVulEditorUtil::Output(
 				INVTEXT("Vul Style Generation"),
@@ -70,7 +71,10 @@ public:
 				return;
 			}
 
-			UEngine::CopyPropertiesForUnrelatedObjects(Template, Style);
+			if (Template != nullptr)
+			{
+				UEngine::CopyPropertiesForUnrelatedObjects(Template, Style);
+			}
 
 			Apply(Style, Variation.Value);
 

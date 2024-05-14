@@ -1,6 +1,7 @@
 ﻿#include "AssetIntegration/VulEditorFactories.h"
 #include "DataTable/VulDataRepository.h"
 #include "DataTable/VulDataTableSource.h"
+#include "StyleGenerator/VulBorderStyleGenerator.h"
 #include "StyleGenerator/VulButtonStyleGenerator.h"
 #include "StyleGenerator/VulTextStyleGenerator.h"
 
@@ -70,4 +71,21 @@ UObject* UVulTextStyleGeneratorFactory::FactoryCreateNew(
 	FFeedbackContext* Warn)
 {
 	return NewObject<UVulTextStyleGenerator>(InParent, InClass, InName, Flags, Context);
+}
+
+UVulBorderStyleGeneratorFactory::UVulBorderStyleGeneratorFactory()
+{
+	SupportedClass = UVulBorderStyleGenerator::StaticClass();
+	bCreateNew = true;
+}
+
+UObject* UVulBorderStyleGeneratorFactory::FactoryCreateNew(
+	UClass* InClass,
+	UObject* InParent,
+	FName InName,
+	EObjectFlags Flags,
+	UObject* Context,
+	FFeedbackContext* Warn)
+{
+	return NewObject<UVulBorderStyleGenerator>(InParent, InClass, InName, Flags, Context);
 }

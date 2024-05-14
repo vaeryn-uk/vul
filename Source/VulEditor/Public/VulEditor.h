@@ -15,6 +15,7 @@ private:
 	TSharedPtr<FVulDataRepositoryAssetTypeActions> DataRepositoryAssetTypeActions;
 	TSharedPtr<FVulButtonStyleGeneratorAssetTypeActions> ButtonStyleGeneratorAssetTypeActions;
 	TSharedPtr<FVulTextStyleGeneratorAssetTypeActions> TextStyleGeneratorAssetTypeActions;
+	TSharedPtr<FVulBorderStyleGeneratorAssetTypeActions> BorderStyleGeneratorAssetTypeActions;
 };
 
 DECLARE_LOG_CATEGORY_EXTERN(LogVulEditor, Display, Display)

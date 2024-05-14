@@ -5,6 +5,7 @@
 #include "DataTable/VulDataTableSource.h"
 #include "Subsystems/EditorAssetSubsystem.h"
 #include "VulEditorUtil.h"
+#include "StyleGenerator/VulBorderStyleGenerator.h"
 #include "StyleGenerator/VulButtonStyleGenerator.h"
 #include "StyleGenerator/VulTextStyleGenerator.h"
 
@@ -162,6 +163,26 @@ FColor FVulTextStyleGeneratorAssetTypeActions::GetTypeColor() const
 }
 
 uint32 FVulTextStyleGeneratorAssetTypeActions::GetCategories()
+{
+	return EAssetTypeCategories::UI;
+}
+
+UClass* FVulBorderStyleGeneratorAssetTypeActions::GetSupportedClass() const
+{
+	return UVulBorderStyleGenerator::StaticClass();
+}
+
+FText FVulBorderStyleGeneratorAssetTypeActions::GetName() const
+{
+	return INVTEXT("Vul Border Style Generator");
+}
+
+FColor FVulBorderStyleGeneratorAssetTypeActions::GetTypeColor() const
+{
+	return FColor::Orange;
+}
+
+uint32 FVulBorderStyleGeneratorAssetTypeActions::GetCategories()
 {
 	return EAssetTypeCategories::UI;
 }

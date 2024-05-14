@@ -71,3 +71,20 @@ public:
 		UObject* Context,
 		FFeedbackContext* Warn) override;
 };
+
+UCLASS()
+class UVulBorderStyleGeneratorFactory : public UFactory
+{
+	GENERATED_BODY()
+
+public:
+	UVulBorderStyleGeneratorFactory();
+
+	virtual UObject* FactoryCreateNew(
+		UClass* InClass,
+		UObject* InParent,
+		FName InName,
+		EObjectFlags Flags,
+		UObject* Context,
+		FFeedbackContext* Warn) override;
+};

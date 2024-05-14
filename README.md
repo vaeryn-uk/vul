@@ -220,6 +220,7 @@ are listed in place.
 Generators provided:
 - `VulButtonStyleGenerator`
 - `VulTextStyleGenerator`
+- `VulBorderStyleGenerator`
 
 Note that generators only allow variation of a small subset of available properties right
 now. These may be expanded as use-cases arise.
