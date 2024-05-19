@@ -38,6 +38,14 @@ struct TVulMeasure
 	}
 
 	/**
+	 * How far away is this measure away from its max value?
+	 */
+	NumberType Missing() const
+	{
+		return Max->Value() - Current->Value();
+	}
+
+	/**
 	 * Deducts Amount from this resource, only if we have enough of the resource.
 	 *
 	 * Returns true if we consumed, or false if we did not have enough.

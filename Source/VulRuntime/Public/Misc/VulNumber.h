@@ -177,7 +177,7 @@ public:
 	/**
 	 * Alters the base value for this number by a fixed amount.
 	 *
-	 * This is permanent and cannot be withdrawn nor reset, as with normal modifications.
+	 * This is permanent and cannot be withdrawn nor reset like normal modifications can be.
 	 *
 	 * This is intended for characters' stats, e.g. a base stat increase, that other modifications
 	 * are applied on top of.
