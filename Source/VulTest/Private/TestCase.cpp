@@ -8,8 +8,19 @@ void VulTest::TestCase::Log(const FString& Message) const
 	));
 }
 
-FString VulTest::TestCase::FormatTestTitle(const FString Message) const
+FString VulTest::TestCase::FormatTestTitle(FString Message, const FString& Extra) const
 {
+	if (!Extra.IsEmpty())
+	{
+		if (!Message.IsEmpty())
+		{
+			Message += " " + Extra;
+		} else
+		{
+			Message = Extra;
+		}
+	}
+
 	if (!Message.IsEmpty())
 	{
 		return FString::Printf(TEXT("[VULTEST] %ls: %ls"), *Name, *Message);

@@ -126,5 +126,54 @@ bool TestMath::RunTest(const FString& Parameters)
 		);
 	}
 
+	{
+		struct Data
+		{
+			FVector A;
+			FVector B;
+			float T;
+			float Distance;
+			FVector Plane;
+			TArray<FVector> ExpectedResult;
+		};
+
+		auto Ddt = DDT<Data>(this, "EitherSideOfLine", [](TC Test, Data Case)
+		{
+			const auto Result = FVulMath::EitherSideOfLine(Case.A, Case.B, Case.T, Case.Plane, Case.Distance);
+
+			Test.Equal(Result, Case.ExpectedResult);
+
+			// Quick sanity checks.
+			Test.Equal((Result[0] - Result[1]).Size(), static_cast<double>(Case.Distance * 2), "distance check");
+		});
+
+		Ddt.Run("xy-plane-diagonal", {
+			.A=FVector(0, 0, 0),
+			.B=FVector(1, 0, 0),
+			.T=1.f,
+			.Distance=1,
+			.Plane=FVector(0, 0, 1),
+			.ExpectedResult={FVector(1, 1, 0), FVector(1, -1, 0)},
+		});
+
+		Ddt.Run("xy-plane-diagonal", {
+			.A=FVector(0, 0, 0),
+			.B=FVector(2, 2, 0),
+			.T=.5f,
+			.Distance=1,
+			.Plane=FVector(0, 0, 1),
+			.ExpectedResult={FVector(0.2929, 1.7071, 0), FVector(1.7071, 0.2929, 0)},
+		});
+
+		Ddt.Run("xz-plane-diagonal", {
+			.A=FVector(0, 0, 0),
+			.B=FVector(2, 0, 2),
+			.T=.0f,
+			.Distance=1,
+			.Plane=FVector(0, 1, 0),
+			.ExpectedResult={FVector(0.7071, 0, -0.7071), FVector(-0.7071, 0, 0.7071)},
+		});
+	}
+
 	return !HasAnyErrors();
 }

@@ -45,3 +45,19 @@ FVector FVulMath::ClosestPointOnLineSegment(const FVector& A, const FVector& B, 
 
 	return A + AB * FMath::Clamp(T, 0.0f, 1.0f);
 }
+
+TArray<FVector> FVulMath::EitherSideOfLine(
+	const FVector& A,
+	const FVector& B,
+	const float T,
+	const FVector& Plane,
+	const float Distance
+) {
+	const auto Cross = FVector::CrossProduct(Plane.GetSafeNormal(), B - A);
+	const auto Point = (A + (B - A)) * T;
+
+	return {
+		Point + Cross.GetSafeNormal() * Distance,
+		Point - Cross.GetSafeNormal() * Distance,
+	};
+}

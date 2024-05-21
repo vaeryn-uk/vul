@@ -25,7 +25,7 @@ namespace VulTest
 		template <typename Type>
 		bool Equal(const TOptional<Type>& Actual, const TOptional<Type>& Expected, const FString Message = FString()) const
 		{
-			if (!TestInstance->TestEqual(FormatTestTitle("TOptional IsSet check " + Message), Actual.IsSet(), Expected.IsSet()))
+			if (!TestInstance->TestEqual(FormatTestTitle("TOptional IsSet check", Message), Actual.IsSet(), Expected.IsSet()))
 			{
 				return false;
 			}
@@ -35,7 +35,7 @@ namespace VulTest
 				return true;
 			}
 
-			return TestInstance->TestEqual(FormatTestTitle("TOptional value check " + Message), Actual.GetValue(), Expected.GetValue());
+			return TestInstance->TestEqual(FormatTestTitle("TOptional value check", Message), Actual.GetValue(), Expected.GetValue());
 		}
 
 		/**
@@ -77,12 +77,12 @@ namespace VulTest
 		{
 			bool Ok = true;
 
-			if (TestInstance->TestEqual(FormatTestTitle(Message + "Array num"), Actual.Num(), Expected.Num()))
+			if (TestInstance->TestEqual(FormatTestTitle(Message, "Array num"), Actual.Num(), Expected.Num()))
 			{
 				for (auto N = 0; N < Actual.Num(); ++N)
 				{
 					if (!TestInstance->TestEqual(
-						FormatTestTitle(Message + FString::Printf(TEXT("Item #%d"), N)),
+						FormatTestTitle(Message, FString::Printf(TEXT("Item #%d"), N)),
 						Actual[N],
 						Expected[N]
 					))
@@ -112,7 +112,7 @@ namespace VulTest
 		 */
 		void VULTEST_API Log(const FString& Message) const;
 	private:
-		FString VULTEST_API FormatTestTitle(const FString Message) const;
+		FString VULTEST_API FormatTestTitle(FString Message, const FString& Extra = "") const;
 	};
 
 	/**

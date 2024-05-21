@@ -80,7 +80,7 @@ public:
 	/**
 	 * Pre-defined tooltip data, that can be rendered in rich text via the returned text.
 	 *
-	 * This text will contain <tt cached="some-id"{content}</>. "some-id" is later resolved by
+	 * This text will contain <tt cached="some-id">{content}</>. "some-id" is later resolved by
 	 * UVulRichTextBlock to render the tooltip data. The returned text is expected to be formatted
 	 * with a named arg "content" which will be wrapped in the tooltip.
 	 *
