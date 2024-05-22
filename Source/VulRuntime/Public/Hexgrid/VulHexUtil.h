@@ -24,10 +24,12 @@ struct FVulWorldHexGridSettings
 	/**
 	 * The plane on which the grid is projected.
 	 *
-	 * TODO: This isn't respected yet. Functions assume this value does not change.
+	 * Default lays the grid along the XY plane.
+	 *
+	 * TODO: This isn't fully respected yet. Most functions assume this value does not change.
 	 */
 	UPROPERTY(VisibleAnywhere)
-	FPlane ProjectionPlane = FPlane(FVector::Zero(), FVector::ZAxisVector);
+	FPlane ProjectionPlane = FPlane(FVector(0, 0, 1), 0);
 
 	/**
 	 * Returns the value between two hexes center points when moving one hex in the short direction.

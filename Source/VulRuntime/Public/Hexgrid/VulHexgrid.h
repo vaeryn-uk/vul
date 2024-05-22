@@ -120,12 +120,25 @@ struct TVulHexgrid
 	 *
 	 * The optional function returns true if a tile is valid along the trace. Can be used to implement
 	 * line of sight obstacles.
+	 *
+	 * Leeway allows the trace to deviate from the exact path by this amount of a single hex tile's size.
+	 * This is useful when you want to prevent the trace being blocked when the trace navigates close
+	 * to 2 tiles where one is blocked and one is not.
+	 *
+	 *           ( 0 -1 +1)        (+1 -1  0)
+	 *
+	 *  (-1  0 +1)        ( 0  0  0)        (+1  0 -1)
+	 *
+	 *  Consider finding a trace between ( 0 -1 +1) and (+1  0 -1). The trace will run along
+	 *  the boundary between (+1 -1  0) and ( 0  0  0). This Leeway allows the trace to be
+	 *  satisfied by either one of these tiles if either is blocked.
 	 */
 	FTraceResult Trace(
 		const FVulHexAddr& From,
 		const FVulHexAddr& To,
-		const TFunction<bool (const FVulTile&)>& Check = [](const FVulTile&) { return true; })
-	{
+		const TFunction<bool (const FVulTile&)>& Check = [](const FVulTile&) { return true; },
+		const float Leeway = 0.01
+	) {
 		FVulWorldHexGridSettings Settings;
 		Settings.HexSize = 10;
 
@@ -140,11 +153,41 @@ struct TVulHexgrid
 		for (auto SampleN = 1; SampleN <= SampleCount; ++SampleN)
 		{
 			const auto Sample = Start + LineSegment * (SampleN / static_cast<float>(SampleCount));
-			const auto Tile = VulRuntime::Hexgrid::Deproject(Sample, Settings);
+			auto Tile = VulRuntime::Hexgrid::Deproject(Sample, Settings);
 
-			if (!IsValidAddr(Tile) || !Check(GetTile(Tile).GetValue()))
+			if (!IsValidAddr(Tile))
 			{
 				return Result;
+			}
+
+			if (!Check(GetTile(Tile).GetValue()) && Leeway > 0.f)
+			{
+				const auto Sides = FVulMath::EitherSideOfLine(
+					Start,
+					End,
+					SampleN / static_cast<float>(SampleCount),
+					Settings.ProjectionPlane.GetNormal(),
+					Settings.HexSize * Leeway
+				);
+
+				bool AlternateFound = false;
+
+				for (const auto& Side : Sides)
+				{
+					const auto& Candidate = VulRuntime::Hexgrid::Deproject(Side, Settings);
+
+					if (IsValidAddr(Candidate) && Check(GetTile(Candidate).GetValue()))
+					{
+						Tile = Candidate;
+						AlternateFound = true;
+						break;
+					}
+				}
+
+				if (!AlternateFound)
+				{
+					return Result;
+				}
 			}
 
 			Result.Tiles.Add(Tile);

@@ -147,7 +147,7 @@ bool TestMath::RunTest(const FString& Parameters)
 			Test.Equal((Result[0] - Result[1]).Size(), static_cast<double>(Case.Distance * 2), "distance check");
 		});
 
-		Ddt.Run("xy-plane-diagonal", {
+		Ddt.Run("xy-plane-diagonal-at-1", {
 			.A=FVector(0, 0, 0),
 			.B=FVector(1, 0, 0),
 			.T=1.f,
@@ -156,7 +156,7 @@ bool TestMath::RunTest(const FString& Parameters)
 			.ExpectedResult={FVector(1, 1, 0), FVector(1, -1, 0)},
 		});
 
-		Ddt.Run("xy-plane-diagonal", {
+		Ddt.Run("xy-plane-diagonal-at-.5", {
 			.A=FVector(0, 0, 0),
 			.B=FVector(2, 2, 0),
 			.T=.5f,
@@ -165,13 +165,31 @@ bool TestMath::RunTest(const FString& Parameters)
 			.ExpectedResult={FVector(0.2929, 1.7071, 0), FVector(1.7071, 0.2929, 0)},
 		});
 
-		Ddt.Run("xz-plane-diagonal", {
+		Ddt.Run("xz-plane-diagonal-at-0", {
 			.A=FVector(0, 0, 0),
 			.B=FVector(2, 0, 2),
-			.T=.0f,
+			.T=0.f,
 			.Distance=1,
 			.Plane=FVector(0, 1, 0),
 			.ExpectedResult={FVector(0.7071, 0, -0.7071), FVector(-0.7071, 0, 0.7071)},
+		});
+
+		Ddt.Run("xz-plane-diagonal-at-.5", {
+			.A=FVector(0, 0, 0),
+			.B=FVector(2, 2, 0),
+			.T=.5f,
+			.Distance=1,
+			.Plane=FVector(0, 1, 0),
+			.ExpectedResult={FVector(1, 1, -1), FVector(1, 1, 1)},
+		});
+
+		Ddt.Run("from-tile-test", {
+			.A=FVector(-8.66025, 15, 0),
+			.B=FVector(18.32050, 0, 0),
+			.T=.5f,
+			.Distance=.1,
+			.Plane=FVector(0, 0, 1),
+			.ExpectedResult={FVector(4.8787, 7.5874, 0), FVector(4.7815, 7.4125, 0)},
 		});
 	}
 

@@ -54,7 +54,7 @@ TArray<FVector> FVulMath::EitherSideOfLine(
 	const float Distance
 ) {
 	const auto Cross = FVector::CrossProduct(Plane.GetSafeNormal(), B - A);
-	const auto Point = (A + (B - A)) * T;
+	const auto Point = FMath::Lerp(A, B, T);
 
 	return {
 		Point + Cross.GetSafeNormal() * Distance,

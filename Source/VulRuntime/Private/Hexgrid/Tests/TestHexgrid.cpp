@@ -118,6 +118,67 @@ bool TestHexgrid::RunTest(const FString& Parameters)
 		Ddt.Run("50 tiles, straight", {50, {-25, 0}, {25, 0}, Expected, true});
 	}
 
+	{
+		struct Data { FVulHexAddr From; FVulHexAddr To; TArray<FVulHexAddr> Obstacles; TArray<FVulHexAddr> ExpectedTiles; bool ExpectedComplete; };
+		auto Ddt = DDT<Data>(this, "Alternate Traces", [](const TestCase& TestCase, const Data& Data)
+		{
+			auto Grid = MakeGrid(2);
+			const auto Result = Grid.Trace(Data.From, Data.To, [Data](const TestGrid::FVulTile& Tile)
+			{
+				return !Data.Obstacles.Contains(Tile.Addr);
+			});
+
+			TestCase.Equal(Result.Complete, Data.ExpectedComplete, "is complete");
+			TestCase.Equal(Result.Tiles, Data.ExpectedTiles, "expected tiles match");
+		});
+
+		Ddt.Run("no-obstacles", {
+			.From=FVulHexAddr(0, -1),
+			.To=FVulHexAddr(1, 0),
+			.Obstacles={},
+			.ExpectedTiles={FVulHexAddr(0, -1), FVulHexAddr(0, 0), FVulHexAddr(1, 0)},
+			.ExpectedComplete=true
+		});
+
+		Ddt.Run("block-side-1", {
+			.From=FVulHexAddr(0, -1),
+			.To=FVulHexAddr(1, 0),
+			.Obstacles={FVulHexAddr(1, -1)},
+			.ExpectedTiles={FVulHexAddr(0, -1), FVulHexAddr(0, 0), FVulHexAddr(1, 0)},
+			.ExpectedComplete=true
+		});
+
+		Ddt.Run("block-side-2", {
+			.From=FVulHexAddr(0, -1),
+			.To=FVulHexAddr(1, 0),
+			.Obstacles={FVulHexAddr(0, 0)},
+			.ExpectedTiles={FVulHexAddr(0, -1), FVulHexAddr(1, -1), FVulHexAddr(1, 0)},
+			.ExpectedComplete=true
+		});
+
+		Ddt.Run("block-side-1-and-2", {
+			.From=FVulHexAddr(0, -1),
+			.To=FVulHexAddr(1, 0),
+			.Obstacles={FVulHexAddr(0, 0), FVulHexAddr(1, -1)},
+			.ExpectedTiles={FVulHexAddr(0, -1)},
+			.ExpectedComplete=false
+		});
+
+		Ddt.Run("multi-alternates", {
+			.From=FVulHexAddr(0, -2),
+			.To=FVulHexAddr(2, 0),
+			.Obstacles={FVulHexAddr(2, -1), FVulHexAddr(0, -1)},
+			.ExpectedTiles={
+				FVulHexAddr(0, -2),
+				FVulHexAddr(1, -2),
+				FVulHexAddr(1, -1),
+				FVulHexAddr(1, 0),
+				FVulHexAddr(2, 0),
+			},
+			.ExpectedComplete=true
+		});
+	}
+
 	return true;
 }
 
