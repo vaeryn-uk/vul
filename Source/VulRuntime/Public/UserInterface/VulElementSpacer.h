@@ -28,15 +28,15 @@ struct VULRUNTIME_API FVulElementSpacer
 	/**
 	 * Adds Element to a horizontal or vertical box container, applying the spacing setting.
 	 */
-	UPanelSlot* AddToContainer(UPanelWidget* Container, UWidget* Element) const;
+	UPanelSlot* AddToContainer(UPanelWidget* Container, UWidget* Element, const FMargin& Extra = FMargin()) const;
 
 	/**
 	 * Adds Element to a horizontal box container, applying the spacing setting.
 	 */
-	UHorizontalBoxSlot* AddToContainer(UHorizontalBox* Container, UWidget* Element) const;
+	UHorizontalBoxSlot* AddToContainer(UHorizontalBox* Container, UWidget* Element, const FMargin& Extra = FMargin()) const;
 
 	/**
 	 * Adds Element to a horizontal box container, applying the spacing setting.
 	 */
-	UVerticalBoxSlot* AddToContainer(UVerticalBox* Container, UWidget* Element) const;
+	UVerticalBoxSlot* AddToContainer(UVerticalBox* Container, UWidget* Element, const FMargin& Extra = FMargin()) const;
 };
