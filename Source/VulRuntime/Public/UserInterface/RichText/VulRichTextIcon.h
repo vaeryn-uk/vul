@@ -39,8 +39,6 @@ public:
 	virtual TOptional<float> GetAutoSizeAspectRatio() override;
 
 	bool ApplyIcon(const FVulRichTextIconDefinition* Definition);
-
-#if WITH_EDITORONLY_DATA
 	/**
 	 * The icon to preview when TestIcon is selected.
 	 */
@@ -52,7 +50,6 @@ public:
 	 */
 	UFUNCTION(CallInEditor, Category="Test")
 	void TestIcon();
-#endif
 
 	/**
 	 * Override this to provide an fallback icon when no icon is found. Useful as a visual

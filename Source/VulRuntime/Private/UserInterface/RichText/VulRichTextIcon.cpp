@@ -78,9 +78,9 @@ bool UVulRichTextIcon::ApplyIcon(const FVulRichTextIconDefinition* Definition)
 	return true;
 }
 
-#if WITH_EDITORONLY_DATA
 void UVulRichTextIcon::TestIcon()
 {
+#if WITH_EDITORONLY_DATA
 	if (TestIconRowName.IsNone())
 	{
 		FVulEditorUtil::Output("Icon Test", "No row name selected", EAppMsgCategory::Error);
@@ -100,8 +100,8 @@ void UVulRichTextIcon::TestIcon()
 	}
 
 	ApplyIcon(Found);
-}
 #endif
+}
 
 TObjectPtr<UObject> UVulRichTextIcon::FallbackIcon() const
 {
