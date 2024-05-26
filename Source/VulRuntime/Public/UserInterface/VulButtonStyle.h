@@ -9,7 +9,7 @@
  * Override the button styles to allow them to be edited inline in the editor.
  */
 UCLASS(EditInlineNew)
-class VULEDITOR_API UVulButtonStyle : public UCommonButtonStyle
+class VULRUNTIME_API UVulButtonStyle : public UCommonButtonStyle
 {
 	GENERATED_BODY()
 };

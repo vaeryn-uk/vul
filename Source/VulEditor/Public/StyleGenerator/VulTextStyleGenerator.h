@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
-#include "VulTextStyle.h"
+#include "UserInterface/VulTextStyle.h"
 #include "UObject/Object.h"
 #include "VulTextStyleGenerator.generated.h"
 

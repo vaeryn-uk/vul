@@ -1,5 +1,5 @@
 ﻿#include "StyleGenerator/VulButtonStyleGenerator.h"
-#include "StyleGenerator/VulButtonStyle.h"
+#include "UserInterface//VulButtonStyle.h"
 #include "StyleGenerator/VulStyleGeneration.h"
 
 void UVulButtonStyleGenerator::Generate()

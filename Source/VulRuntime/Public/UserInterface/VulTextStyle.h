@@ -9,7 +9,7 @@
  * Override the text styles to allow them to be edited inline in the editor.
  */
 UCLASS(EditInlineNew)
-class VULEDITOR_API UVulTextStyle : public UCommonTextStyle
+class VULRUNTIME_API UVulTextStyle : public UCommonTextStyle
 {
 	GENERATED_BODY()
 };

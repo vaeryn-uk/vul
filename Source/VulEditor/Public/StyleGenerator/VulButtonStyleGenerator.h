@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
-#include "VulButtonStyle.h"
+#include "UserInterface/VulButtonStyle.h"
 #include "VulButtonStyleGenerator.generated.h"
 
 /**
