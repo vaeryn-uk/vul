@@ -323,3 +323,8 @@ bool FVulPathMovement::IsComplete() const
 {
 	return Started.Alpha(Duration) >= 1;
 }
+
+float FVulPathMovement::GetDuration() const
+{
+	return Duration;
+}

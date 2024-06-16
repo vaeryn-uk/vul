@@ -176,6 +176,8 @@ struct VULRUNTIME_API FVulPathMovement
 	 * Returns true if the movement is completed. Usually this means this movement object can be trashed.
 	 */
 	bool IsComplete() const;
+
+	float GetDuration() const;
 private:
 	FVulVectorPath Path;
 	FVulTime Started;
