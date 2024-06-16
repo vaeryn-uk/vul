@@ -66,25 +66,19 @@ FVulVectorPath FVulVectorPath::Randomize(
 	return FVulVectorPath(Out);
 }
 
-FVulVectorPath FVulVectorPath::Curve(
-	const float TurnDegsPerWorldUnit,
-	const int Samples,
-	const float TerminationFactor,
-	const float MaxLengthFactor,
-	const TOptional<FRotator>& StartDirection
-) const
+FVulVectorPath FVulVectorPath::Curve(const float TurnDegsPerWorldUnit, const FVulVectorPathCurveOptions& Options) const
 {
 	if (!IsValid())
 	{
 		return FVulVectorPath();
 	}
 
-	const auto Termination = Distance * TerminationFactor;
+	const auto Termination = Distance * Options.TerminationFactor;
 
 	TArray OutPath = {Points[0]};
 
 	// How long between each sample.
-	const auto SampleLength = Distance / (Points.Num() - 1) / Samples;
+	const auto SampleLength = Distance / (Points.Num() - 1) / Options.Samples;
 
 	// Maximum rotation possible in a single segment.
 	const auto DegsPerSample = TurnDegsPerWorldUnit * SampleLength;
@@ -99,7 +93,7 @@ FVulVectorPath FVulVectorPath::Curve(
 
 	// The current direction of our travel. Start with the starting direction of the path at alpha=0,
 	// unless otherwise specified.
-	auto CurrentDirection = StartDirection.IsSet() ? StartDirection.GetValue() : Direction(0);
+	auto CurrentDirection = Options.StartDirection.IsSet() ? Options.StartDirection.GetValue() : Direction(0);
 
 	// Where we're heading towards.
 	auto Target = Points[CurrentIndex + 1];
@@ -120,12 +114,19 @@ FVulVectorPath FVulVectorPath::Curve(
 	{
 		// Calculate any turn we need to make.
 		const auto RequiredDirection = UKismetMathLibrary::FindLookAtRotation(CurrentPosition, Target);
-		const auto RequiredTurn = (RequiredDirection - CurrentDirection).GetNormalized().Euler();
-		const auto RequiredDegs = RequiredTurn.Size();
+		const auto RequiredTurn = (RequiredDirection - CurrentDirection).GetNormalized();
+		const auto RequiredDegs = RequiredTurn.Euler().Size();
 
 		// Limit the turn to the maximum we're allowed for a single sample.
-		const auto ActualTurn = RequiredTurn.GetSafeNormal() * FMath::Min(DegsPerSample, RequiredDegs);
-		CurrentDirection += FRotator::MakeFromEuler(ActualTurn);
+		auto ActualTurn = FRotator::MakeFromEuler(RequiredTurn.Euler().GetSafeNormal() * FMath::Min(DegsPerSample, RequiredDegs));
+
+		// And customize the rotation if requested to.
+		if (Options.AdjustRotation)
+		{
+			ActualTurn = Options.AdjustRotation(ActualTurn, RequiredTurn);
+		}
+
+		CurrentDirection += ActualTurn;
 
 		// LastPosition is used for line-segment checking of termination.
 		const auto LastPosition = CurrentPosition;
@@ -133,7 +134,7 @@ FVulVectorPath FVulVectorPath::Curve(
 		CurrentPosition += CurrentDirection.RotateVector(FVector::ForwardVector * SampleLength);
 		DistanceTravelled += SampleLength;
 
-		if (DistanceTravelled > MaxLengthFactor * Distance)
+		if (DistanceTravelled > Options.MaxLengthFactor * Distance)
 		{
 			// The path has not reached the end within the requested factor.
 			// Give up to avoid infinite loops.
@@ -178,17 +179,6 @@ FVulVectorPath FVulVectorPath::Curve(
 	}
 
 	return FVulVectorPath(OutPath);
-}
-
-FVulVectorPath FVulVectorPath::Curve(
-	const float TurnDegsPerWorldUnit,
-	const FRotator& StartDirection,
-	const int Samples,
-	const float TerminationFactor,
-	const float MaxLengthFactor
-) const
-{
-	return Curve(TurnDegsPerWorldUnit, Samples, TerminationFactor, MaxLengthFactor, StartDirection);
 }
 
 FVulVectorPath FVulVectorPath::Simplify() const
@@ -239,6 +229,22 @@ FRotator FVulVectorPath::Direction(const float Alpha) const
 
 	// Must be at the end of the path. Rotate as if we've come from the last-but-one point.
 	return UKismetMathLibrary::FindLookAtRotation(Points[Points.Num() - 2], Points[Points.Num() - 1]);
+}
+
+float FVulVectorPath::FinalDestinationAlpha(const float Alpha) const
+{
+	const auto PointIndex = LastPointIndex(Alpha);
+	if (PointIndex < Points.Num() - 2)
+	{
+		return -1;
+	}
+
+	if (PointIndex >= Points.Num() - 1)
+	{
+		return 1;
+	}
+
+	return (Interpolate(Alpha) - Points[PointIndex]).Size() / (Points[PointIndex + 1] - Points[PointIndex]).Size();
 }
 
 float FVulVectorPath::GetDistance() const
@@ -302,8 +308,10 @@ void FVulVectorPath::CalculateDistance()
 	}
 }
 
-FTransform FVulPathMovement::Apply(const FTransform& Current) const
-{
+FTransform FVulPathMovement::Apply(
+	const FTransform& Current,
+	const TFunction<FRotator(const FRotator Calculated, const float Alpha)>& AdjustDirection
+) const {
 	auto Ret = Current;
 
 	auto Alpha = Started.ClampedAlpha(Duration);
@@ -314,7 +322,14 @@ FTransform FVulPathMovement::Apply(const FTransform& Current) const
 	}
 
 	Ret.SetLocation(Path.Interpolate(Alpha));
-	Ret.SetRotation(Path.Direction(Alpha).Quaternion());
+	FRotator Direction = Path.Direction(Alpha);
+
+	if (AdjustDirection != nullptr)
+	{
+		Direction = AdjustDirection(Direction, Alpha);
+	}
+
+	Ret.SetRotation(Direction.Quaternion());
 
 	return Ret;
 }
@@ -327,4 +342,9 @@ bool FVulPathMovement::IsComplete() const
 float FVulPathMovement::GetDuration() const
 {
 	return Duration;
+}
+
+const FVulVectorPath& FVulPathMovement::GetPath() const
+{
+	return Path;
 }

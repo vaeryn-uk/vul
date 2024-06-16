@@ -56,7 +56,9 @@ bool TestVectorPath::RunTest(const FString& Parameters)
 		auto Ddt = DDT<Data>(this, "Curve", [](TC Test, Data Case)
 		{
 			const auto Path = FVulVectorPath(Case.Path);
-			const auto Curved = Path.Curve(Case.TurnDegsPerWorldUnit, Case.Samples);
+			FVulVectorPathCurveOptions Options;
+			Options.Samples = Case.Samples;
+			const auto Curved = Path.Curve(Case.TurnDegsPerWorldUnit, Options);
 
 			Test.Equal(Curved.GetPoints(), Case.Expected);
 		});
