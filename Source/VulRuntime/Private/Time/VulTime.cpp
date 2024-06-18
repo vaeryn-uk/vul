@@ -35,6 +35,11 @@ float FVulTime::Alpha(const float TotalSeconds) const
 	return (NowFn() - Time) / TotalSeconds;
 }
 
+float FVulTime::LoopedAlpha(const float TotalSeconds, const float Offset) const
+{
+	return fmod(Alpha(TotalSeconds) + Offset, 1.f);
+}
+
 float FVulTime::ClampedAlpha(const float TotalSeconds) const
 {
 	return FMath::Clamp(Alpha(TotalSeconds), 0, 1);

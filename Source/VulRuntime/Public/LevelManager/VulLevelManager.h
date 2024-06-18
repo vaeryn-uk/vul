@@ -121,6 +121,11 @@ public:
 	template <typename WidgetType>
 	WidgetType* LastSpawnedWidget() const;
 
+	/**
+	 * Returns the level last-loaded by this level manager, or nullptr.
+	 */
+	ULevelStreaming* GetLastLoadedLevel() const;
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -137,6 +142,11 @@ private:
 	 * Generates a unique action info input required for streaming levels. Required for the level streaming API.
 	 */
 	FLatentActionInfo NextLatentAction();
+
+	/**
+	 * The last level that was successfully loaded by this manager (including loading level).
+	 */
+	TWeakObjectPtr<ULevelStreaming> LastLoadedLevel = nullptr;
 
 	/**
 	 * The current level being loaded or has loaded.

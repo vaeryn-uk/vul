@@ -3,7 +3,6 @@
 #include "ActorUtil/VulActorUtil.h"
 #include "Blueprint/GameViewportSubsystem.h"
 #include "Blueprint/UserWidget.h"
-#include "Blueprint/WidgetLayoutLibrary.h"
 #include "Engine/StreamableManager.h"
 #include "Kismet/GameplayStatics.h"
 #include "World/VulWorldGlobals.h"
@@ -16,6 +15,16 @@ AVulLevelManager::AVulLevelManager()
 AVulLevelManager* AVulLevelManager::Get(UWorld* World)
 {
 	return FVulActorUtil::FindFirstActor<AVulLevelManager>(World);
+}
+
+ULevelStreaming* AVulLevelManager::GetLastLoadedLevel() const
+{
+	if (LastLoadedLevel.IsValid() && LastLoadedLevel->IsLevelLoaded())
+	{
+		return LastLoadedLevel.Get();
+	}
+
+	return nullptr;
 }
 
 // Called when the game starts or when spawned
@@ -87,7 +96,8 @@ void AVulLevelManager::ShowLevel(const FName& LevelName)
 	// Remove all widgets from the viewport from previous levels.
 	RemoveAllWidgets(GetWorld());
 
-	GetLevelStreaming(LevelName)->SetShouldBeVisible(true);
+	LastLoadedLevel = GetLevelStreaming(LevelName);
+	LastLoadedLevel->SetShouldBeVisible(true);
 
 	// Need to ensure that visibility is finalized as it seems that not all actors are
 	// always available.

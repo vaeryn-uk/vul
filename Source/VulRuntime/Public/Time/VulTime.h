@@ -45,6 +45,14 @@ struct VULRUNTIME_API FVulTime
 	float Alpha(const float TotalSeconds) const;
 
 	/**
+	 * Like Alpha, but will start again from 0 when we exceed 1.
+	 *
+	 * Offset allows adjusting the start of the loop by some fixed amount, e.g.
+	 * 0.5 will start at 0.5, up to 1, then from 0 to 0.5 in a over TotalSeconds.
+	 */
+	float LoopedAlpha(const float TotalSeconds, const float Offset = 0.f) const;
+
+	/**
 	 * Returns Alpha, clamped between 0-1.
 	 */
 	float ClampedAlpha(const float TotalSeconds) const;
