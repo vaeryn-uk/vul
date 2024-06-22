@@ -154,13 +154,23 @@ void AVulLevelManager::LoadAssets(const TArray<FSoftObjectPath>& Paths)
 
 	UE_LOG(LogVul, Display, TEXT("Loading %d additional assets with level"), Paths.Num());
 
-	bIsLoadingAssets = true;
-	StreamableManager.RequestAsyncLoad(Paths, FStreamableDelegate::CreateUObject(this, &AVulLevelManager::OnAssetLoaded));
+	if (AdditionalAssets.IsValid())
+	{
+		// Free additional assets we loaded before.
+		AdditionalAssets->ReleaseHandle();
+	}
+
+	AdditionalAssets = StreamableManager.RequestAsyncLoad(Paths);
 }
 
-void AVulLevelManager::OnAssetLoaded()
+bool AVulLevelManager::AreWaitingForAdditionalAssets() const
 {
-	bIsLoadingAssets = false;
+	if (!AdditionalAssets.IsValid())
+	{
+		return false;
+	}
+
+	return !AdditionalAssets->HasLoadCompleted();
 }
 
 void AVulLevelManager::LoadStreamingLevel(const FName& LevelName, TSoftObjectPtr<UWorld> Level)
@@ -312,7 +322,7 @@ void AVulLevelManager::Process(FLoadRequest* Request)
 		return;
 	}
 
-	if (!GetLevelStreaming(Request->LevelName.GetValue())->IsLevelLoaded() || bIsLoadingAssets)
+	if (!GetLevelStreaming(Request->LevelName.GetValue())->IsLevelLoaded() || AreWaitingForAdditionalAssets())
 	{
 		// Loading is not complete.
 		return;

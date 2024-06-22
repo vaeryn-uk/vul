@@ -174,13 +174,16 @@ private:
 	mutable TMap<FName, UVulLevelData*> LevelDataInstances;
 
 	void LoadAssets(const TArray<FSoftObjectPath>& Paths);
-	void OnAssetLoaded();
-
-	TArray<FSoftObjectPath> AssetsToLoad;
+	bool AreWaitingForAdditionalAssets() const;
 
 	FStreamableManager StreamableManager;
 
-	bool bIsLoadingAssets = false;
+	/**
+	 * A handle for the additional assets the last level load request.
+	 *
+	 * This handle can be used to release assets.
+	 */
+	TSharedPtr<FStreamableHandle> AdditionalAssets;
 
 	void LoadStreamingLevel(const FName& Name, TSoftObjectPtr<UWorld> Level);
 	void UnloadStreamingLevel(const FName& Name, TSoftObjectPtr<UWorld> Level);
