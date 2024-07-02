@@ -49,20 +49,9 @@ struct TVulHexgrid
 		checkf(InSize > 0, TEXT("Hexgrid Size must be a greater than 0"))
 		Size = InSize;
 
-		AddTile(FVulHexAddr(0, 0), Allocator);
-
-		for (auto Ring = 1; Ring <= Size; Ring++)
+		for (const auto& Addr : FVulHexAddr::GenerateGrid(Size))
 		{
-			const auto Seq = FVulHexAddr::GenerateSequenceForRing(Ring);
-
-			auto Q = 0;
-			auto R = Seq.Num() - Ring * 2;
-
-			for (auto I = 0; I < Ring * 6; I++)
-			{
-				const FVulHexAddr Next(Seq[Q++ % Seq.Num()], Seq[R++ % Seq.Num()]);
-				AddTile(Next, Allocator);
-			}
+			AddTile(Addr, Allocator);
 		}
 	}
 
@@ -399,8 +388,10 @@ struct TVulHexgrid
 	 * Returns the tiles adjacent to To, recursively searching for those tiles' adjacent tiles if the search if max range > 1.
 	 *
 	 * Return an empty array if the provided tile is not valid in this grid.
+	 *
+	 * Tiles closer to To will be returned first; farther tiles later.
 	 */
-	TArray<FVulTile> AdjacentTiles(const FVulHexAddr& To, const int MaxRange = 1) const
+	TArray<FVulTile> AdjacentTiles(const FVulHexAddr& To, const int MaxRange = 1, const bool IncludeStart = false) const
 	{
 		if (!IsValidAddr(To))
 		{
@@ -409,28 +400,19 @@ struct TVulHexgrid
 
 		TArray<FVulTile> Out;
 
-		TArray NewTiles = {To};
-		// Tracks our progress through NewTiles, which we just continue to add to as we iterate.
-		auto NewTilesCheckIndex = 0;
-
-		for (auto I = 0; I < MaxRange; I++)
+		for (const auto& Addr : FVulHexAddr::GenerateGrid(MaxRange))
 		{
-			const auto NewTileCount = NewTiles.Num() - NewTilesCheckIndex;
+			const auto Translated = To.Translate(Addr.Vector());
 
-			for (auto TileIndex = NewTilesCheckIndex; TileIndex < NewTilesCheckIndex + NewTileCount; TileIndex++)
+			if (Translated == To && !IncludeStart)
 			{
-				for (const auto& Adj : NewTiles[TileIndex].Adjacent())
-				{
-					// Valid in the grid and has not already been checked.
-					if (IsValidAddr(Adj) && !NewTiles.Contains(Adj))
-					{
-						Out.Add(Tiles.FindChecked(Adj));
-						NewTiles.Add(Adj);
-					}
-				}
+				continue;
 			}
 
-			NewTilesCheckIndex += NewTileCount;
+			if (IsValidAddr(Translated))
+			{
+				Out.Add(GetTile(Translated).GetValue());
+			}
 		}
 
 		return Out;

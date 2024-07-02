@@ -75,6 +75,13 @@ struct VULRUNTIME_API FVulHexAddr
 	FVulHexVector Diff(const FVulHexAddr& Other) const;
 
 	/**
+	 * Returns the hex vector representation of this address.
+	 *
+	 * This is the QR components.
+	 */
+	FVulHexVector Vector() const;
+
+	/**
 	 * All the addresses that are adjacent to this address on a hexgrid.
 	 *
 	 * Note that the addresses returned may not be valid for a given grid due to its boundaries.
@@ -113,11 +120,22 @@ struct VULRUNTIME_API FVulHexAddr
 		return Other.Q == Q && Other.R == R && Other.S == S;
 	}
 
-	static TArray<int> GenerateSequenceForRing(const int Ring);
-
 	bool IsValid() const;
 
+	/**
+	 * Returns the addresses that make up a hexagonal-shaped grid of the given size.
+	 *
+	 * Returns tiles expanding as rings around the origin hex. Size is how many rings
+	 * there are.
+	 */
+	static TArray<FVulHexAddr> GenerateGrid(const int Size);
+
 private:
+	/**
+	 * Generates the numeric sequence used to build rings around an origin tile.
+	 */
+	static TArray<int> GenerateSequenceForRing(const int Ring);
+
 	void EnsureValid() const;
 };
 

@@ -24,6 +24,19 @@ FVulHexShape FVulHexShape::Translate(const FVulHexVector& Vector) const
 	return Out;
 }
 
+TOptional<FVulHexShape> FVulHexShape::RotateUntil(const TFunction<bool(const FVulHexShape&)> Filter) const
+{
+	for (int I = 0; I < 6; ++I)
+	{
+		if (const auto Rotated = Rotate(I); Filter(Rotated))
+		{
+			return Rotated;
+		}
+	}
+
+	return {};
+}
+
 FString FVulHexShape::ToString() const
 {
 	TArray<FString> Out;

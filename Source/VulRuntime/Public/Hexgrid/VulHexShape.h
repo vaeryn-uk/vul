@@ -31,6 +31,16 @@ struct VULRUNTIME_API FVulHexShape
 	 */
 	FVulHexShape Translate(const FVulHexVector& Vector) const;
 
+	/**
+	 * Starting with this shape, applies it to the given filter until the filter returns true.
+	 *
+	 * We rotate the shape each time, returning the first shape resulting from those rotation(s)
+	 * where Filter returns true. The first rotation we try is the 0 rotation (i.e. this unrotated).
+	 *
+	 * Returns unset if Filter does not return true for any of the 6 rotations.
+	 */
+	TOptional<FVulHexShape> RotateUntil(const TFunction<bool (const FVulHexShape&)> Filter) const;
+
 	FString ToString() const;
 
 	TArray<FVulHexAddr> GetTiles() const;

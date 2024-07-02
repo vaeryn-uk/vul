@@ -22,6 +22,11 @@ FVulHexVector FVulHexAddr::Diff(const FVulHexAddr& Other) const
 	return {Other.Q - Q, Other.R - R};
 }
 
+FVulHexVector FVulHexAddr::Vector() const
+{
+	return FVulHexVector({Q, R});
+}
+
 TArray<FVulHexAddr> FVulHexAddr::Adjacent() const
 {
 	return {
@@ -133,6 +138,27 @@ TArray<int> FVulHexAddr::GenerateSequenceForRing(const int Ring)
 bool FVulHexAddr::IsValid() const
 {
 	return Q + R + S == 0;
+}
+
+TArray<FVulHexAddr> FVulHexAddr::GenerateGrid(const int Size)
+{
+	TArray Out = {FVulHexAddr(0, 0)};
+
+	for (auto Ring = 1; Ring <= Size; Ring++)
+	{
+		const auto Seq = GenerateSequenceForRing(Ring);
+
+		auto Q = 0;
+		auto R = Seq.Num() - Ring * 2;
+
+		for (auto I = 0; I < Ring * 6; I++)
+		{
+			const FVulHexAddr Next(Seq[Q++ % Seq.Num()], Seq[R++ % Seq.Num()]);
+			Out.Add(Next);
+		}
+	}
+
+	return Out;
 }
 
 void FVulHexAddr::EnsureValid() const
