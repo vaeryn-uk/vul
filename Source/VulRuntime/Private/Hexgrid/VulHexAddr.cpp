@@ -12,6 +12,11 @@ int FVulHexRotation::GetValue() const
 	return FVulMath::Modulo(static_cast<int>(Value), 6);
 }
 
+FVulHexAddr FVulHexAddr::Origin()
+{
+	return FVulHexAddr(0, 0);
+}
+
 FString FVulHexAddr::ToString() const
 {
 	return FString::Printf(TEXT("(%d %d %d)"), Q, R, S);

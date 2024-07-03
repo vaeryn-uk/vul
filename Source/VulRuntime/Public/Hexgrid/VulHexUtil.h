@@ -176,4 +176,17 @@ namespace VulRuntime::Hexgrid
 		const TArray<FVulHexAddr>& Path,
 		const FVulWorldHexGridSettings& GridSettings
 	);
+
+	/**
+	 * Calculates the average hex address given multiple addresses.
+	 */
+	VULRUNTIME_API FVulHexAddr AveragePosition(const TArray<FVulHexAddr>& Tiles);
+
+	/**
+	 * Calculates the average hex address given multiple addresses, with each a weight.
+	 *
+	 * The higher the weight of each address will "pull" the final position closer to that
+	 * address.
+	 */
+	VULRUNTIME_API FVulHexAddr AveragePosition(const TMap<FVulHexAddr, float>& WeightedTiles);
 }

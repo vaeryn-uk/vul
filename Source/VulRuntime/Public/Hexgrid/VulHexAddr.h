@@ -52,6 +52,8 @@ struct VULRUNTIME_API FVulHexAddr
 		EnsureValid();
 	}
 
+	static FVulHexAddr Origin();
+
 	/**
 	 * From a vector, which is simply QR coords.
 	 */

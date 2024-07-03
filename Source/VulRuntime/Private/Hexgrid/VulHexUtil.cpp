@@ -125,6 +125,38 @@ FVulVectorPath VulRuntime::Hexgrid::VectorPath(
 	return FVulVectorPath(Points);
 }
 
+FVulHexAddr VulRuntime::Hexgrid::AveragePosition(const TArray<FVulHexAddr>& Tiles)
+{
+	TMap<FVulHexAddr, float> WeightedTiles;
+
+	for (const auto& Tile : Tiles)
+	{
+		WeightedTiles.Add(Tile, 1);
+	}
+
+	return AveragePosition(WeightedTiles);
+}
+
+FVulHexAddr VulRuntime::Hexgrid::AveragePosition(const TMap<FVulHexAddr, float>& WeightedTiles)
+{
+	if (WeightedTiles.IsEmpty())
+	{
+		return FVulHexAddr::Origin();
+	}
+
+	FVector2D QR;
+	float Total = 0;
+
+	for (const auto& Entry : WeightedTiles)
+	{
+		QR.X += Entry.Key.Q * Entry.Value;
+		QR.Y += Entry.Key.R * Entry.Value;
+		Total += Entry.Value;
+	}
+
+	return FVulHexAddr(static_cast<int>(QR.X / Total), static_cast<int>(QR.Y / Total));
+}
+
 float FVulWorldHexGridSettings::ShortStep() const
 {
 	return FMath::Sqrt(FMath::Square(HexSize) - FMath::Square(HexSize / 2));
