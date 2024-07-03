@@ -4,7 +4,6 @@
 #include "VulHexAddr.h"
 #include "VulHexUtil.h"
 #include "Containers/VulPriorityQueue.h"
-#include "vector"
 #include "UObject/Object.h"
 
 /**
@@ -418,6 +417,16 @@ struct TVulHexgrid
 		return Out;
 	}
 
+	/**
+	 * Returns all tiles scored by ScoreFn then sorted by this score.
+	 *
+	 * ScoreFn may return unset if a tile should be excluded from the results.
+	 */
+	TArray<TPair<FVulTile, float>> ScoreTiles(
+		const TFunction<TOptional<float> (const FVulTile&)>& ScoreFn,
+		const bool Ascending = true
+	) const;
+
 private:
 
 	int Size;
@@ -428,3 +437,32 @@ private:
 		Tiles.Add(Addr, FVulTile(Addr, Allocator(Addr)));
 	}
 };
+
+template <typename TileData>
+TArray<TPair<typename TVulHexgrid<TileData>::FVulTile, float>> TVulHexgrid<TileData>::ScoreTiles(
+	const TFunction<TOptional<float>(const FVulTile&)>& ScoreFn,
+	const bool Ascending
+) const {
+	TArray<TPair<FVulTile, float>> Out;
+
+	for (const auto& Tile : GetTiles())
+	{
+		if (const auto Score = ScoreFn(Tile); Score.IsSet())
+		{
+			Out.Add(TPair<FVulTile, float>(Tile, Score.GetValue()));
+		}
+	}
+
+	Algo::Sort(Out, [Ascending](const TPair<FVulTile, float>& A, const TPair<FVulTile, float>& B) -> bool
+	{
+		if (FMath::IsNearlyEqual(A.Value, B.Value))
+		{
+			// Deterministic order for equal-scoring tiles.
+			return A.Key.Addr.ToString() < B.Key.Addr.ToString();
+		}
+
+		return Ascending ^ (A.Value > B.Value);
+	});
+
+	return Out;
+}

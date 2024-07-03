@@ -75,7 +75,8 @@ namespace VulRuntime::Hexgrid
 	 */
 	VULRUNTIME_API FTransform CalculateMeshTransformation(
 		const FBox& HexMeshBoundingBox,
-		const FVulWorldHexGridSettings& GridSettings);
+		const FVulWorldHexGridSettings& GridSettings
+	);
 
 	/**
 	 * Returns the center of the position of a hex as applied on a grid starting at (0, 0, 0).
@@ -111,7 +112,8 @@ namespace VulRuntime::Hexgrid
 	VULRUNTIME_API TArray<TArray<FVector>> Triangles(
 		const FVulHexAddr& Addr,
 		const FVulWorldHexGridSettings& GridSettings,
-		const float Scale = 1);
+		const float Scale = 1
+	);
 
 	/**
 	 * Like Project, maps a tile on to world space but returns the 6 corners of the hex.
@@ -128,7 +130,8 @@ namespace VulRuntime::Hexgrid
 	VULRUNTIME_API TArray<FVector> Points(
 		const FVulHexAddr& Addr,
 		const FVulWorldHexGridSettings& GridSettings,
-		const float Scale = 1);
+		const float Scale = 1
+	);
 
 	/**
 	 * Takes a world location and returns the hex grid address this point sits within, according to GridSettings.
@@ -147,7 +150,8 @@ namespace VulRuntime::Hexgrid
 	VULRUNTIME_API FVector RandomPointInTile(
 		const FVulHexAddr& Addr,
 		const FVulWorldHexGridSettings& GridSettings,
-		const float Scale = 1);
+		const float Scale = 1
+	);
 
 	/**
 	 * Calculates a random world point inside the Addr tile whilst using GridSettings.
@@ -158,7 +162,8 @@ namespace VulRuntime::Hexgrid
 		const FVulHexAddr& Addr,
 		const FVulWorldHexGridSettings& GridSettings,
 		const FRandomStream& Rng,
-		const float Scale = 1);
+		const float Scale = 1
+	);
 
 	/**
 	 * Converts the provided start position and path to a path made of positions in the world.
@@ -169,5 +174,6 @@ namespace VulRuntime::Hexgrid
 	VULRUNTIME_API FVulVectorPath VectorPath(
 		const FVulHexAddr& Start,
 		const TArray<FVulHexAddr>& Path,
-		const FVulWorldHexGridSettings& GridSettings);
+		const FVulWorldHexGridSettings& GridSettings
+	);
 }
