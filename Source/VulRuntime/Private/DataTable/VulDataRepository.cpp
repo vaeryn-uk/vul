@@ -43,7 +43,7 @@ void UVulDataRepository::RebuildReferenceCache(UScriptStruct* Struct)
 			);
 
 			const auto RefTable = FName(Property->GetMetaData(FName(TEXT("VulDataTable"))));
-			checkf(DataTables.Contains(RefTable), TEXT("Data repository does not have table %s"), RefTable);
+			checkf(DataTables.Contains(RefTable), TEXT("Data repository does not have table %s"), *RefTable.ToString());
 
 			FVulDataRepositoryReference Ref;
 			Ref.Property = Property->GetName();

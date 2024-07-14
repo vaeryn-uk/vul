@@ -128,7 +128,6 @@ namespace VulTest
 	 * Use the alias C for a more concise syntax.
 	 */
 	void VULTEST_API Case(FAutomationTestBase* TestInstance, const FString& Name, const TFunction<void (TC)>& TestFn);
-	constexpr auto C = Case;
 
 	/**
 	 * Logs some information output. Not for errors or problems.

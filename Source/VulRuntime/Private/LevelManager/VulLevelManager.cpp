@@ -370,7 +370,7 @@ ULevelStreaming* AVulLevelManager::GetLevelStreaming(const FName& LevelName, con
 	checkf(!LevelName.IsNone(), TEXT("Invalid level name provided: "), Reason);
 
 	const auto Data = ResolveData(LevelName);
-	checkf(!Data->Level.IsNull(), TEXT("Could not find level by name %s for streaming"))
+	checkf(!Data->Level.IsNull(), TEXT("Could not find level by name %s for streaming"), *LevelName.ToString())
 
 	const auto Loaded = UGameplayStatics::GetStreamingLevel(this, FName(*Data->Level.GetLongPackageName()));
 
