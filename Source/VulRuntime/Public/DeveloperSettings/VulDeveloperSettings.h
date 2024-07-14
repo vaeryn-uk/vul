@@ -12,12 +12,12 @@
  */
 #if UE_BUILD_SHIPPING
 	#define VUL_DEV_MODE_SETTING(Type, Property, Default) \
-	Type Get##Property##() const \
+	Type Get##Property() const \
 		return Default; \
 	}
 #else
 	#define VUL_DEV_MODE_SETTING(Type, Property, Default) \
-	Type Get##Property##() const \
+	Type Get##Property() const \
 	{ \
 \
 		if (bDevMode) { \
