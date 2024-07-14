@@ -35,7 +35,7 @@ struct VULRUNTIME_API FVulUiNotification
 	 * How long should this notification display for? In seconds.
 	 */
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
-	float RenderTime;
+	float RenderTime = 0.f;
 
 	bool operator==(const FVulUiNotification& Other) const;
 };

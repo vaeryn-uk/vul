@@ -16,16 +16,16 @@ struct FVulButtonStyleVariation
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere)
-	UTexture2D* NormalBackground;
+	UTexture2D* NormalBackground = nullptr;
 
 	UPROPERTY(EditAnywhere)
-	UTexture2D* PressedBackground;
+	UTexture2D* PressedBackground = nullptr;
 
 	UPROPERTY(EditAnywhere)
-	UTexture2D* HoveredBackground;
+	UTexture2D* HoveredBackground = nullptr;
 
 	UPROPERTY(EditAnywhere)
-	UTexture2D* DisabledBackground;
+	UTexture2D* DisabledBackground = nullptr;
 };
 
 /**

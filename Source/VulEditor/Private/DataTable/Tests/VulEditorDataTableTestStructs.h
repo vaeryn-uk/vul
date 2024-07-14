@@ -11,7 +11,7 @@ struct FTestStruct : public FTableRowBase
 	GENERATED_BODY()
 
 	UPROPERTY()
-	int Num;
+	int Num = 0;
 
 	UPROPERTY(meta=(VulRowName))
 	FName RowName;
@@ -26,10 +26,10 @@ struct FTestCharacter : public FTableRowBase
 	FName Name;
 
 	UPROPERTY()
-	int Hp;
+	int Hp = 0;
 
 	UPROPERTY()
-	int Strength;
+	int Strength = 0;
 };
 
 USTRUCT()
@@ -38,10 +38,10 @@ struct FTestWeapon : public FTableRowBase
 	GENERATED_BODY()
 
 	UPROPERTY()
-	int Damage;
+	int Damage = 0;
 
 	UPROPERTY()
-	int MinStrength;
+	int MinStrength = 0;
 };
 
 USTRUCT()
