@@ -22,6 +22,11 @@ void UVulDataRepository::RebuildReferenceCache()
 
 	for (const auto& [Name, Table] : DataTables)
 	{
+		if (!IsValid(Table))
+		{
+			continue;
+		}
+
 		RebuildReferenceCache(Table->RowStruct);
 	}
 
@@ -43,7 +48,12 @@ void UVulDataRepository::RebuildReferenceCache(UScriptStruct* Struct)
 			);
 
 			const auto RefTable = FName(Property->GetMetaData(FName(TEXT("VulDataTable"))));
-			checkf(DataTables.Contains(RefTable), TEXT("Data repository does not have table %s"), *RefTable.ToString());
+			// ensureMsgf here, despite being a serious error, The user needs to be able to correct
+			// the repository definition if incorrect.
+			if (!ensureMsgf(DataTables.Contains(RefTable), TEXT("Data repository does not have table %s"), *RefTable.ToString()))
+			{
+				continue;
+			}
 
 			FVulDataRepositoryReference Ref;
 			Ref.Property = Property->GetName();
