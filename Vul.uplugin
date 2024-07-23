@@ -6,7 +6,7 @@
   "Description" : "A collection of generic functionality used in my personal projects.",
   "CreatedBy" : "Vaeryn",
   "EnabledByDefault" : true,
-  "CanContainContent" : false,
+  "CanContainContent" : true,
   "IsBetaVersion" : false,
   "Installed" : false,
   "Modules" :
