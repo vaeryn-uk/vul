@@ -27,6 +27,20 @@ struct TVulMeasure
 		Init(InCurrent, InMax);
 	}
 
+	static TVulMeasure Sum(const TArray<TVulMeasure>& Measures)
+	{
+		NumberType Sum = 0;
+		NumberType Max = 0;
+
+		for (const auto& Measure : Measures)
+		{
+			Sum += Measure.CurrentValue();
+			Max += Measure.MaxValue();
+		}
+
+		return TVulMeasure(Sum, Max);
+	}
+
 	/**
 	 * Modifies the current value of this measure, returning true if we are not at min (e.g. not dead).
 	 */
