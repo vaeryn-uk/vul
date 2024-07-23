@@ -258,6 +258,18 @@ bool FVulVectorPath::IsValid() const
 	return Points.Num() > 1;
 }
 
+FVulVectorPath FVulVectorPath::Translate(const FVector& By) const
+{
+	TArray<FVector> NewPoints;
+
+	for (const auto& Point : Points)
+	{
+		NewPoints.Add(Point + By);
+	}
+
+	return FVulVectorPath(NewPoints);
+}
+
 FVulVectorPath FVulVectorPath::RelocateEnd(const FVector& NewEnd) const
 {
 	auto New = *this;

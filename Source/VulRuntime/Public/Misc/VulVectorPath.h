@@ -161,6 +161,8 @@ struct VULRUNTIME_API FVulVectorPath
 	 */
 	bool IsValid() const;
 
+	FVulVectorPath Translate(const FVector& By) const;
+
 	/**
 	 * Returns a copy of this path with its final point moved to NewEnd.
 	 */
