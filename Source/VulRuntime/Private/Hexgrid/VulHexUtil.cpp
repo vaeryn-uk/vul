@@ -81,10 +81,15 @@ TArray<FVector> VulRuntime::Hexgrid::Points(
 	return Out;
 }
 
-FVulHexAddr VulRuntime::Hexgrid::Deproject(const FVector& WorldLocation, const FVulWorldHexGridSettings& GridSettings)
-{
-	const int R = FMath::RoundToInt(WorldLocation.Y / GridSettings.LongStep() * - 1);
-	const int Q = FMath::RoundToInt((WorldLocation.X - GridSettings.ShortStep() * R) / 2.0 / GridSettings.ShortStep());
+FVulHexAddr VulRuntime::Hexgrid::Deproject(
+	const FVector& WorldLocation,
+	const FVulWorldHexGridSettings& GridSettings,
+	const FVector& GridOrigin
+) {
+	const auto WorldOffset = WorldLocation - GridOrigin;
+
+	const int R = FMath::RoundToInt(WorldOffset.Y / GridSettings.LongStep() * - 1);
+	const int Q = FMath::RoundToInt((WorldOffset.X - GridSettings.ShortStep() * R) / 2.0 / GridSettings.ShortStep());
 
 	return FVulHexAddr(Q, R);
 }
@@ -111,15 +116,16 @@ FVector VulRuntime::Hexgrid::RandomPointInTile(
 FVulVectorPath VulRuntime::Hexgrid::VectorPath(
 	const FVulHexAddr& Start,
 	const TArray<FVulHexAddr>& Path,
-	const FVulWorldHexGridSettings& GridSettings)
-{
+	const FVulWorldHexGridSettings& GridSettings,
+	const FVector& GridOrigin
+) {
 	TArray<FVector> Points;
 	TArray Tiles = {Start};
 	Tiles.Append(Path);
 
 	for (const auto Tile : Tiles)
 	{
-		Points.Add(Project(Tile, GridSettings));
+		Points.Add(Project(Tile, GridSettings) + GridOrigin);
 	}
 
 	return FVulVectorPath(Points);

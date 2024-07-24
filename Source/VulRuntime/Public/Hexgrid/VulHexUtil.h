@@ -138,7 +138,11 @@ namespace VulRuntime::Hexgrid
 	 *
 	 * The inverse of Project.
 	 */
-	VULRUNTIME_API FVulHexAddr Deproject(const FVector& WorldLocation, const FVulWorldHexGridSettings& GridSettings);
+	VULRUNTIME_API FVulHexAddr Deproject(
+		const FVector& WorldLocation,
+		const FVulWorldHexGridSettings& GridSettings,
+		const FVector& GridOrigin = FVector::ZeroVector
+	);
 
 	/**
 	 * Calculates a random world point inside the Addr tile whilst using GridSettings.
@@ -174,7 +178,8 @@ namespace VulRuntime::Hexgrid
 	VULRUNTIME_API FVulVectorPath VectorPath(
 		const FVulHexAddr& Start,
 		const TArray<FVulHexAddr>& Path,
-		const FVulWorldHexGridSettings& GridSettings
+		const FVulWorldHexGridSettings& GridSettings,
+		const FVector& GridOrigin = FVector::ZeroVector
 	);
 
 	/**
