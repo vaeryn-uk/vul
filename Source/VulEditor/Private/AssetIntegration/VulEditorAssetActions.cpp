@@ -69,6 +69,9 @@ void FVulDataRepositoryAssetTypeActions::ImportAllConnectedSources()
 				continue;
 			}
 
+			// Always rebuild before import incase during dev it's become corrupted.
+			Repo->RebuildReferenceCache();
+
 			for (const auto Entry : Repo->DataTables)
 			{
 				if (Entry.Value == Loaded->DataTable)
