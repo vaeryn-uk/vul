@@ -65,6 +65,14 @@ struct TVulHexgrid
 	}
 
 	/**
+	 * Removes a tile from the grid.
+	 */
+	void RemoveTile(const FVulHexAddr& Addr)
+	{
+		Tiles.Remove(Addr);
+	}
+
+	/**
 	 * Options we provide to @see Path to customize the path-finding algorithm.
 	 */
 	template <typename CostType = int>
