@@ -132,6 +132,17 @@ struct VULRUNTIME_API FVulHexAddr
 	 */
 	static TArray<FVulHexAddr> GenerateGrid(const int Size);
 
+	/**
+	 * Adds the addresses that make up a ring of hexes, where N expands from the center.
+	 *
+	 * N=0 returns the center hex.
+	 * N=1 returns the 6 hexes around the center.
+	 * N=2 returns the 12 hexes around N=1 tiles.
+	 *
+	 * etc.
+	 */
+	static void GenerateRing(const int N, TArray<FVulHexAddr>& Out);
+
 private:
 	/**
 	 * Generates the numeric sequence used to build rings around an origin tile.

@@ -46,12 +46,22 @@ struct TVulHexgrid
 	explicit TVulHexgrid(const int InSize, const FVulTileAllocator& Allocator)
 	{
 		checkf(InSize > 0, TEXT("Hexgrid Size must be a greater than 0"))
-		Size = InSize;
 
-		for (const auto& Addr : FVulHexAddr::GenerateGrid(Size))
+		for (const auto& Addr : FVulHexAddr::GenerateGrid(InSize))
 		{
 			AddTile(Addr, Allocator);
 		}
+	}
+
+	/**
+	 * Adds a tile to the grid, expanding the grid itself.
+	 *
+	 * Use in construction grid-building scenarios only.
+	 * Use SetTileData to assign data to an existing grid.
+	 */
+	void AddTile(const FVulHexAddr& Addr, const TileData& Data)
+	{
+		Tiles.Add(Addr, FVulTile(Addr, Data));
 	}
 
 	/**
@@ -325,7 +335,6 @@ struct TVulHexgrid
 	/**
 	 * Returns the size of this grid, that is the number of tiles from the center to an edge.
 	 */
-	int GetSize() const { return Size; }
 	int TileCount() const { return Tiles.Num(); };
 
 	TArray<FVulTile> GetTiles() const
@@ -367,20 +376,28 @@ struct TVulHexgrid
 
 	void SetTileData(const FVulHexAddr& Addr, const TileData& Data)
 	{
+		if (!ensureMsgf(IsValidAddr(Addr), TEXT("Cannot add to grid. Addr=%s is not valid for this grid"), *Addr.ToString()))
+		{
+			return;
+		}
+
 		// TODO: Do we destruct properly here?
 		Tiles[Addr] = FVulTile(Addr, Data);
 	}
 
 	FVulTile* ModifyTileData(const FVulHexAddr& Addr)
 	{
+		if (!ensureMsgf(IsValidAddr(Addr), TEXT("Cannot modify grid data. Addr=%s is not valid for this grid"), *Addr.ToString()))
+		{
+			return nullptr;
+		}
+
 		return Tiles.Find(Addr);
 	}
 
 	bool IsValidAddr(const FVulHexAddr& Addr) const
 	{
-		return FMath::IsWithinInclusive(Addr.Q, Size * -1, Size)
-			&& FMath::IsWithinInclusive(Addr.R, Size * -1, Size)
-			&& FMath::IsWithinInclusive(Addr.S, Size * -1, Size);
+		return Tiles.Contains(Addr);
 	}
 
 	/**

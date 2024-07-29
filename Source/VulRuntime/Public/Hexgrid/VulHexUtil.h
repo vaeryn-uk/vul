@@ -126,11 +126,14 @@ namespace VulRuntime::Hexgrid
 	 *
 	 * Scale allows for scaling of the size of the hex' points from its center, but note this only
 	 * effects the tile we're getting points for. We do not scale other tiles/the grid as a whole.
+	 *
+	 * Optionally you can include the center which will be the first entry in the array.
 	 */
 	VULRUNTIME_API TArray<FVector> Points(
 		const FVulHexAddr& Addr,
 		const FVulWorldHexGridSettings& GridSettings,
-		const float Scale = 1
+		const float Scale = 1,
+		const bool IncludeCenter = false
 	);
 
 	/**

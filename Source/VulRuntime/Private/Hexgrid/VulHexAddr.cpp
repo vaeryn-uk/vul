@@ -147,23 +147,33 @@ bool FVulHexAddr::IsValid() const
 
 TArray<FVulHexAddr> FVulHexAddr::GenerateGrid(const int Size)
 {
-	TArray Out = {FVulHexAddr(0, 0)};
+	TArray<FVulHexAddr> Out;
 
-	for (auto Ring = 1; Ring <= Size; Ring++)
+	for (auto Ring = 0; Ring <= Size; Ring++)
 	{
-		const auto Seq = GenerateSequenceForRing(Ring);
-
-		auto Q = 0;
-		auto R = Seq.Num() - Ring * 2;
-
-		for (auto I = 0; I < Ring * 6; I++)
-		{
-			const FVulHexAddr Next(Seq[Q++ % Seq.Num()], Seq[R++ % Seq.Num()]);
-			Out.Add(Next);
-		}
+		GenerateRing(Ring, Out);
 	}
 
 	return Out;
+}
+
+void FVulHexAddr::GenerateRing(const int N, TArray<FVulHexAddr>& Out)
+{
+	if (N == 0)
+	{
+		Out.Add(FVulHexAddr(0, 0));
+		return;
+	}
+
+	const auto Seq = GenerateSequenceForRing(N);
+
+	auto Q = 0;
+	auto R = Seq.Num() - N * 2;
+
+	for (auto I = 0; I < N * 6; I++)
+	{
+		Out.Add(FVulHexAddr(Seq[Q++ % Seq.Num()], Seq[R++ % Seq.Num()]));
+	}
 }
 
 void FVulHexAddr::EnsureValid() const

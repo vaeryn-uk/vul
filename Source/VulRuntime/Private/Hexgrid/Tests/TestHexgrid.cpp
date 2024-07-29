@@ -249,7 +249,6 @@ void TestConstruction(TestHexgrid* TestCase)
 	{
 		auto Grid = MakeGrid(Case.Size);
 
-		Test.Equal(Grid.GetSize(), Case.Size, TEXT("Size"));
 		Test.Equal(Grid.TileCount(), Case.ExpectedTileCount, TEXT("TileCount"));
 	});
 

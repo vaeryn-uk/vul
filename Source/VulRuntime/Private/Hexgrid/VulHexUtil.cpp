@@ -64,10 +64,16 @@ TArray<TArray<FVector>> VulRuntime::Hexgrid::Triangles(
 TArray<FVector> VulRuntime::Hexgrid::Points(
 	const FVulHexAddr& Addr,
 	const FVulWorldHexGridSettings& GridSettings,
-	const float Scale)
-{
+	const float Scale,
+	const bool IncludeCenter
+) {
 	const auto Center = Project(Addr, GridSettings);
 	TArray<FVector> Out;
+
+	if (IncludeCenter)
+	{
+		Out.Add(Center);
+	}
 
 	for (auto N = 0; N < 6; ++N)
 	{
