@@ -128,11 +128,6 @@ TSharedPtr<SWidget> FVulIconDecorator::CreateDecoratorWidget(
 	const auto Umg = CreateWidget<UVulRichTextIcon>(Owner, VulRuntime::Settings()->IconWidget.LoadSynchronous());
 
 	const auto Resolved = VulRuntime::Settings()->ResolveIcon(FName(RunInfo.MetaData["i"]));
-	if (Resolved == nullptr)
-	{
-		return TSharedPtr<SWidget>();
-	}
-
 	if (!Umg->ApplyIcon(Resolved))
 	{
 		return TSharedPtr<SWidget>();
