@@ -130,6 +130,12 @@ struct VULRUNTIME_API FVulVectorPath
 	) const;
 
 	/**
+	 * Returns a chopped-down path based on the start and end values, where each is
+	 * a number between 0 and 1 indicating progress along the path.
+	 */
+	FVulVectorPath Chop(const float Start, const float End) const;
+
+	/**
 	 * Returns a new path with any redundant points removed, i.e. removes any points
 	 * that don't impact the direction of travel because 3 consecutive points sit
 	 * in a straight line.

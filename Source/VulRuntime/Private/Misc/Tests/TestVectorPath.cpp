@@ -111,5 +111,64 @@ bool TestVectorPath::RunTest(const FString& Parameters)
 		});
 	}
 
+	{
+		struct Data
+		{
+			TArray<FVector> Path;
+			TPair<float, float> StartEnd;
+			TArray<FVector> Expected;
+		};
+		auto Ddt = DDT<Data>(this, "Chop", [](TC Test, Data Case)
+		{
+			const auto Path = FVulVectorPath(Case.Path);
+
+			Test.Equal(Path.Chop(Case.StartEnd.Key, Case.StartEnd.Value).GetPoints(), Case.Expected);
+		});
+
+		const TArray Simple({FVector(0, 0, 0), FVector(0, 1, 0), FVector(1, 1, 0)});
+
+		Ddt.Run("simple-first-half", {
+			.Path = Simple,
+			.StartEnd = {0.f, 0.5f},
+			.Expected = {FVector(0, 0, 0), FVector(0, 1, 0)}
+		});
+
+		Ddt.Run("simple-second-half", {
+			.Path = Simple,
+			.StartEnd = {0.5f, 1.f},
+			.Expected = {FVector(0, 1, 0), FVector(1, 1, 0)}
+		});
+
+		Ddt.Run("simple-middle-half", {
+			.Path = Simple,
+			.StartEnd = {0.25f, 0.75f},
+			.Expected = {FVector(0, 0.5, 0), FVector(0, 1, 0), FVector(0.5, 1, 0)}
+		});
+
+		Ddt.Run("simple-first-3-quarters", {
+			.Path = Simple,
+			.StartEnd = {0.f, .75f},
+			.Expected = {FVector(0, 0, 0), FVector(0, 1, 0), FVector(0.5, 1, 0)}
+		});
+
+		Ddt.Run("simple-last-3-quarters", {
+			.Path = Simple,
+			.StartEnd = {0.25f, 1.f},
+			.Expected = {FVector(0, 0.5, 0), FVector(0, 1, 0), FVector(1, 1, 0)}
+		});
+
+		Ddt.Run("simple-clamped", {
+			.Path = Simple,
+			.StartEnd = {-1.f, 2.f},
+			.Expected = {FVector(0, 0, 0), FVector(0, 1, 0), FVector(1, 1, 0)}
+		});
+
+		Ddt.Run("invalid", {
+			.Path = {},
+			.StartEnd = {0.25f, 0.75f},
+			.Expected = {}
+		});
+	}
+
 	return !HasAnyErrors();
 }

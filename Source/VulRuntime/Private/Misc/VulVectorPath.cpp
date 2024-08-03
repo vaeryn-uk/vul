@@ -181,6 +181,38 @@ FVulVectorPath FVulVectorPath::Curve(const float TurnDegsPerWorldUnit, const FVu
 	return FVulVectorPath(OutPath);
 }
 
+FVulVectorPath FVulVectorPath::Chop(const float Start, const float End) const
+{
+	if (!IsValid())
+	{
+		return FVulVectorPath();
+	}
+
+	const auto StartDistance = Distance * FMath::Clamp(Start, 0, 1);
+	const auto EndDistance = Distance * FMath::Clamp(End, 0, 1);
+	auto Travelled = 0.f;
+	TArray NewPoints = {Interpolate(Start)};
+
+	for (auto I = 1; I < Points.Num(); ++I)
+	{
+		const auto Segment = (Points[I] - Points[I - 1]);
+
+		if (Travelled > StartDistance && Travelled < EndDistance)
+		{
+			// Point is within chopped path. Just copy it.
+			NewPoints.Add(Points[I - 1]);
+			Travelled += Segment.Length();
+			continue;
+		}
+
+		Travelled += Segment.Length();
+	}
+
+	NewPoints.Add(Interpolate(End));
+
+	return FVulVectorPath(NewPoints);
+}
+
 FVulVectorPath FVulVectorPath::Simplify() const
 {
 	if (!IsValid())
