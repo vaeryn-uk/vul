@@ -64,6 +64,8 @@ struct VULRUNTIME_API FVulTime
 	 */
 	bool IsAfter(const float Seconds) const;
 
+	float Seconds() const;
+
 	/**
 	 * Set the time to now.
 	 */

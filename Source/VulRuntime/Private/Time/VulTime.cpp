@@ -55,6 +55,11 @@ bool FVulTime::IsAfter(const float Seconds) const
 	return NowFn() > Time + Seconds;
 }
 
+float FVulTime::Seconds() const
+{
+	return Time;
+}
+
 void FVulTime::SetNow()
 {
 	Time = NowFn();
