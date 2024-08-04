@@ -1,5 +1,7 @@
 #include "Time/VulTickedObject.h"
 
+#include "VulRuntime.h"
+
 bool UVulTickedObject::IsAllowedToTick() const
 {
 	return !HasAnyFlags(RF_ClassDefaultObject);
@@ -11,10 +13,16 @@ void UVulTickedObject::Tick(float DeltaTime)
 	{
 		TickedTime += DeltaTime;
 
-		if (TickedTime - LastVulTickTime > VulTickTime())
+		bool HaveTicked = false;
+		// May need to tick multiple times.
+		for (int64 I = FMath::TruncToInt((TickedTime - LastVulTickTime) / VulTickTime()); I > 0; I--)
 		{
-			// TODO: Multiple ticks?
 			VulTick();
+			HaveTicked = true;
+		}
+
+		if (HaveTicked)
+		{
 			SetLastTickTime();
 		}
 	}
