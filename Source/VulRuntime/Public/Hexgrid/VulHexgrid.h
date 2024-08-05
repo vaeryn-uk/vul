@@ -261,7 +261,7 @@ struct TVulHexgrid
 		int I = 0;
 		while (I < WorkingSet.Num())
 		{
-			const auto& Current = WorkingSet[I];
+			const auto Current = WorkingSet[I];
 
 			for (const auto Next : AdjacentTiles(Current.Key))
 			{
