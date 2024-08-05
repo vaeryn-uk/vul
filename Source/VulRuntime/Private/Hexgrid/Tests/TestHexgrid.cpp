@@ -15,7 +15,7 @@ typedef TVulHexgrid<FString> TestGrid;
 TestGrid MakeGrid(int Size);
 void TestTileDistance(TestHexgrid* TestCase, const FVulHexAddr& One, const FVulHexAddr& Two, const int Expected);
 void TestConstruction(TestHexgrid* TestCase);
-TestGrid::FPathResult<int> TestPath(
+TestGrid::FPathResult TestPath(
 	TestHexgrid* TestCase,
 	const int GridSize,
 	const FVulHexAddr& Start,
@@ -179,6 +179,142 @@ bool TestHexgrid::RunTest(const FString& Parameters)
 		});
 	}
 
+
+	{
+		struct Data
+		{
+			FVulHexAddr From;
+			int GridSize;
+			TOptional<int> MaxCost;
+			int ExpectedTotalPaths;
+			TMap<FVulHexAddr, TestGrid::FPathResult> PathsToCheck;
+			TArray<FVulHexAddr> Obstacles;
+		};
+
+		auto Ddt = DDT<Data>(this, "Paths", [](const TestCase& TestCase, const Data& Data)
+		{
+			auto Grid = MakeGrid(Data.GridSize);
+
+			TestGrid::TVulQueryOptions Opts;
+			Opts.CostFn = [Data](
+				const TestGrid::FVulTile& From,
+				const TestGrid::FVulTile& To,
+				TVulHexgrid<FString>* Grid
+			) -> TOptional<int> {
+				if (Data.Obstacles.Contains(To.Addr))
+				{
+					return {};
+				}
+
+				return 1;
+			};
+
+			const auto Result = Grid.Paths(Data.From, Data.MaxCost, Opts);
+
+			TestCase.Equal(Result.Num(), Data.ExpectedTotalPaths, "Total number of found paths");
+
+			for (const auto& Entry : Data.PathsToCheck)
+			{
+				if (!TestCase.Equal(
+					true,
+					Result.Contains(Entry.Key),
+					FString::Printf(TEXT("Expected path to tile %s exists"), *Entry.Key.ToString())
+				))
+				{
+					continue;
+				}
+
+				TestCase.Equal(
+					Result[Entry.Key].Cost,
+					Entry.Value.Cost,
+					FString::Printf(TEXT("Expected path cost to tile %s match"), *Entry.Key.ToString())
+				);
+
+				if (!TestCase.Equal(
+					Result[Entry.Key].Tiles.Num(),
+					Entry.Value.Tiles.Num(),
+					FString::Printf(TEXT("Expected path tile count to tile %s match"), *Entry.Key.ToString())
+				))
+				{
+					continue;
+				}
+
+				for (int I = 0; I < Entry.Value.Tiles.Num(); I++)
+				{
+					TestCase.Equal(
+						Entry.Value.Tiles[I].Addr.ToString(),
+						Result[Entry.Key].Tiles[I].Addr.ToString(),
+						FString::Printf(TEXT("Expected path to tile %s entry #%d to match"), *Entry.Key.ToString(), I)
+					);
+				}
+			}
+		});
+
+		// Helper to define an expected path result.
+		const TFunction<TestGrid::FPathResult (const TArray<TPair<int, int>>& Coords, const int Cost)> ExpectedResult = [](
+			const TArray<TPair<int, int>>& Coords,
+			const int Cost
+		) {
+			TestGrid::FPathResult Out;
+
+			for (const auto& Coord : Coords)
+			{
+				TestGrid::FVulTile Tile;
+				Tile.Addr = FVulHexAddr(Coord.Key, Coord.Value);
+				Tile.Data = "";
+				Out.Tiles.Add(Tile);
+			}
+
+			Out.Cost = Cost;
+			Out.Complete = true;
+
+			return Out;
+		};
+
+		Ddt.Run("grid-1-origin", {
+			.From = FVulHexAddr(0, 0),
+			.GridSize = 1,
+			.ExpectedTotalPaths = 6,
+			.PathsToCheck = TMap<FVulHexAddr, TestGrid::FPathResult>{
+				{FVulHexAddr(1, -1), ExpectedResult({{1, -1}}, 1)},
+				{FVulHexAddr(1, 0), ExpectedResult({{1, 0}}, 1)},
+			},
+		});
+
+		Ddt.Run("grid-2-origin", {
+			.From = FVulHexAddr(0, 0),
+			.GridSize = 2,
+			.ExpectedTotalPaths = 6 + 12,
+			.PathsToCheck = TMap<FVulHexAddr, TestGrid::FPathResult>{
+				{FVulHexAddr(1, -1), ExpectedResult({{1, -1}}, 1)},
+				{FVulHexAddr(2, -2), ExpectedResult({{1, -1}, {2, -2}}, 2)},
+			},
+		});
+
+		Ddt.Run("grid-2-origin-with-obstacles", {
+			.From = FVulHexAddr(0, 0),
+			.GridSize = 2,
+			.ExpectedTotalPaths = 6 + 12 - 1,
+			.PathsToCheck = TMap<FVulHexAddr, TestGrid::FPathResult>{
+				{FVulHexAddr(1, 0), ExpectedResult({{1, 0}}, 1)},
+				{FVulHexAddr(2, -2), ExpectedResult({{0, -1}, {1, -2}, {2, -2}}, 3)},
+			},
+			.Obstacles = {FVulHexAddr(1, -1)}
+		});
+
+		Ddt.Run("grid-2-max-cost-1-with-obstacle", {
+			.From = FVulHexAddr(0, 0),
+			.GridSize = 2,
+			.MaxCost = 1,
+			.ExpectedTotalPaths = 5,
+			.PathsToCheck = TMap<FVulHexAddr, TestGrid::FPathResult>{
+				{FVulHexAddr(1, 0), ExpectedResult({{1, 0}}, 1)},
+			},
+			.Obstacles = {FVulHexAddr(1, -1)}
+		});
+	}
+
+
 	return true;
 }
 
@@ -196,7 +332,7 @@ void TestTileDistance(TestHexgrid* TestCase, const FVulHexAddr& One, const FVulH
 	TestCase->TestEqual(Assertion, One.Distance(Two), Expected);
 }
 
-TestGrid::FPathResult<int> TestPath(
+TestGrid::FPathResult TestPath(
 	TestHexgrid* TestCase,
 	const int GridSize,
 	const FVulHexAddr& Start,
@@ -207,7 +343,7 @@ TestGrid::FPathResult<int> TestPath(
 {
 	auto Grid = MakeGrid(GridSize);
 
-	TestGrid::TVulQueryOptions<int> Opts;
+	TestGrid::TVulQueryOptions Opts;
 	Opts.CostFn = [Impassable](const TestGrid::FVulTile& From, const TestGrid::FVulTile& To, TestGrid* Grid) -> TOptional<int>
 	{
 		if (Impassable.Contains(To.Addr))
@@ -218,7 +354,7 @@ TestGrid::FPathResult<int> TestPath(
 		return 1;
 	};
 
-	const auto Result = Grid.Path<int>(Start, Goal, Opts);
+	const auto Result = Grid.Path(Start, Goal, Opts);
 
 	TestCase->TestEqual("Path Found", Result.Complete, ExpectedDistanceFromGoal == 0);
 

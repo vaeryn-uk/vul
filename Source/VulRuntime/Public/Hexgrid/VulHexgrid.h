@@ -23,7 +23,7 @@
  *
  * Templated to allow arbitrary data structures to be stored at each tile in the grid.
  */
-template <typename TileData>
+template <typename TileData, typename CostType = int>
 struct TVulHexgrid
 {
 	typedef TFunction<TileData (const FVulHexAddr& Addr)> FVulTileAllocator;
@@ -75,7 +75,6 @@ struct TVulHexgrid
 	/**
 	 * Options we provide to @see Path to customize the path-finding algorithm.
 	 */
-	template <typename CostType = int>
 	struct TVulQueryOptions
 	{
 		static TOptional<CostType> DefaultCostFn(const FVulTile& From, const FVulTile& To, TVulHexgrid* Grid)
@@ -145,6 +144,8 @@ struct TVulHexgrid
 		const TFunction<bool (const FVulTile&)>& Check = [](const FVulTile&) { return true; },
 		const float Leeway = 0.01
 	) {
+		TRACE_CPUPROFILER_EVENT_SCOPE_STR("VulHexgrid::Trace")
+
 		FVulWorldHexGridSettings Settings;
 		Settings.HexSize = 10;
 
@@ -206,7 +207,6 @@ struct TVulHexgrid
 	/**
 	 * Result of a @see Path call.
 	 */
-	template <typename CostType>
 	struct FPathResult
 	{
 		/**
@@ -220,8 +220,10 @@ struct TVulHexgrid
 		 * Note the starting tile is implied and not included here, but the To tile
 		 * will be (assuming we have a complete path).
 		 * This also means that for a null path query (where From == To), this will be empty.
+		 *
+		 * TODO: Make this const FVulTile* to save copying tile data?
 		 */
-		TArray<FVulTile> Tiles;
+		TArray<FVulTile> Tiles = {};
 
 		/**
 		 * The cost of this path, according to the algorithm passed to our pathfinding.
@@ -230,18 +232,94 @@ struct TVulHexgrid
 	};
 
 	/**
+	 * Generates Path query results for all eligible tiles that can be reached within MaxCost.
+	 *
+	 * If MaxCost is omitted, this will generate the shortest path data for all tiles that can
+	 * be reached.
+	 *
+	 * This is a heavy call, but is more efficient than making separate Path queries for lots
+	 * of tiles in the grid.
+	 *
+	 * Note that this only returns completed paths.
+	 */
+	TMap<FVulHexAddr, FPathResult> Paths(
+		const FVulHexAddr& From,
+		const TOptional<CostType> MaxCost = {},
+		const TVulQueryOptions& Opts = TVulQueryOptions()
+	) {
+		TMap<FVulHexAddr, FPathResult> Result;
+
+		TArray<TPair<FVulHexAddr, FPathResult>> WorkingSet;
+
+		// Starting point. This is removed from the result set later.
+		WorkingSet.Add({From, FPathResult{
+			.Complete = true,
+			.Tiles = {},
+			.Cost = 0,
+		}});
+
+		int I = 0;
+		while (I < WorkingSet.Num())
+		{
+			const auto& Current = WorkingSet[I];
+
+			for (const auto Next : AdjacentTiles(Current.Key))
+			{
+				if (Next.Addr == From)
+				{
+					// Not interested in routes that return to the origin tile.
+					continue;
+				}
+
+				auto Cost = Opts.CostFn(
+					Tiles.FindChecked(Current.Key),
+					Tiles.FindChecked(Next.Addr),
+					this
+				);
+
+				if (!Cost.IsSet())
+				{
+					continue;
+				}
+
+				if (MaxCost.IsSet() && Cost.GetValue() + Current.Value.Cost > MaxCost.GetValue())
+				{
+					continue;
+				}
+
+				auto NewResult = Current.Value;
+				NewResult.Cost += Cost.GetValue();
+				NewResult.Tiles.Add(Next);
+
+				if (!Result.Contains(Next.Addr) || NewResult.Cost < Result[Next.Addr].Cost)
+				{
+					Result.Add(Next.Addr, NewResult);
+					WorkingSet.Add({Next.Addr, NewResult});
+				}
+			}
+
+			I++;
+		}
+
+		Result.Remove(From);
+
+		return Result;
+	}
+
+	/**
 	 * Finds a path between two tiles, From and To. Opts can be used to customize the path-finding.
 	 *
 	 * Returns one of the best possible paths.
 	 *
 	 * A* Search algorithm adapted from https://www.redblobgames.com/pathfinding/a-star/implementation.html#cpp-astar.
 	 */
-	template <typename CostType = int>
-	FPathResult<CostType> Path(
+	FPathResult Path(
 		const FVulHexAddr& From,
 		const FVulHexAddr& To,
-		const TVulQueryOptions<CostType>& Opts = TVulQueryOptions<CostType>())
+		const TVulQueryOptions& Opts = TVulQueryOptions())
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE_STR("VulHexgrid::Path")
+
 		if (From == To)
 		{
 			return {
@@ -302,7 +380,7 @@ struct TVulHexgrid
 			}
 		}
 
-		FPathResult<CostType> Result;
+		FPathResult Result;
 
 		if (Visited.IsEmpty())
 		{
@@ -463,8 +541,8 @@ private:
 	}
 };
 
-template <typename TileData>
-TArray<TPair<typename TVulHexgrid<TileData>::FVulTile, float>> TVulHexgrid<TileData>::ScoreTiles(
+template <typename TileData, typename CostType = int>
+TArray<TPair<typename TVulHexgrid<TileData, CostType>::FVulTile, float>> TVulHexgrid<TileData, CostType>::ScoreTiles(
 	const TFunction<TOptional<float>(const FVulTile&)>& ScoreFn,
 	const bool Ascending
 ) const {
