@@ -209,10 +209,12 @@ FText UVulRichTextBlock::ApplyContentSubstitutions(const FText& InText, UWidget*
 	if (!Replaced)
 	{
 		// If nothing modified, use the untouched FText.
+		// Recursion termination point.
 		return InText;
 	}
 
-	return FText::FromString(Str);
+	// Recurse for another pass, supporting nested substitutions.
+	return ApplyContentSubstitutions(FText::FromString(Str), Widget);
 }
 
 void UVulRichTextBlock::ApplySWidgetText()

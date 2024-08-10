@@ -60,13 +60,20 @@ public:
 	virtual TObjectPtr<UObject> FallbackIcon() const;
 };
 
-class FVulIconDecorator : public FRichTextDecorator
+class VULRUNTIME_API FVulIconDecorator : public FRichTextDecorator
 {
 public:
 	FVulIconDecorator(URichTextBlock* InOwner)
 		: FRichTextDecorator(InOwner) {}
 
 	virtual bool Supports(const FTextRunParseResults& RunParseResult, const FString& Text) const override;
+
+	/**
+	 * Convenience for defining icon markup statically from CPP code.
+	 *
+	 * Returns <vi i="IconName"/>
+	 */
+	static FString Markup(const FString& IconName);
 
 protected:
 	virtual TSharedPtr<SWidget> CreateDecoratorWidget(

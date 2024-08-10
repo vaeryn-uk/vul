@@ -113,6 +113,11 @@ bool FVulIconDecorator::Supports(const FTextRunParseResults& RunParseResult, con
 	return RunParseResult.Name == "vi";
 }
 
+FString FVulIconDecorator::Markup(const FString& IconName)
+{
+	return FString::Printf(TEXT("<vi i=\"%s\"/>"), *IconName);
+}
+
 TSharedPtr<SWidget> FVulIconDecorator::CreateDecoratorWidget(
 	const FTextRunInfo& RunInfo,
 	const FTextBlockStyle& DefaultTextStyle
