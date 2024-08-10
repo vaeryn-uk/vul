@@ -14,7 +14,8 @@ const FVulRichTextIconDefinition* UVulRuntimeSettings::ResolveIcon(const FName& 
 
 	return IconSet.LoadSynchronous()->FindRow<FVulRichTextIconDefinition>(
 		RowName,
-		"UVulRuntimeSettings::ResolveIcon"
+		"UVulRuntimeSettings::ResolveIcon",
+		false // We support placeholder icons if row is not set, so don't warn on this as it clogs logs.
 	);
 }
 
