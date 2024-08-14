@@ -2,6 +2,9 @@
 
 #include "CoreMinimal.h"
 #include "CommonRichTextBlock.h"
+#include "Blueprint/UserWidget.h"
+#include "CommonTextBlock.h"
+#include "Blueprint/WidgetTree.h"
 #include "UserInterface/Tooltip/VulTooltip.h"
 #include "Containers/Union.h"
 #include "Framework/Text/ITextDecorator.h"
@@ -88,6 +91,29 @@ public:
 		const FRunInfo&,
 		const FTextBlockStyle&
 	);
+
+	/**
+	 * Convenience method to construct a Vul text block (or child class of).
+	 */
+	template <typename T = UVulRichTextBlock>
+	static T* CreateTextBlock(
+		UUserWidget* Owner,
+		TSubclassOf<UCommonTextStyle> Style = nullptr,
+		const FText& Content = FText::GetEmpty()
+	) {
+		const auto Spawned = Owner->WidgetTree->ConstructWidget<T>();
+
+		if (Style != nullptr)
+		{
+			FTextBlockStyle StyleToApply;
+			Style->GetDefaultObject<UCommonTextStyle>()->ToTextBlockStyle(StyleToApply);
+			Spawned->SetDefaultTextStyle(StyleToApply);
+		}
+
+		Spawned->SetText(Content);
+
+		return Spawned;
+	}
 
 	/**
 	 * Utility function when defining static or dynamic content markets in your project.
