@@ -48,7 +48,14 @@ protected:
 	/**
 	 * The rate at which VulTick should be called, in seconds.
 	 */
-	virtual float VulTickTime() PURE_VIRTUAL(, return 0.f; )
+	virtual float VulTickTime() const PURE_VIRTUAL(, return 0.f; )
+
+	/**
+	 * An estimation of how far between two VulTicks we are, where 0 = just ticked and 1 = going to tick again now.
+	 *
+	 * This isn't accurate, but is useful for smoothing against VulTick rate.
+	 */
+	double VulTickFraction() const;
 private:
 	void SetLastTickTime();
 

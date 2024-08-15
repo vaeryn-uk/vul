@@ -38,6 +38,11 @@ double UVulTickedObject::VulTimeSpentTicking() const
 	return TickedTime;
 }
 
+double UVulTickedObject::VulTickFraction() const
+{
+	return (TickedTime - LastVulTickTime) / VulTickTime();
+}
+
 void UVulTickedObject::SetLastTickTime()
 {
 	// Normalize last tick to the last Xms to ensure that we don't lose time
