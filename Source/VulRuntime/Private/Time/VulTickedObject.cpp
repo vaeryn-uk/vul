@@ -40,6 +40,11 @@ double UVulTickedObject::VulTimeSpentTicking() const
 
 double UVulTickedObject::VulTickFraction() const
 {
+	if (IsVulTickingPaused())
+	{
+		return 0;
+	}
+
 	return (TickedTime - LastVulTickTime) / VulTickTime();
 }
 

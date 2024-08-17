@@ -27,7 +27,7 @@ protected:
 	/**
 	 * Returns true when you want VulTick to stop being called temporarily.
 	 */
-	virtual bool IsVulTickingPaused() { return false; };
+	virtual bool IsVulTickingPaused() const { return false; };
 
 	/**
 	 * Implement this to perform your custom tick logic.
@@ -54,6 +54,8 @@ protected:
 	 * An estimation of how far between two VulTicks we are, where 0 = just ticked and 1 = going to tick again now.
 	 *
 	 * This isn't accurate, but is useful for smoothing against VulTick rate.
+	 *
+	 * Returns 0 if vul ticking is paused.
 	 */
 	double VulTickFraction() const;
 private:
