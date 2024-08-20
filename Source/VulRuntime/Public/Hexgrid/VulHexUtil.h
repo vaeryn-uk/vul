@@ -177,6 +177,8 @@ namespace VulRuntime::Hexgrid
 	 *
 	 * This can be used in conjunction with the results from a Path query to visualize actors moving
 	 * along a hexgrid path.
+	 *
+	 * This path will assume a 2D plane for a grid, and plot points matching GridOrigin's Z location.
 	 */
 	VULRUNTIME_API FVulVectorPath VectorPath(
 		const FVulHexAddr& Start,
