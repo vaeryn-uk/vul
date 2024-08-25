@@ -26,6 +26,11 @@ struct VULRUNTIME_API FVulTime
 	 */
 	static FVulTime WorldTime(UWorld* World);
 
+	/**
+	 * Creates a time based on the current real time (pause ignored).
+	 */
+	static FVulTime RealTime(UWorld* World);
+
 	bool IsValid() const;
 
 	/**

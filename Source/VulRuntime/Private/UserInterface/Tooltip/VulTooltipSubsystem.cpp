@@ -329,13 +329,9 @@ void VulRuntime::Tooltipify(
 		Widget,
 		[Context, Getter, Widget, Options](const FGeometry&, const FPointerEvent&)
 		{
-			if (Options.ShowAnimation.IsValid())
+			if (Options.OnShow)
 			{
-				const auto AnimationWidget = ResolveAnimatableWidget(Widget);
-				if (IsValid(AnimationWidget))
-				{
-					AnimationWidget->PlayAnimation(Options.ShowAnimation.Get());
-				}
+				Options.OnShow();
 			}
 
 			Tooltip(Widget)->Show(Context, Widget->GetOwningPlayer(), Getter.Execute(), Options.Anchor);
@@ -346,13 +342,9 @@ void VulRuntime::Tooltipify(
 		Widget,
 		[Context, Widget, Options](const FPointerEvent&)
 		{
-			if (Options.HideAnimation.IsValid())
+			if (Options.OnHide)
 			{
-				const auto AnimationWidget = ResolveAnimatableWidget(Widget);
-				if (IsValid(AnimationWidget))
-				{
-					AnimationWidget->PlayAnimation(Options.HideAnimation.Get());
-				}
+				Options.OnHide();
 			}
 
 			Tooltip(Widget)->Hide(Context, Widget->GetOwningPlayer());
@@ -363,14 +355,4 @@ void VulRuntime::Tooltipify(
 void VulRuntime::Tooltipify(const FString& Context, UWidget* Widget, TSharedPtr<const FVulTooltipData> Data)
 {
 	return Tooltipify(Context, Widget, FVulGetTooltipData::CreateWeakLambda(Widget, [Data] { return Data; }));
-}
-
-UUserWidget* VulRuntime::ResolveAnimatableWidget(UWidget* Widget)
-{
-	if (const auto AsUserWidget = Cast<UUserWidget>(Widget); IsValid(AsUserWidget))
-	{
-		return AsUserWidget;
-	}
-
-	return Widget->GetTypedOuter<UUserWidget>();
 }

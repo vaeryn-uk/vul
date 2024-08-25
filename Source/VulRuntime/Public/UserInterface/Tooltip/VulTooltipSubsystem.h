@@ -197,6 +197,8 @@ private:
 
 /**
  * Defines how a widget that trigger a tooltip behaves. Note this is not the tooltip widget itself.
+ *
+ * Pass one of these to VulRuntime::Tooltipify.
  */
 USTRUCT()
 struct FVulTooltipWidgetOptions
@@ -206,20 +208,14 @@ struct FVulTooltipWidgetOptions
 	TOptional<FVulTooltipAnchor> Anchor = {};
 
 	/**
-	 * If set, this animation will be played when the tooltip is shown.
-	 *
-	 * This animation is triggered against a UUserWidget that is initiating the tooltip; either itself or
-	 * a parent owning it.
+	 * Triggered when the tooltip is shown.
 	 */
-	TWeakObjectPtr<UWidgetAnimation> ShowAnimation = nullptr;
+	TFunction<void ()> OnShow = nullptr;
 
 	/**
-	 * If set, this animation will be played when the tooltip is hidden.
-	 *
-	 * This animation is triggered against a UUserWidget that is initiating the tooltip; either itself or
-	 * a parent owning it.
+	 * Triggered when the tooltip is hidden.
 	 */
-	TWeakObjectPtr<UWidgetAnimation> HideAnimation = nullptr;
+	TFunction<void ()> OnHide = nullptr;
 };
 
 namespace VulRuntime
@@ -250,6 +246,4 @@ namespace VulRuntime
 	 * Tooltipify a widget with some static tooltip data. No need for a delegate.
 	 */
 	VULRUNTIME_API void Tooltipify(const FString& Context, UWidget* Widget, TSharedPtr<const FVulTooltipData> Data);
-
-	UUserWidget* ResolveAnimatableWidget(UWidget* Widget);
 }

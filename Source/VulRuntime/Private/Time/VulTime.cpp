@@ -15,6 +15,15 @@ FVulTime FVulTime::WorldTime(UWorld* World)
 	});
 }
 
+FVulTime FVulTime::RealTime(UWorld* World)
+{
+	return FVulTime([World]
+	{
+		checkf(::IsValid(World), TEXT("Cannot generate now time as world is invalid"))
+		return World->GetRealTimeSeconds();
+	});
+}
+
 bool FVulTime::IsValid() const
 {
 	return NowFn != nullptr && Time >= 0;
