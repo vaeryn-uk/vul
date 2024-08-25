@@ -2,13 +2,14 @@
 
 #include "CoreMinimal.h"
 #include "VulTooltip.h"
+#include "Animation/WidgetAnimation.h"
 #include "Components/Widget.h"
 #include "Misc/VulContextToggle.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "VulTooltipSubsystem.generated.h"
 
 /**
- * Describes how a tooltip is anchor to another element.
+ * Describes how a tooltip is anchored to another element.
  *
  * The absence of this, and the default, is positioning relative to the mouse cursor.
  */
@@ -44,9 +45,6 @@ public:
 	 * Context is required to differentiate different reasons that a tooltip would be made
 	 * visible, and a tooltip will be shown until all contexts for that player controller
 	 * have requested Hide.
-	 *
-	 * AnchorWidget can be provided to fix the position of the tooltip to the provided widget.
-	 * If omitted, the tooltip will follow the mouse cursor.
 	 */
 	void Show(
 		const FString& Context,
@@ -197,6 +195,33 @@ private:
 	void GarbageCollectCachedTooltips();
 };
 
+/**
+ * Defines how a widget that trigger a tooltip behaves. Note this is not the tooltip widget itself.
+ */
+USTRUCT()
+struct FVulTooltipWidgetOptions
+{
+	GENERATED_BODY()
+
+	TOptional<FVulTooltipAnchor> Anchor = {};
+
+	/**
+	 * If set, this animation will be played when the tooltip is shown.
+	 *
+	 * This animation is triggered against a UUserWidget that is initiating the tooltip; either itself or
+	 * a parent owning it.
+	 */
+	TWeakObjectPtr<UWidgetAnimation> ShowAnimation = nullptr;
+
+	/**
+	 * If set, this animation will be played when the tooltip is hidden.
+	 *
+	 * This animation is triggered against a UUserWidget that is initiating the tooltip; either itself or
+	 * a parent owning it.
+	 */
+	TWeakObjectPtr<UWidgetAnimation> HideAnimation = nullptr;
+};
+
 namespace VulRuntime
 {
 	/**
@@ -211,10 +236,20 @@ namespace VulRuntime
 	 *
 	 * This is useful to add the functionality to native widget types without having to extend
 	 * them in your own projects to get at the handlers.
+	 *
+	 * Context is the value we pass when triggering the tooltip, as per UVulTooltipSubsystem::Show.
 	 */
-	VULRUNTIME_API void Tooltipify(const FString& Context, UWidget* Widget, FVulGetTooltipData Getter);
+	VULRUNTIME_API void Tooltipify(
+		const FString& Context,
+		UWidget* Widget,
+		FVulGetTooltipData Getter,
+		const FVulTooltipWidgetOptions& Options = FVulTooltipWidgetOptions()
+	);
+
 	/**
 	 * Tooltipify a widget with some static tooltip data. No need for a delegate.
 	 */
 	VULRUNTIME_API void Tooltipify(const FString& Context, UWidget* Widget, TSharedPtr<const FVulTooltipData> Data);
+
+	UUserWidget* ResolveAnimatableWidget(UWidget* Widget);
 }

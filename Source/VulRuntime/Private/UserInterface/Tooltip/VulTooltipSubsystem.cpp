@@ -319,20 +319,42 @@ UVulTooltipSubsystem* VulRuntime::Tooltip(const UObject* WorldCtx)
 	return VulRuntime::WorldGlobals::GetGameInstanceSubsystemChecked<UVulTooltipSubsystem>(WorldCtx);
 }
 
-void VulRuntime::Tooltipify(const FString& Context, UWidget* Widget, FVulGetTooltipData Getter)
-{
+void VulRuntime::Tooltipify(
+	const FString& Context,
+	UWidget* Widget,
+	FVulGetTooltipData Getter,
+	const FVulTooltipWidgetOptions& Options
+) {
 	Widget->TakeWidget()->SetOnMouseEnter(FNoReplyPointerEventHandler::CreateWeakLambda(
 		Widget,
-		[Context, Getter, Widget](const FGeometry&, const FPointerEvent&)
+		[Context, Getter, Widget, Options](const FGeometry&, const FPointerEvent&)
 		{
-			Tooltip(Widget)->Show(Context, Widget->GetOwningPlayer(), Getter.Execute());
+			if (Options.ShowAnimation.IsValid())
+			{
+				const auto AnimationWidget = ResolveAnimatableWidget(Widget);
+				if (IsValid(AnimationWidget))
+				{
+					AnimationWidget->PlayAnimation(Options.ShowAnimation.Get());
+				}
+			}
+
+			Tooltip(Widget)->Show(Context, Widget->GetOwningPlayer(), Getter.Execute(), Options.Anchor);
 		}
 	));
 
 	Widget->TakeWidget()->SetOnMouseLeave(FSimpleNoReplyPointerEventHandler::CreateWeakLambda(
 		Widget,
-		[Context, Widget](const FPointerEvent&)
+		[Context, Widget, Options](const FPointerEvent&)
 		{
+			if (Options.HideAnimation.IsValid())
+			{
+				const auto AnimationWidget = ResolveAnimatableWidget(Widget);
+				if (IsValid(AnimationWidget))
+				{
+					AnimationWidget->PlayAnimation(Options.HideAnimation.Get());
+				}
+			}
+
 			Tooltip(Widget)->Hide(Context, Widget->GetOwningPlayer());
 		}
 	));
@@ -341,4 +363,14 @@ void VulRuntime::Tooltipify(const FString& Context, UWidget* Widget, FVulGetTool
 void VulRuntime::Tooltipify(const FString& Context, UWidget* Widget, TSharedPtr<const FVulTooltipData> Data)
 {
 	return Tooltipify(Context, Widget, FVulGetTooltipData::CreateWeakLambda(Widget, [Data] { return Data; }));
+}
+
+UUserWidget* VulRuntime::ResolveAnimatableWidget(UWidget* Widget)
+{
+	if (const auto AsUserWidget = Cast<UUserWidget>(Widget); IsValid(AsUserWidget))
+	{
+		return AsUserWidget;
+	}
+
+	return Widget->GetTypedOuter<UUserWidget>();
 }

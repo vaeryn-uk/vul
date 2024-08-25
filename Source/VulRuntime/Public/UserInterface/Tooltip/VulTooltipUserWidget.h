@@ -8,7 +8,7 @@
 /**
  * Provides a base implementation for a user widget that displays a tooltip when hovered.
  *
- * Alternatively consider VulRuntime::Tooltipify if you don't want to extend this.
+ * Alternatively, consider VulRuntime::Tooltipify if you don't want to extend this.
  */
 UCLASS()
 class VULRUNTIME_API UVulTooltipUserWidget : public UCommonUserWidget
