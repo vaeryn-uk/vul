@@ -69,9 +69,22 @@ public:
 	UPROPERTY(EditAnywhere)
 	FVulAnimatedHighlightSettings Settings;
 
+	template <typename T>
+	T* GetTypedContent() const;
+
 private:
 	bool bIsHighlighted;
 	TOptional<FVulTime> ChangedAt;
 
 	void SetContentBrightness(const float Brightness);
 };
+
+template <typename T>
+T* UVulAnimatedHighlight::GetTypedContent() const
+{
+	const auto Typed = Cast<T>(GetContent());
+
+	checkf(IsValid(Typed), TEXT("UVulAnimatedHighlight does not contain content of the requested type"))
+
+	return Typed;
+}
