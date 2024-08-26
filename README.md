@@ -145,6 +145,11 @@ of temporary notifications to a player. This provides functionality such as:
 A reusable variation of a border widget that allows defining multiple, overlaid borders in its style definition.
 See `UVulMultiBorder`.
 
+#### Animated Highlight widget
+
+`UVulAnimatedHighlight` wraps content, providing a highlighting effect when the content is hovered.
+Intended to be used alongside tooltip functionality.
+
 #### Collapsed panel widget
 
 Contains content that is shown/hidden when a connected button is pushed. See `UVulCollapsedPanel`.
