@@ -4,19 +4,40 @@
 #include "Components/Border.h"
 #include "Tooltip/VulTooltipSubsystem.h"
 #include "Time/VulTime.h"
-#include "Blueprint/WidgetTree.h"
 #include "VulAnimatedHighlight.generated.h"
 
 USTRUCT()
-struct FVulAnimatedHighlightSettings
+struct VULRUNTIME_API FVulAnimatedHighlightSettings
 {
 	GENERATED_BODY()
+
+	/**
+	 * After constructing settings, use functions to configure the settings, e.g. Background and Brightness.
+	 */
+	FVulAnimatedHighlightSettings() = default;
+	FVulAnimatedHighlightSettings(const FMargin InPadding) : Padding(InPadding) {}
+
+	/**
+	 * Configures a background animation. Returns this for chaining.
+	 */
+	FVulAnimatedHighlightSettings Background(
+		const FLinearColor& Default,
+		const FLinearColor& Highlighted
+	);
+
+	/**
+	 * Configures a brightness animation. Returns this for chaining.
+	 */
+	FVulAnimatedHighlightSettings Brightness(
+		const float Default = .6f,
+		const float Highlighted = 1.f
+	);
 
 	/**
 	 * The brightness of content when not highlighted.
 	 */
 	UPROPERTY(EditAnywhere)
-	float DefaultBrightness = .6f;
+	float DefaultBrightness = 1.f;
 
 	/**
 	 * The brightness of content when highlighted.
@@ -24,11 +45,31 @@ struct FVulAnimatedHighlightSettings
 	UPROPERTY(EditAnywhere)
 	float HighlightedBrightness = 1.f;
 
+	UPROPERTY(EditAnywhere)
+	FLinearColor DefaultBackgroundColor = FLinearColor::Transparent;
+
+	UPROPERTY(EditAnywhere)
+	FLinearColor HighlightedBackgroundColor = FLinearColor::Transparent;
+
+	UPROPERTY(EditAnywhere)
+	FMargin Padding = FMargin(0);
+
 	/**
 	 * The animation speed between default & highlighted states.
 	 */
 	UPROPERTY(EditAnywhere)
-	float Speed = .15f;
+	float Speed = DefaultSpeed;
+
+	/**
+	 * The default animation speed.
+	 */
+	static constexpr float DefaultSpeed = .15f;
+
+	bool Animates() const;
+
+	bool AnimatesBrightness() const;
+
+	bool AnimatesBackground() const;
 };
 
 /**
@@ -76,6 +117,7 @@ private:
 	bool bIsHighlighted;
 	TOptional<FVulTime> ChangedAt;
 
+	void SetBackgroundColor(const FLinearColor& Color);
 	void SetContentBrightness(const float Brightness);
 };
 

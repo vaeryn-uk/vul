@@ -1,5 +1,37 @@
 #include "UserInterface/VulAnimatedHighlight.h"
-#include "VulRuntime.h"
+
+FVulAnimatedHighlightSettings FVulAnimatedHighlightSettings::Background(
+	const FLinearColor& Default,
+	const FLinearColor& Highlighted
+) {
+	DefaultBackgroundColor = Default;
+	HighlightedBackgroundColor = Highlighted;
+
+	return *this;
+}
+
+FVulAnimatedHighlightSettings FVulAnimatedHighlightSettings::Brightness(const float Default, const float Highlighted)
+{
+	DefaultBrightness = Default;
+	HighlightedBrightness = Highlighted;
+
+	return *this;
+}
+
+bool FVulAnimatedHighlightSettings::Animates() const
+{
+	return AnimatesBackground() || AnimatesBrightness();
+}
+
+bool FVulAnimatedHighlightSettings::AnimatesBrightness() const
+{
+	return DefaultBrightness != HighlightedBrightness;
+}
+
+bool FVulAnimatedHighlightSettings::AnimatesBackground() const
+{
+	return DefaultBackgroundColor != HighlightedBackgroundColor;
+}
 
 UVulAnimatedHighlight* UVulAnimatedHighlight::Wrap(
 	const FVulAnimatedHighlightSettings& InSettings,
@@ -16,10 +48,10 @@ UVulAnimatedHighlight* UVulAnimatedHighlight::Wrap(
 		return Created;
 	}
 
-	Created->SetPadding(FMargin(0));
+	Created->SetPadding(InSettings.Padding);
 	Created->SetContent(ToWrap);
-	Created->Background.TintColor = FColor::Transparent;
 	Created->SetContentBrightness(InSettings.DefaultBrightness);
+	Created->SetBackgroundColor(InSettings.DefaultBackgroundColor);
 	Created->Settings = InSettings;
 
 	return Created;
@@ -27,21 +59,35 @@ UVulAnimatedHighlight* UVulAnimatedHighlight::Wrap(
 
 void UVulAnimatedHighlight::Tick(float DeltaTime)
 {
-	if (!ChangedAt.IsSet())
+	if (!IsValid(GetWorld()) || !ChangedAt.IsSet() || !Settings.Animates())
 	{
 		return;
 	}
 
 	const float Alpha = ChangedAt->Alpha(Settings.Speed);
 
-	if (Alpha < 1)
+	if (Settings.AnimatesBrightness())
 	{
-		const auto Start = bIsHighlighted ? Settings.DefaultBrightness : Settings.HighlightedBrightness;
-		const auto End   = bIsHighlighted ? Settings.HighlightedBrightness : Settings.DefaultBrightness;
-		SetContentBrightness(FMath::Lerp(Start, End, Alpha));
-	} else
+		if (Alpha < 1) {
+			const auto Start = bIsHighlighted ? Settings.DefaultBrightness : Settings.HighlightedBrightness;
+			const auto End   = bIsHighlighted ? Settings.HighlightedBrightness : Settings.DefaultBrightness;
+			SetContentBrightness(FMath::Lerp(Start, End, Alpha));
+		} else
+		{
+			SetContentBrightness(bIsHighlighted ? Settings.HighlightedBrightness : Settings.DefaultBrightness);
+		}
+	}
+
+	if (Settings.AnimatesBackground())
 	{
-		SetContentBrightness(bIsHighlighted ? Settings.HighlightedBrightness : Settings.DefaultBrightness);
+		if (Alpha < 1) {
+			const auto Start = bIsHighlighted ? Settings.DefaultBackgroundColor : Settings.HighlightedBackgroundColor;
+			const auto End   = bIsHighlighted ? Settings.HighlightedBackgroundColor : Settings.DefaultBackgroundColor;
+			SetBackgroundColor(FMath::Lerp(Start, End, Alpha));
+		} else
+		{
+			SetBackgroundColor(bIsHighlighted ? Settings.HighlightedBackgroundColor : Settings.DefaultBackgroundColor);
+		}
 	}
 }
 
@@ -72,8 +118,12 @@ void UVulAnimatedHighlight::Deactivate()
 	bIsHighlighted = false;
 }
 
+void UVulAnimatedHighlight::SetBackgroundColor(const FLinearColor& Color)
+{
+	SetBrushColor(Color);
+}
+
 void UVulAnimatedHighlight::SetContentBrightness(const float Brightness)
 {
-	UE_LOG(LogVul, Display, TEXT("Setting brightness=%.2f"), Brightness);
 	SetContentColorAndOpacity(FLinearColor(Brightness, Brightness, Brightness, GetContentColorAndOpacity().A));
 }
