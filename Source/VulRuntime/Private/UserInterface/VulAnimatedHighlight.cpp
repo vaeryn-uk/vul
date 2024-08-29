@@ -59,7 +59,7 @@ UVulAnimatedHighlight* UVulAnimatedHighlight::Wrap(
 
 void UVulAnimatedHighlight::Tick(float DeltaTime)
 {
-	if (!IsValid(GetWorld()) || !ChangedAt.IsSet() || !Settings.Animates())
+	if (!IsValid(this) || !IsValid(GetWorld()) || !ChangedAt.IsSet() || !Settings.Animates())
 	{
 		return;
 	}
@@ -94,6 +94,11 @@ void UVulAnimatedHighlight::Tick(float DeltaTime)
 TStatId UVulAnimatedHighlight::GetStatId() const
 {
 	RETURN_QUICK_DECLARE_CYCLE_STAT(UVulAnimatedHighlight, STATGROUP_Tickables);
+}
+
+bool UVulAnimatedHighlight::IsAllowedToTick() const
+{
+	return !HasAnyFlags(RF_ClassDefaultObject);
 }
 
 FVulTooltipWidgetOptions UVulAnimatedHighlight::TooltipOptions() const

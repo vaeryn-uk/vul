@@ -97,6 +97,7 @@ public:
 
 	virtual void Tick(float DeltaTime) override;
 	virtual TStatId GetStatId() const override;
+	virtual bool IsAllowedToTick() const override;
 
 	/**
 	 * Commonly used with tooltips, this creates & configures options to activate/deactivate this
