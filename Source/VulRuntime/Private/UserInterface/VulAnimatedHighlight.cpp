@@ -59,7 +59,7 @@ UVulAnimatedHighlight* UVulAnimatedHighlight::Wrap(
 
 void UVulAnimatedHighlight::Tick(float DeltaTime)
 {
-	if (!IsValid(this) || !IsValid(GetWorld()) || !ChangedAt.IsSet() || !Settings.Animates())
+	if (!IsValid(this) || !IsValid(GetOuter()) || !ChangedAt.IsSet() || !Settings.Animates())
 	{
 		return;
 	}

@@ -12,7 +12,7 @@ class VULRUNTIME_API FVulActorUtil
 {
 public:
 	/**
-	 * Spawns a scene component dynamically at runtime of the templated class. Sets it up so that it can be seen
+	 * Spawns a component dynamically at runtime of the templated class. Sets it up so that it can be seen
 	 * in the world tree/actor graph.
 	 *
 	 * Optionally provide a parent component to attach to, else we attach to the root component of the provided
@@ -38,7 +38,8 @@ public:
 		AActor* Owner,
 		const FName& Name,
 		USceneComponent* Parent   = nullptr,
-		UActorComponent* Template = nullptr);
+		UActorComponent* Template = nullptr
+	);
 
 	/**
 	 * Creates a component that will be attached to the provided component, or attached as root if Parent
