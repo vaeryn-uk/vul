@@ -124,6 +124,16 @@ data in/out will be handled for you and a loading screen can be displayed whilst
 support is provided for useful functionality such as hooking in to when levels are loaded and automatically
 spawning widgets when certain levels are shown.
 
+### Enhanced Developer Settings
+
+`UVulDeveloperSettings` provides an extension to project-specific settings for your game with the ability
+to mark certain settings' values ignored if a "developer mode" flag is enabled. Useful for quickly switching
+values for something you're developing now, and reverting back to the normal settings without needing to reconfigure
+everything.
+
+You will need the `DeveloperSettings` module enabled in your `Project.Build.cs` file to extend & use this
+feature.
+
 ### Centralization of random number generation
 
 See `TVulRngManager` for more information.
