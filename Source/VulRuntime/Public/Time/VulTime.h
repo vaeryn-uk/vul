@@ -68,6 +68,7 @@ struct VULRUNTIME_API FVulTime
 	 * False if we haven't started or is not valid.
 	 */
 	bool IsAfter(const float Seconds) const;
+	bool IsNowOrAfter(const float Seconds) const;
 
 	float Seconds() const;
 
@@ -79,4 +80,23 @@ struct VULRUNTIME_API FVulTime
 private:
 	FVulNowFn NowFn;
 	float Time = -1;
+};
+
+/**
+ * A wrapper around an FVulTime where we know the duration we want to check for ahead of time.
+ *
+ * E.g. "I want to know when 5s has passed, then do something"
+ */
+USTRUCT()
+struct VULRUNTIME_API FVulFutureTime
+{
+	GENERATED_BODY()
+
+	static FVulFutureTime WorldTime(UWorld* World, float SecondsInFuture);
+
+	bool IsNowOrInPast() const;
+
+private:
+	float Seconds = 0;
+	FVulTime Time;
 };

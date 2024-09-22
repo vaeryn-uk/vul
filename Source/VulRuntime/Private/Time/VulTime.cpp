@@ -64,6 +64,16 @@ bool FVulTime::IsAfter(const float Seconds) const
 	return NowFn() > Time + Seconds;
 }
 
+bool FVulTime::IsNowOrAfter(const float Seconds) const
+{
+	if (!IsValid())
+	{
+		return false;
+	}
+
+	return NowFn() >= Time + Seconds;
+}
+
 float FVulTime::Seconds() const
 {
 	return Time;
@@ -72,4 +82,19 @@ float FVulTime::Seconds() const
 void FVulTime::SetNow()
 {
 	Time = NowFn();
+}
+
+FVulFutureTime FVulFutureTime::WorldTime(UWorld* World, float SecondsInFuture)
+{
+	FVulFutureTime Ret;
+
+	Ret.Time = FVulTime::WorldTime(World);
+	Ret.Seconds = SecondsInFuture;
+
+	return Ret;
+}
+
+bool FVulFutureTime::IsNowOrInPast() const
+{
+	return Time.IsNowOrAfter(Seconds);
 }
