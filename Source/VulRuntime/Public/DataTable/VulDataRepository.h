@@ -60,6 +60,19 @@ public:
 
 	virtual void PostLoad() override;
 
+	/**
+	 * Convenient row lookup when you expect the row to be found.
+	 *
+	 * Common scenario when accessing data in CPP from in-editor configuration.
+	 */
+	template <typename RowType>
+	static TVulDataPtr<RowType> Get(
+		const TSoftObjectPtr<UVulDataRepository>& Repo,
+		const FName& TableName,
+		const FName& RowName,
+		const FString& ContextString = ""
+	);
+
 #if WITH_EDITORONLY_DATA
 	/**
 	 * Builds up a cache of all reference properties across all table managed by this repository.
@@ -108,6 +121,8 @@ private:
 
 	template <typename RowType>
 	const RowType* FindRaw(const FName& TableName, const FName& RowName);
+	template <typename RowType>
+	const RowType* FindRawChecked(const FName& TableName, const FName& RowName);
 
 	FVulDataPtr FindPtrChecked(const FName& TableName, const FName& RowName);
 
@@ -157,10 +172,21 @@ const RowType* UVulDataRepository::FindRaw(const FName& TableName, const FName& 
 {
 	auto Table = DataTables.FindChecked(TableName);
 	auto Row = Table->FindRow<RowType>(RowName, TEXT("VulDataRepository FindChecked"), false);
-	checkf(Row != nullptr, TEXT("Cannot find row %s in table %s"), *RowName.ToString(), *TableName.ToString());
+	if (Row == nullptr)
+	{
+		return nullptr;
+	}
 
 	InitStruct(TableName, Table, Table->RowStruct, Row);
 
+	return Row;
+}
+
+template <typename RowType>
+const RowType* UVulDataRepository::FindRawChecked(const FName& TableName, const FName& RowName)
+{
+	auto Row = FindRaw<RowType>(TableName, RowName);
+	checkf(Row != nullptr, TEXT("Cannot find row %s in table %s"), *RowName.ToString(), *TableName.ToString());
 	return Row;
 }
 
@@ -172,4 +198,59 @@ TVulDataPtr<RowType> UVulDataRepository::FindChecked(const FName& TableName, con
 	// This assumes TVulDataPtr is the same size as FVulDataPtr.
 	static_assert(sizeof(TVulDataPtr<FTableRowBase>) == sizeof(FVulDataPtr), "FVulDataPtr and TVulDataPtr must be the same size");
 	return *reinterpret_cast<TVulDataPtr<RowType>*>(&Ptr);
+}
+
+template <typename RowType>
+TVulDataPtr<RowType> UVulDataRepository::Get(
+	const TSoftObjectPtr<UVulDataRepository>& Repo,
+	const FName& TableName,
+	const FName& RowName,
+	const FString& ContextString
+)
+{
+	const auto LogPrefix = ContextString.IsEmpty() ? "" : FString::Printf(TEXT("%s:"), *ContextString);
+
+	if (!ensureAlwaysMsgf(!Repo.IsNull(), TEXT("%sCannot Get row: UVulDataRepository is not set"), *LogPrefix))
+	{
+		return TVulDataPtr<RowType>();
+	}
+
+	if (!ensureAlwaysMsgf(!TableName.IsNone(), TEXT("%sCannot Get row: TableName is not set"), *LogPrefix))
+	{
+		return TVulDataPtr<RowType>();
+	}
+
+	if (!ensureAlwaysMsgf(!RowName.IsNone(), TEXT("%sCannot Get row: RowName is not set"), *LogPrefix))
+	{
+		return TVulDataPtr<RowType>();
+	}
+
+	if (!ensureAlwaysMsgf(
+		Repo->DataTables.Contains(TableName),
+		TEXT("%sCannot Get row: table %s is not in repo"),
+		*LogPrefix,
+		*TableName.ToString()
+	))
+	{
+		return TVulDataPtr<RowType>();
+	}
+
+	const auto Found = Repo->FindRaw<RowType>(TableName, RowName);
+	if (!ensureAlwaysMsgf(
+		Found != nullptr,
+		TEXT("%sCannot Get row: row %s is not found in table %s"),
+		*LogPrefix,
+		*RowName.ToString(),
+		*TableName.ToString()
+	))
+	{
+		return TVulDataPtr<RowType>();
+	}
+
+	return FVulDataPtr(
+		Repo.LoadSynchronous(),
+		TableName,
+		RowName,
+		Found
+	);
 }

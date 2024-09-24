@@ -80,7 +80,7 @@ FVulDataPtr UVulDataRepository::FindPtrChecked(const FName& TableName, const FNa
 		this,
 		TableName,
 		RowName,
-		FindRaw<FTableRowBase>(TableName, RowName)
+		FindRawChecked<FTableRowBase>(TableName, RowName)
 	);
 }
 

@@ -41,7 +41,7 @@ const void* FVulDataPtr::EnsurePtr() const
 		return Ptr;
 	}
 
-	Ptr = Repository->FindRaw<FTableRowBase>(TableName, RowName);
+	Ptr = Repository->FindRawChecked<FTableRowBase>(TableName, RowName);
 	checkf(Ptr != nullptr, TEXT("Failed to load row: %s"), *RowName.ToString())
 
 	return Ptr;

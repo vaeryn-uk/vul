@@ -42,10 +42,13 @@ public:
 	);
 
 	/**
-	 * Creates a component that will be attached to the provided component, or attached as root if Parent
+	 * Creates a scene component that will be attached to the provided component, or attached as root if Parent
 	 * is nullptr.
 	 *
 	 * For use in CDO constructors only.
+	 *
+	 * Note: Component properties referenced this way likely want UPROPERTY(VisibleAnywhere) to be modified
+	 * in the editor.
 	 */
 	template <typename T>
 	std::enable_if_t<std::is_base_of_v<USceneComponent, T>, T*>
@@ -61,6 +64,21 @@ public:
 		}
 
 		return Spawned;
+	}
+
+	/**
+	 * Creates an actor component (non-scene-components) that will be attached to the provided actor.
+	 *
+	 * For use in CDO constructors only.
+	 *
+	 * Note: Component properties referenced this way likely want UPROPERTY(VisibleAnywhere) to be modified
+	 * in the editor.
+	 */
+	template <typename T>
+	std::enable_if_t<std::is_base_of_v<UActorComponent, T>, T*>
+	static ConstructorSpawnActorComponent(AActor* Owner, const FName& Name)
+	{
+		return Owner->CreateDefaultSubobject<T>(Name);
 	}
 
 	template <typename T>
@@ -89,6 +107,60 @@ public:
 		}
 
 		return Out;
+	}
+
+	/**
+	 * Resolves a sibling component identified by the provided class.
+	 *
+	 * Expects a ptr to that component which will be set if found, which is useful to avoid
+	 * unnecessary work if the component has already been resolved (for example using this
+	 * in a Tick function).
+	 *
+	 * If the component cannot be found, a warning is given and this returns false.
+	 */
+	template <typename ComponentClass>
+	std::enable_if_t<std::is_base_of_v<UActorComponent, ComponentClass>, bool>
+	static ResolveComponent(const UActorComponent* Component, ComponentClass*& Ptr)
+	{
+		if (IsValid(Ptr))
+		{
+			return true;
+		}
+
+		const auto Actor = Component->GetTypedOuter<AActor>();
+		if (!ensureMsgf(IsValid(Actor), TEXT("Cannot find valid actor owning the provided component")))
+		{
+			return false;
+		}
+
+		return ResolveComponent(Actor, Ptr);
+	}
+
+	/**
+	 * Resolves a component identified by the provided class.
+	 *
+	 * Expects a ptr to that component which will be set if found, which is useful to avoid
+	 * unnecessary work if the component has already been resolved (for example using this
+	 * in a Tick function).
+	 *
+	 * If the component cannot be found, a warning is given and this returns false.
+	 */
+	template <typename ComponentClass>
+	std::enable_if_t<std::is_base_of_v<UActorComponent, ComponentClass>, bool>
+	static ResolveComponent(const AActor* Actor, ComponentClass*& Ptr)
+	{
+		Ptr = Actor->GetComponentByClass<ComponentClass>();
+		if (!ensureMsgf(
+			IsValid(Ptr),
+			TEXT("Could not find %s attached to %s"),
+			*ComponentClass::StaticClass()->GetName(),
+			*Actor->GetName()
+		))
+		{
+			return false;
+		}
+
+		return true;
 	}
 
 	/**
