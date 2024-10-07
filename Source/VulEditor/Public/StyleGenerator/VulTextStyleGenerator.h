@@ -26,9 +26,15 @@ struct FVulTextStyleVariation
 	UPROPERTY(EditAnywhere)
 	int32 OutlineSize = 0;
 
+	/**
+	 * Is the specified Color property applied?
+	 */
 	UPROPERTY(EditAnywhere)
 	bool bApplyColor = false;
 
+	/**
+	 * The color of the text in this variation, overriding the template. Must tick ApplyColor.
+	 */
 	UPROPERTY(EditAnywhere)
 	FLinearColor Color = FLinearColor::White;
 };

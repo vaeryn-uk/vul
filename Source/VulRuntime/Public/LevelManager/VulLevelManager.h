@@ -19,6 +19,9 @@ DECLARE_MULTICAST_DELEGATE_TwoParams(FVulLevelDelegate, const UVulLevelData*, co
  *
  * This actor should be placed in the root level, and will load all levels in and out
  * as sub-levels. The root level persists throughout the entire game's lifespan.
+ *
+ * Actors may implement IVulLevelAwareActor to be notified when levels are toggled
+ * by this manager.
  */
 UCLASS()
 class VULRUNTIME_API AVulLevelManager : public AActor
@@ -220,6 +223,11 @@ private:
 	 * Tracks the widgets spawned when showing the last level.
 	 */
 	TArray<TWeakObjectPtr<UWidget>> Widgets;
+
+	/**
+	 * Tracks whether we still need to level-aware actors' on shown function.
+	 */
+	bool bIsPendingActorOnShow = false;
 };
 
 template <typename WidgetType>

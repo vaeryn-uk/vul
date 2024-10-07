@@ -5,6 +5,8 @@
 #include "Blueprint/UserWidget.h"
 #include "Engine/StreamableManager.h"
 #include "Kismet/GameplayStatics.h"
+#include "LevelManager/VulLevelAwareActor.h"
+#include "UserInterface/VulUserInterface.h"
 #include "World/VulWorldGlobals.h"
 
 AVulLevelManager::AVulLevelManager()
@@ -98,6 +100,7 @@ void AVulLevelManager::ShowLevel(const FName& LevelName)
 
 	LastLoadedLevel = GetLevelStreaming(LevelName);
 	LastLoadedLevel->SetShouldBeVisible(true);
+	bIsPendingActorOnShow = true;
 
 	// Need to ensure that visibility is finalized as it seems that not all actors are
 	// always available.
@@ -105,7 +108,6 @@ void AVulLevelManager::ShowLevel(const FName& LevelName)
 
 	Widgets.Reset();
 
-	const auto ViewportSS = UGameViewportSubsystem::Get(GetWorld());
 	const auto Ctrl = VulRuntime::WorldGlobals::GetFirstPlayerController(this);
 	if (ensureMsgf(IsValid(Ctrl), TEXT("Cannot find player controller to spawn level load widgets")))
 	{
@@ -118,13 +120,10 @@ void AVulLevelManager::ShowLevel(const FName& LevelName)
 				continue;
 			}
 
-			ViewportSS->AddWidgetForPlayer(
-				SpawnedWidget,
-				Ctrl->GetLocalPlayer(),
-				ViewportSS->GetWidgetSlot(SpawnedWidget)
-			);
-
-			Widgets.Add(SpawnedWidget);
+			if (VulRuntime::UserInterface::AttachRootUMG(SpawnedWidget, Ctrl, Widget.ZOrder))
+			{
+				Widgets.Add(SpawnedWidget);
+			}
 		}
 	}
 
@@ -400,6 +399,21 @@ void AVulLevelManager::Tick(float DeltaTime)
 	} else
 	{
 		Process(CurrentRequest());
+	}
+
+	if (bIsPendingActorOnShow && LastLoadedLevel.IsValid() && LastLoadedLevel->HasLoadedLevel())
+	{
+		const auto Level = LastLoadedLevel->GetLoadedLevel();
+		for (auto I = 0; I < Level->Actors.Num(); I++)
+		{
+			const auto Actor = Level->Actors[I];
+			if (const auto LevelAware = Cast<IVulLevelAwareActor>(Actor))
+			{
+				LevelAware->OnVulLevelShown();
+			}
+		}
+
+		bIsPendingActorOnShow = false;
 	}
 }
 

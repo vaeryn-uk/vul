@@ -72,13 +72,13 @@ struct VULRUNTIME_API FVulTextNotification : public FVulUiNotification
  *   notification is received. This is expected to add the created widget to the owning widget
  *   hierarchy in a container.
  * * An update fn, which is given the notification and pre-existing widget. It is expected to
- *   up date the widget according to the notification given. It is also given the amount we
+ *   update the widget according to the notification given. It is also given the amount we
  *   have progressed through its duration, as a figure between 0 (just started) and 1 (completed).
  *   Note that applying widget content should be applied here, and not in allocator, to ensure
  *   that when an existing widget gets new content, we apply it correctly.
  *
  * Note that deallocation is not customizable; we instead just remove a dead widget from its
- * parent when its notification is no longer required.
+ * parent widget or viewport when its notification is no longer required.
  *
  * This complexity is justified by the common use-case, and not having to reimplement widget-syncing
  * logic in various places and avoids having to recreate widgets which often leads to jumpy
@@ -214,8 +214,11 @@ struct TVulNotificationCollection
 		{
 			// Otherwise just append.
 			auto Created = Allocator(Notification);
-			UpdateFn(Notification, Created, Time.Alpha(Notification.RenderTime));
-			Entries.Add({Notification, Time, Created});
+			if (IsValid(Created))
+			{
+				UpdateFn(Notification, Created, Time.Alpha(Notification.RenderTime));
+				Entries.Add({Notification, Time, Created});
+			}
 		}
 
 		Dirty = true;

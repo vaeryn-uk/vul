@@ -47,6 +47,26 @@ namespace VulRuntime::WorldGlobals
 	}
 
 	/**
+	 * Gets the first local player of the requested type from the given UObject's world, checking that it exists/is valid.
+	 */
+	template <typename LocalPlayer = ULocalPlayer>
+	ULocalPlayer* GetFirstLocalPlayer(UObject* Ctx)
+	{
+		auto PC = Cast<APlayerController>(GetWorldChecked(Ctx)->GetFirstPlayerController());
+		if (ensureAlwaysMsgf(IsValid(PC), TEXT("Cannot get LocalPlayer from no player contoller")))
+		{
+			return nullptr;
+		}
+		const auto LP = Cast<LocalPlayer>(PC->GetLocalPlayer());
+		if (ensureAlwaysMsgf(IsValid(LP), TEXT("No LocalPlayer found on player controller")))
+		{
+			return nullptr;
+		}
+
+		return LP;
+	}
+
+	/**
 	 * Returns the provided subsystem, checking it exists (if the player controller is a local player).
 	 *
 	 * If not a local player controller, this returns nullptr.
