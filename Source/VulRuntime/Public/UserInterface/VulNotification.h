@@ -161,14 +161,21 @@ struct TVulNotificationCollection
 		{
 			if (Entries[N].Notification.Ref == Ref)
 			{
-				if (Entries[N].Widget.IsValid())
-				{
-					Entries[N].Widget.Get()->RemoveFromParent();
-				}
-
-				Dirty = true;
+				RemoveWidget(Entries[N]);
 				Entries.RemoveAt(N);
 			}
+		}
+	}
+
+	/**
+	 * Removes all notifications, resetting the collection.
+	 */
+	void RemoveAll()
+	{
+		for (auto N = Entries.Num() - 1; N >= 0; --N)
+		{
+			RemoveWidget(Entries[N]);
+			Entries.RemoveAt(N);
 		}
 	}
 
@@ -234,6 +241,16 @@ struct TVulNotificationCollection
 
 private:
 	TArray<FEntryStruct> Entries;
+
+	void RemoveWidget(FEntryStruct& Entry)
+	{
+		if (Entry.Widget.IsValid())
+		{
+			Entry.Widget.Get()->RemoveFromParent();
+		}
+
+		Dirty = true;
+	}
 
 	/**
 	 * Removes any timed out elements.
