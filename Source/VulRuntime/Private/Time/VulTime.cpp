@@ -1,5 +1,7 @@
 ﻿#include "Time/VulTime.h"
 
+#include "VulRuntime.h"
+
 FVulTime::FVulTime(FVulNowFn InNowFn)
 {
 	NowFn = InNowFn;
@@ -79,6 +81,11 @@ float FVulTime::Seconds() const
 	return Time;
 }
 
+float FVulTime::SecondsNow() const
+{
+	return NowFn();
+}
+
 void FVulTime::SetNow()
 {
 	Time = NowFn();
@@ -97,4 +104,9 @@ FVulFutureTime FVulFutureTime::WorldTime(UWorld* World, float SecondsInFuture)
 bool FVulFutureTime::IsNowOrInPast() const
 {
 	return Time.IsNowOrAfter(Seconds);
+}
+
+bool FVulFutureTime::IsNowWithin(float const Before, float const After) const
+{
+	return FMath::IsWithin(Time.SecondsNow(), Time.Seconds() + Seconds - Before, Time.Seconds() + Seconds + After);
 }

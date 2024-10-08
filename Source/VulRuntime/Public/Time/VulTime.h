@@ -73,6 +73,13 @@ struct VULRUNTIME_API FVulTime
 	float Seconds() const;
 
 	/**
+	 * Returns Now as seconds using this FVulTime's NowFn.
+	 *
+	 * Does not modify the stored time.
+	 */
+	float SecondsNow() const;
+
+	/**
 	 * Set the time to now.
 	 */
 	void SetNow();
@@ -94,7 +101,16 @@ struct VULRUNTIME_API FVulFutureTime
 
 	static FVulFutureTime WorldTime(UWorld* World, float SecondsInFuture);
 
+	/**
+	 * Returns true if now has advanced past the stored time in the future.
+	 */
 	bool IsNowOrInPast() const;
+
+	/**
+	 * True if FutureTime-Before <= Now < FutureTime+After. Checks if the current time falls
+	 * either side of a time.
+	 */
+	bool IsNowWithin(float const Before, float const After) const;
 
 private:
 	float Seconds = 0;
