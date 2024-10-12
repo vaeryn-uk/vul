@@ -21,7 +21,8 @@ TOptional<FVector2D> VulRuntime::UserInterface::CalculateScreenPosition(
 	APlayerController* Controller,
 	const FVector& WorldLocation,
 	const FVector2D& Offset,
-	const FVector2D& Anchor
+	const FVector2D& Anchor,
+	const bool ClampToScreen
 ) {
 	FVector2D ActorPos;
 	if (!Controller->ProjectWorldLocationToScreen(WorldLocation, ActorPos, true))
@@ -39,5 +40,16 @@ TOptional<FVector2D> VulRuntime::UserInterface::CalculateScreenPosition(
 	const auto PixelOffset = FVector2D(Offset.X * ScreenSize.X, Offset.Y * ScreenSize.Y);
 	const auto WidgetOffset = FVector2D(-Widget->GetDesiredSize().X * Anchor.X, -Widget->GetDesiredSize().Y * Anchor.Y);
 
-	return ActorPos + PixelOffset + WidgetOffset;
+	auto Result = ActorPos + PixelOffset + WidgetOffset;
+
+	if (ClampToScreen)
+	{
+		Result = FVector2D::Clamp(
+			Result,
+			Widget->GetDesiredSize() / 2,
+			FVector2D(ScreenSize.X, ScreenSize.Y) - (Widget->GetDesiredSize() / 2)
+		);
+	}
+
+	return Result;
 }

@@ -20,6 +20,8 @@ namespace VulRuntime::UserInterface
 	 * Anchor controls how the widget is positioned based on its size, e.g. (0, 0) would return the widget
 	 * positioned with its top-left corner as the return, and (.5, .5) is a centered widget position.
 	 *
+	 * ClampToScreen will ensure that the widget is positioned fully within the bounds of the screen.
+	 *
 	 * Returns unset if a position cannot be found.
 	 */
 	TOptional<FVector2D> VULRUNTIME_API CalculateScreenPosition(
@@ -27,6 +29,7 @@ namespace VulRuntime::UserInterface
 		APlayerController* Controller,
 		const FVector& WorldLocation,
 		const FVector2D& Offset = FVector2D(0, 0),
-		const FVector2D& Anchor = FVector2D(.5f, .5f)
+		const FVector2D& Anchor = FVector2D(.5f, .5f),
+		const bool ClampToScreen = false
 	);
 }
