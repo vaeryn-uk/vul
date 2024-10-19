@@ -150,6 +150,12 @@ of temporary notifications to a player. This provides functionality such as:
 * Extensibility for implementation of different notification types; `FVulHeadlineNotification` is
   the provided implementation.
 
+##### Text Notification Component
+
+`UVulTextNotificationComponent` can be attached to actor to render text to the screen at their position.
+This uses the `TVulNotificationCollection` above, using a standard notification implementation, `FVulTextNotification`,
+which can render text & icons.
+
 #### MultiBorder widget
 
 A reusable variation of a border widget that allows defining multiple, overlaid borders in its style definition.

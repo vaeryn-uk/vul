@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "Kismet/GameplayStatics.h"
 #include "UObject/Object.h"
 
 /**
@@ -44,6 +45,26 @@ namespace VulRuntime::WorldGlobals
 		auto PC = Cast<PlayerController>(GetWorldChecked(Ctx)->GetFirstPlayerController());
 		checkf(IsValid(PC), TEXT("Cannot find player controller"))
 		return PC;
+	}
+
+	/**
+	 * Attempts to resolve a player controller that is viewing the given object.
+	 */
+	template <typename PlayerController = APlayerController>
+	PlayerController* GetViewPlayerController(const UObject* Ctx)
+	{
+		for (int I = 0; I < UGameplayStatics::GetNumPlayerControllers(Ctx); I++)
+		{
+			const auto PC = UGameplayStatics::GetPlayerController(Ctx, I);
+			const auto LP = PC->GetLocalPlayer();
+
+			if (GEngine && GEngine->GameViewport.Get() && LP && GEngine->GameViewport.Get() == LP->ViewportClient.Get())
+			{
+				return PC;
+			}
+		}
+
+		return nullptr;
 	}
 
 	/**
