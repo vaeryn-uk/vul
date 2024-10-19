@@ -62,6 +62,8 @@ public:
 
 	void RemoveAll();
 
+	virtual void DestroyComponent(bool bPromoteChildren = false) override;
+
 protected:
 	virtual void BeginPlay() override;
 

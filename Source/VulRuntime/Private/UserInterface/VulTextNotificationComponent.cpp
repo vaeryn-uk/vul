@@ -27,6 +27,13 @@ void UVulTextNotificationComponent::RemoveAll()
 	Notifications.RemoveAll();
 }
 
+void UVulTextNotificationComponent::DestroyComponent(bool bPromoteChildren)
+{
+	RemoveAll();
+
+	Super::DestroyComponent(bPromoteChildren);
+}
+
 void UVulTextNotificationComponent::BeginPlay()
 {
 	Super::BeginPlay();
