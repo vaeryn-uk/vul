@@ -60,6 +60,8 @@ public:
 	void Add(const FVulTextNotification& Notification);
 	void Add(const FText& Text);
 
+	void RemoveAll();
+
 protected:
 	virtual void BeginPlay() override;
 

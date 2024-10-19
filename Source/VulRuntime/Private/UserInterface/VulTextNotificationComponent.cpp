@@ -22,6 +22,11 @@ void UVulTextNotificationComponent::Add(const FText& Text)
 	Notifications.Add(FVulTextNotification(Text, DefaultTextDuration), GetWorld());
 }
 
+void UVulTextNotificationComponent::RemoveAll()
+{
+	Notifications.RemoveAll();
+}
+
 void UVulTextNotificationComponent::BeginPlay()
 {
 	Super::BeginPlay();
