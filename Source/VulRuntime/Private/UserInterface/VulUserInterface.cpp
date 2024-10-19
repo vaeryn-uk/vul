@@ -24,6 +24,13 @@ TOptional<FVector2D> VulRuntime::UserInterface::CalculateScreenPosition(
 	const FVector2D& Anchor,
 	const bool ClampToScreen
 ) {
+	if (Widget->GetDesiredSize().IsNearlyZero())
+	{
+		// Don't render if the widget isn't reporting a desired size. Stops flickering
+		// when first appearing.
+		return {};
+	}
+
 	FVector2D ActorPos;
 	if (!Controller->ProjectWorldLocationToScreen(WorldLocation, ActorPos, true))
 	{
