@@ -1,11 +1,15 @@
 ﻿#include "UserInterface/VulTextNotificationComponent.h"
-
 #include "CommonUIEditorSettings.h"
 #include "Blueprint/GameViewportSubsystem.h"
+#include "UserInterface/VulTextStyle.h"
 #include "UserInterface/VulUserInterface.h"
 #include "World/VulWorldGlobals.h"
 
-DEFINE_LAZY_OBJ_PTR_SHORT(UVulTextNotificationComponent, Controller, VulRuntime::WorldGlobals::GetViewPlayerController(this));
+DEFINE_VUL_LAZY_OBJ_PTR_SHORT(
+	UVulTextNotificationComponent,
+	Controller,
+	VulRuntime::WorldGlobals::GetViewPlayerController(this)
+);
 
 UVulTextNotificationComponent::UVulTextNotificationComponent()
 {

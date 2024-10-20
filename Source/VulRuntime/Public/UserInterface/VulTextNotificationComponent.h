@@ -72,5 +72,5 @@ private:
 
 	FVector GetRenderLocation() const;
 
-	DECLARE_LAZY_OBJ_PTR(APlayerController, Controller);
+	DECLARE_VUL_LAZY_OBJ_PTR(APlayerController, Controller);
 };
