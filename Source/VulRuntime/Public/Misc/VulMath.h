@@ -69,4 +69,11 @@ public:
 		const FVector& Plane,
 		const float Distance
 	);
+
+	/**
+	 * How much must we turn from Start to End in 2D (ignoring any Z-locations).
+	 *
+	 * Returns a heading angle in radians, as per UE::Math::TVector::HeadingAngle.
+	 */
+	static float HeadingAngleBetween2D(const FTransform& Start, const FVector& End);
 };

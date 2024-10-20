@@ -61,3 +61,11 @@ TArray<FVector> FVulMath::EitherSideOfLine(
 		Point - Cross.GetSafeNormal() * Distance,
 	};
 }
+
+float FVulMath::HeadingAngleBetween2D(const FTransform& Start, const FVector& End)
+{
+	// From UKismetMathLibrary::FindLookAtRotation.
+	const auto Final = FRotationMatrix::MakeFromX(End - Start.GetLocation()).Rotator();
+
+	return (Final - Start.Rotator()).Vector().GetSafeNormal2D().HeadingAngle();
+}
