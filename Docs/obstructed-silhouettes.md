@@ -56,5 +56,7 @@ means that the object's standard, opaque materials are rendered normally.
 ## Querying neighbouring depths
 
 Materials can query their neighbouring pixels' custom depth & stencil channels. This can be useful to apply
-outlining to silhouettes.
+outlining to silhouettes. For example, this is from a PP material that checks nearby pixels' stencil values:
+
+![img/stencil-pixel-query.png](img/stencil-pixel-query.png)
 
