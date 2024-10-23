@@ -11,6 +11,15 @@ obstructed by objects in the world.
 This approach uses a single post-process material, which saves having to customize materials
 on any objects in the game world (including any Overlay materials).
 
+_Warning: In practice, I could not get this approach to work nicely. The un-solved problem is
+getting two objects' stencil values to combine only when A overlaps B; not when B overlaps A.
+The result was that even when a character walked in front of a wall, the silhouette appeared.
+I experimented with different stencil values & masks, but could not get the desired behaviour,
+and the Visualize Stencil Buffer setting in the viewport seemed to behave inconsistently when
+switching back and forth between two settings. Not sure if this is an engine bug or just a 
+misunderstanding of the stencil feature. For my use-case, I switched to the overlay material
+solution described below._
+
 This uses the stencil bits as a mask, using the write mask to allow multiple objects
 to combine values.
 
@@ -44,8 +53,10 @@ that can provide more detail of the obstructed mesh, as well as easily applying 
 the obstructing object.
 
 The following material is designed to be applied as an overlay material. It works by querying if the
-stencil mask is >128 (which is what our obstructing objects' value is set to). This condition drives
-the opacity value of either `0.0` (show nothing because not obstructed) or `1.0` (show our silhouette effect).
+stencil value is 1. On our obstructing objects (e.g. a wall), we set a stencil value of 1. For objects
+with a silhouette, we set a stencil value of 2. If the silhouette object is in front of an obstructing
+object, the stencil value is 1 and we render opacity as 0 (no silhouette), if the obstructing object is 
+in front, the stencil value is >1 and we render a silhouette.
 
 ![img/silhouette-overlay-material.png](img/silhouette-overlay-material.png)
 
