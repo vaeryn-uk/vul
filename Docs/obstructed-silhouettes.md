@@ -53,8 +53,8 @@ that can provide more detail of the obstructed mesh, as well as easily applying 
 the obstructing object.
 
 The following material is designed to be applied as an overlay material. It works by querying if the
-stencil value is 1. On our obstructing objects (e.g. a wall), we set a stencil value of 1. For objects
-with a silhouette, we set a stencil value of 2. If the silhouette object is in front of an obstructing
+stencil value is >=1. On our obstructing objects (e.g. a wall), we set a stencil value of 2. For objects
+with a silhouette, we set a stencil value of 1. If the silhouette object is in front of an obstructing
 object, the stencil value is 1 and we render opacity as 0 (no silhouette), if the obstructing object is 
 in front, the stencil value is >1 and we render a silhouette.
 
@@ -63,6 +63,11 @@ in front, the stencil value is >1 and we render a silhouette.
 Note that because this material is only drawn on the mesh, we can always output a single color as its
 the opacity that drives which silhouette pixels are actually drawn. As an overlay material, a `0.0` opacity
 means that the object's standard, opaque materials are rendered normally.
+
+Tips:
+* Disable "Custom Depth with TemporalAA Jitter" to avoids jittering pixels around the silhouettes.
+* The material's Translucency Pass works well when set to "After Motion Blur"; you will need to not
+  have motion blur in PP for this to look okay.
 
 ## Querying neighbouring depths
 
