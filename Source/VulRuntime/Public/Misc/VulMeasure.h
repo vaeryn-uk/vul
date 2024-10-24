@@ -52,6 +52,18 @@ struct TVulMeasure
 	}
 
 	/**
+	 * Modifies the current value of this measure, returning true if there was a change in the current value.
+	 */
+	bool Change(const NumberType Delta)
+	{
+		const auto Before = CurrentValue();
+
+		ModifyCurrent(Delta);
+
+		return Before != CurrentValue();
+	}
+
+	/**
 	 * How far away is this measure away from its max value?
 	 */
 	NumberType Missing() const
@@ -88,7 +100,15 @@ struct TVulMeasure
 	 */
 	void Empty()
 	{
-		Current.Get().Reset();
+		Current.Get()->Reset();
+	}
+
+	/**
+	 * Returns true if this measure is at its max value.
+	 */
+	bool IsFull() const
+	{
+		return Percent() >= 1.f;
 	}
 
 	float Percent() const
