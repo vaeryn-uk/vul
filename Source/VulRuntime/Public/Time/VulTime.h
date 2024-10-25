@@ -112,6 +112,16 @@ struct VULRUNTIME_API FVulFutureTime
 	 */
 	bool IsNowWithin(float const Before, float const After) const;
 
+	/**
+	 * Returns how close we are to the future time, based on when this time was set.
+	 *
+	 * 0 - we have just set this time.
+	 * 1 - we have just reached the future time.
+	 *
+	 * Result is clamped between 0-1.
+	 */
+	float ClampedAlpha() const;
+
 private:
 	float Seconds = 0;
 	FVulTime Time;

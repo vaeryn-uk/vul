@@ -64,6 +64,16 @@ struct TVulMeasure
 	}
 
 	/**
+	 * Sets the current value to the new amount, returning true if the value changed.
+	 *
+	 * Normal measure constraints apply to this change (e.g. the resulting current will not be lower than 0).
+	 */
+	bool SetCurrent(const NumberType NewVal)
+	{
+		return Change(NewVal - CurrentValue());
+	}
+
+	/**
 	 * How far away is this measure away from its max value?
 	 */
 	NumberType Missing() const

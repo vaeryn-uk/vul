@@ -110,3 +110,8 @@ bool FVulFutureTime::IsNowWithin(float const Before, float const After) const
 {
 	return FMath::IsWithin(Time.SecondsNow(), Time.Seconds() + Seconds - Before, Time.Seconds() + Seconds + After);
 }
+
+float FVulFutureTime::ClampedAlpha() const
+{
+	return Time.ClampedAlpha(Seconds);
+}
