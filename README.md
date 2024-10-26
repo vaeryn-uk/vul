@@ -138,6 +138,13 @@ feature.
 
 See `TVulRngManager` for more information.
 
+### Actor Utility
+
+* See `FVulActorUtil` for a bunch of CPP helpers for writing actor-interacting code. This serves both as code that
+  can be used, but also a form of documentation of how to work with actors.
+* `TVulComponentCollection` is a data type for conveniently working with zero or more components that share tag.
+  `FVulNiagaraCollection` can be used for Niagara components, but also serves as example of our collection's use.
+
 ### User Interface
 
 #### UI Notifications
