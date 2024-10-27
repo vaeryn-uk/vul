@@ -29,9 +29,19 @@ public:
 	 * The directory in which we look for data files.
 	 *
 	 * Only files immediately in this directory are considered (no recursive traversal).
+	 *
+	 * @deprecated Use RelativeDirectory, which is portable between machines.
 	 */
 	UPROPERTY(EditAnywhere)
 	FDirectoryPath Directory;
+
+	/**
+	 * The directory to look for the files, relative to the project directory.
+	 *
+	 * E.g. "Config/foo/bar" would look in "<some-project-dir>/Config/foo/bar"
+	 */
+	UPROPERTY(EditAnywhere)
+	FString RelativeDirectory;
 
 	/**
 	 * The filename patterns we match on.

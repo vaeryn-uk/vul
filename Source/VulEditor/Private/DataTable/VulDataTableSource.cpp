@@ -110,7 +110,13 @@ void UVulDataTableSource::ParseAndBuildRows(TArray<TPair<FName, FTableRowBase*>>
 {
 	TArray<FString> Paths;
 
-	FFileManagerGeneric::Get().IterateDirectory(*Directory.Path, [this, &Rows](const TCHAR* Name, bool IsDir)
+	FString PathToSearch = Directory.Path;
+	if (!RelativeDirectory.IsEmpty())
+	{
+		PathToSearch = FPaths::Combine(FPaths::ProjectDir(), RelativeDirectory);
+	}
+
+	FFileManagerGeneric::Get().IterateDirectory(*PathToSearch, [this, &Rows](const TCHAR* Name, bool IsDir)
 	{
 		if (IsDir)
 		{
