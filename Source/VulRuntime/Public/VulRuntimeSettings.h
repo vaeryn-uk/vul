@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "LevelManager/VulLevelManager.h"
 #include "UObject/Object.h"
 #include "UserInterface/RichText/VulRichTextIcon.h"
 #include "UserInterface/RichText/VulRichTextTooltipWrapper.h"
@@ -81,10 +82,10 @@ public:
 	const FVulRichTextIconDefinition* ResolveIcon(const FName& RowName) const;
 
 	/**
-	 * If set, any VulLevelManager will start with this map when the game starts.
+	 * If configured, we spawn a level manager in to the root level when the game starts with these settings.
 	 */
 	UPROPERTY(EditAnywhere, Config, Category="Maps")
-	FName StartLevelOverride;
+	FVulLevelSettings LevelSettings;
 
 // Editor integration
 	virtual FName GetCategoryName() const override { return FName("Game"); }

@@ -119,10 +119,12 @@ bucketed by defined sources, which are each tracked independently.
 
 ### Level management
 
-A `AVulLevelManager` can be dropped in to a root level and levels configured. Management of streaming the
-data in/out will be handled for you and a loading screen can be displayed whilst this occurs. Additional
+A `AVulLevelManager` can be configured from Vul's project settings, see `UVulRuntimeSettings::LevelSettings`.
+This actor is spawned in automatically on game start, and it will manage the streaming of
+data in and out, with a loading screen that will be displayed whilst this occurs. Additional
 support is provided for useful functionality such as hooking in to when levels are loaded and automatically
-spawning widgets when certain levels are shown.
+spawning widgets when certain levels are shown, based on the `LevelData` assets that are configured in level
+settings.
 
 ### Enhanced Developer Settings
 

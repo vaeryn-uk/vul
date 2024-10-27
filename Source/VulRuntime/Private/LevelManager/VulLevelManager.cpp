@@ -2,13 +2,17 @@
 #include "VulRuntime.h"
 #include "VulRuntimeSettings.h"
 #include "ActorUtil/VulActorUtil.h"
-#include "Blueprint/GameViewportSubsystem.h"
 #include "Blueprint/UserWidget.h"
 #include "Engine/StreamableManager.h"
 #include "Kismet/GameplayStatics.h"
 #include "LevelManager/VulLevelAwareActor.h"
 #include "UserInterface/VulUserInterface.h"
 #include "World/VulWorldGlobals.h"
+
+bool FVulLevelSettings::IsValid() const
+{
+	return !LevelData.IsEmpty() && !StartingLevelName.IsNone();
+}
 
 AVulLevelManager::AVulLevelManager()
 {
@@ -30,39 +34,52 @@ ULevelStreaming* AVulLevelManager::GetLastLoadedLevel() const
 	return nullptr;
 }
 
-// Called when the game starts or when spawned
-void AVulLevelManager::BeginPlay()
+void AVulLevelManager::VulInit(const FVulLevelSettings& InSettings)
 {
-	Super::BeginPlay();
+	Settings = InSettings;
 
-	if (!LoadingLevelName.IsNone())
+	if (!Settings.IsValid())
+	{
+		return;
+	}
+
+	if (!Settings.LoadingLevelName.IsNone())
 	{
 		// If we have a loading level. Display this first.
-		LoadLevel(LoadingLevelName, FVulLevelDelegate::FDelegate::CreateWeakLambda(
+		LoadLevel(Settings.LoadingLevelName, FVulLevelDelegate::FDelegate::CreateWeakLambda(
 			this,
 			[this](const UVulLevelData*, const AVulLevelManager*)
 			{
-				LoadLevel(ResolveStartingLevelName());
+				LoadLevel(Settings.StartingLevelName);
 			}
 		));
-	} else if (!ResolveStartingLevelName().IsNone())
+	} else if (!Settings.StartingLevelName.IsNone())
 	{
 		// Else just load the starting level without a loading screen.
-		LoadLevel(ResolveStartingLevelName());
+		LoadLevel(Settings.StartingLevelName);
 	} else
 	{
 		UE_LOG(LogVul, Warning, TEXT("No starting level set in VulLevelManager"))
 	}
 }
 
+void AVulLevelManager::BeginPlay()
+{
+	Super::BeginPlay();
+
+	// Try to init with the configured settings.
+	// These maybe empty/invalid if programmatically spawning an actor, which is fine; we just do nothing.
+	VulInit(Settings);
+}
+
 UVulLevelData* AVulLevelManager::ResolveData(const FName& LevelName)
 {
 	// Create instances if needed.
-	if (LevelData.Num() != LevelDataInstances.Num())
+	if (Settings.LevelData.Num() != LevelDataInstances.Num())
 	{
 		LevelDataInstances.Reset();
 
-		for (const auto& Entry : LevelData)
+		for (const auto& Entry : Settings.LevelData)
 		{
 			LevelDataInstances.Add(Entry.Key, NewObject<UVulLevelData>(this, Entry.Value));
 		}
@@ -188,7 +205,7 @@ void AVulLevelManager::LoadStreamingLevel(const FName& LevelName, TSoftObjectPtr
 
 void AVulLevelManager::UnloadStreamingLevel(const FName& Name, TSoftObjectPtr<UWorld> Level)
 {
-	if (Name == LoadingLevelName)
+	if (Name == Settings.LoadingLevelName)
 	{
 		// We never unload our loading level.
 		return;
@@ -239,10 +256,10 @@ void AVulLevelManager::StartProcessing(FLoadRequest* Request)
 		UnloadStreamingLevel(CurrentLevel.GetValue(), Current->Level);
 	}
 
-	if (!LoadingLevelName.IsNone())
+	if (!Settings.LoadingLevelName.IsNone())
 	{
 		// Show the loading level this whilst we load.
-		ShowLevel(LoadingLevelName);
+		ShowLevel(Settings.LoadingLevelName);
 	}
 
 	if (!Request->LevelName.IsSet())
@@ -307,17 +324,17 @@ void AVulLevelManager::Process(FLoadRequest* Request)
 		return;
 	}
 
-	if (!Request->IsLoadingLevel && !Request->StartedAt.GetValue().IsAfter(MinimumTimeOnLoadScreen.GetTotalSeconds()))
+	if (!Request->IsLoadingLevel && !Request->StartedAt.GetValue().IsAfter(Settings.MinimumTimeOnLoadScreen.GetTotalSeconds()))
 	{
 		// Loading, but haven't been on the load screen long enough.
 		// Unless we're loading the loading screen, in which case go straight away.
 		return;
 	}
 
-	if (Request->StartedAt.GetValue().IsAfter(LoadTimeout.GetTotalSeconds()))
+	if (Request->StartedAt.GetValue().IsAfter(Settings.LoadTimeout.GetTotalSeconds()))
 	{
 		// TODO: Load timed out. Then what?
-		UE_LOG(LogVul, Error, TEXT("Level load timeout after %s"), *LoadTimeout.ToString());
+		UE_LOG(LogVul, Error, TEXT("Level load timeout after %s"), *Settings.LoadTimeout.ToString());
 		NextRequest();
 		return;
 	}
@@ -329,9 +346,9 @@ void AVulLevelManager::Process(FLoadRequest* Request)
 	}
 
 	// Otherwise we're done. Boot it up.
-	if (!LoadingLevelName.IsNone() && !Request->IsLoadingLevel)
+	if (!Settings.LoadingLevelName.IsNone() && !Request->IsLoadingLevel)
 	{
-		HideLevel(LoadingLevelName);
+		HideLevel(Settings.LoadingLevelName);
 	}
 
 	ShowLevel(Request->LevelName.GetValue());
@@ -352,7 +369,7 @@ void AVulLevelManager::NextRequest()
 
 bool AVulLevelManager::IsReloadOfSameLevel(const FName& LevelName) const
 {
-	if (LevelName == LoadingLevelName)
+	if (LevelName == Settings.LoadingLevelName)
 	{
 		return false;
 	}
@@ -363,16 +380,6 @@ bool AVulLevelManager::IsReloadOfSameLevel(const FName& LevelName) const
 	}
 
 	return !Queue.IsEmpty() && Queue.Last().LevelName == LevelName;
-}
-
-FName AVulLevelManager::ResolveStartingLevelName() const
-{
-	if (!VulRuntime::Settings()->StartLevelOverride.IsNone())
-	{
-		return VulRuntime::Settings()->StartLevelOverride;
-	}
-
-	return StartingLevelName;
 }
 
 ULevelStreaming* AVulLevelManager::GetLevelStreaming(const FName& LevelName, const TCHAR* Reason)
@@ -443,7 +450,7 @@ void AVulLevelManager::LoadLevel(const FName& LevelName, FVulLevelDelegate::FDel
 
 	FLoadRequest& New = Queue.AddDefaulted_GetRef();
 	New.LevelName = LevelName;
-	New.IsLoadingLevel = LevelName == LoadingLevelName;
+	New.IsLoadingLevel = LevelName == Settings.LoadingLevelName;
 
 	if (OnComplete.IsBound())
 	{

@@ -10,6 +10,53 @@
 DECLARE_MULTICAST_DELEGATE_TwoParams(FVulLevelDelegate, const UVulLevelData*, const AVulLevelManager*)
 
 /**
+ * Configuration for a level manager, see AVulLevelManager below.
+ *
+ * These settings are extracted so they can be configured in project settings as well
+ * as on an actor directly.
+ */
+USTRUCT()
+struct FVulLevelSettings
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere)
+	TMap<FName, TSubclassOf<UVulLevelData>> LevelData;
+
+	/**
+	 * The name of the level in the level data that has a special designation as the
+	 * loading level. That is, one that is shown whilst our levels are loading in and out.
+	 */
+	UPROPERTY(EditAnywhere)
+	FName LoadingLevelName = FName("Loading");
+
+	/**
+	 * The name of the level that is loaded when the game starts. This is loaded as soon as this
+	 * actor starts, if provided.
+	 *
+	 * Note that this maybe overridden in UVulRuntimeSettings::StartLevelOverride.
+	 */
+	UPROPERTY(EditAnywhere)
+	FName StartingLevelName = NAME_None;
+
+	/**
+	 * If showing the load screen, this is the minimum amount of time it will be displayed.
+	 *
+	 * This prevents strange flickering for really fast level loads.
+	 */
+	UPROPERTY(EditAnywhere)
+	FTimespan MinimumTimeOnLoadScreen = FTimespan::FromSeconds(1);
+
+	/**
+	 * Maximum amount of time we'll wait for a level to load before failing.
+	 */
+	UPROPERTY(EditAnywhere)
+	FTimespan LoadTimeout = FTimespan::FromSeconds(10);
+
+	bool IsValid() const;
+};
+
+/**
  * Responsible for loading levels using Unreal's streaming level model.
  *
  * This provides a simple framework for switching levels with a loading screen
@@ -39,42 +86,12 @@ public:
 	 */
 	static AVulLevelManager* Get(UWorld* World);
 
-	UPROPERTY(EditAnywhere)
-	TMap<FName, TSubclassOf<UVulLevelData>> LevelData;
-
-	/**
-	 * The name of the level in the level data that has a special designation as the
-	 * loading level. That is, one that is shown whilst our levels are loading in and out.
-	 */
-	UPROPERTY(EditAnywhere)
-	FName LoadingLevelName = FName("Loading");
-
-	/**
-	 * The name of the level that is loaded when the game starts. This is loaded as soon as this
-	 * actor starts, if provided.
-	 *
-	 * Note that this maybe overridden in UVulRuntimeSettings::StartLevelOverride.
-	 */
-	UPROPERTY(EditAnywhere)
-	FName StartingLevelName = NAME_None;
-
 	FVulLevelDelegate OnLevelLoadComplete;
 
-	/**
-	 * If showing the load screen, this is the minimum amount of time it will be displayed.
-	 *
-	 * This prevents strange flickering for really fast level loads.
-	 */
-	UPROPERTY(EditAnywhere)
-	FTimespan MinimumTimeOnLoadScreen = FTimespan::FromSeconds(1);
-
-	/**
-	 * Maximum amount of time we'll wait for a level to load before failing.
-	 */
-	UPROPERTY(EditAnywhere)
-	FTimespan LoadTimeout = FTimespan::FromSeconds(10);
-
 	virtual void Tick(float DeltaTime) override;
+
+	UPROPERTY(EditAnywhere)
+	FVulLevelSettings Settings;
 
 	/**
 	 * Load a level by its name, invoking OnComplete when it is finished.
@@ -131,8 +148,12 @@ public:
 	 */
 	ULevelStreaming* GetLastLoadedLevel() const;
 
+	/**
+	 * Initializes the level manager with the provided settings.
+	 */
+	void VulInit(const FVulLevelSettings& InSettings);
+
 protected:
-	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
 private:
@@ -230,8 +251,6 @@ private:
 	 * Tracks whether we still need to level-aware actors' on shown function.
 	 */
 	bool bIsPendingActorOnShow = false;
-
-	FName ResolveStartingLevelName() const;
 };
 
 template <typename WidgetType>
