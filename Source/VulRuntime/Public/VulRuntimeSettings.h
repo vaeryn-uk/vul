@@ -80,6 +80,12 @@ public:
 	 */
 	const FVulRichTextIconDefinition* ResolveIcon(const FName& RowName) const;
 
+	/**
+	 * If set, any VulLevelManager will start with this map when the game starts.
+	 */
+	UPROPERTY(EditAnywhere, Config, Category="Maps")
+	FName StartLevelOverride;
+
 // Editor integration
 	virtual FName GetCategoryName() const override { return FName("Game"); }
 	virtual FName GetContainerName() const override { return FName("Project"); };

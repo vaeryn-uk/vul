@@ -52,6 +52,8 @@ public:
 	/**
 	 * The name of the level that is loaded when the game starts. This is loaded as soon as this
 	 * actor starts, if provided.
+	 *
+	 * Note that this maybe overridden in UVulRuntimeSettings::StartLevelOverride.
 	 */
 	UPROPERTY(EditAnywhere)
 	FName StartingLevelName = NAME_None;
@@ -228,6 +230,8 @@ private:
 	 * Tracks whether we still need to level-aware actors' on shown function.
 	 */
 	bool bIsPendingActorOnShow = false;
+
+	FName ResolveStartingLevelName() const;
 };
 
 template <typename WidgetType>

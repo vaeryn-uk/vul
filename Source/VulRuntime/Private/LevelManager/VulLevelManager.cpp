@@ -1,5 +1,6 @@
 ﻿#include "LevelManager/VulLevelManager.h"
 #include "VulRuntime.h"
+#include "VulRuntimeSettings.h"
 #include "ActorUtil/VulActorUtil.h"
 #include "Blueprint/GameViewportSubsystem.h"
 #include "Blueprint/UserWidget.h"
@@ -41,13 +42,13 @@ void AVulLevelManager::BeginPlay()
 			this,
 			[this](const UVulLevelData*, const AVulLevelManager*)
 			{
-				LoadLevel(StartingLevelName);
+				LoadLevel(ResolveStartingLevelName());
 			}
 		));
-	} else if (!StartingLevelName.IsNone())
+	} else if (!ResolveStartingLevelName().IsNone())
 	{
 		// Else just load the starting level without a loading screen.
-		LoadLevel(StartingLevelName);
+		LoadLevel(ResolveStartingLevelName());
 	} else
 	{
 		UE_LOG(LogVul, Warning, TEXT("No starting level set in VulLevelManager"))
@@ -362,6 +363,16 @@ bool AVulLevelManager::IsReloadOfSameLevel(const FName& LevelName) const
 	}
 
 	return !Queue.IsEmpty() && Queue.Last().LevelName == LevelName;
+}
+
+FName AVulLevelManager::ResolveStartingLevelName() const
+{
+	if (!VulRuntime::Settings()->StartLevelOverride.IsNone())
+	{
+		return VulRuntime::Settings()->StartLevelOverride;
+	}
+
+	return StartingLevelName;
 }
 
 ULevelStreaming* AVulLevelManager::GetLevelStreaming(const FName& LevelName, const TCHAR* Reason)
