@@ -7,7 +7,7 @@
 #include "Time/VulTime.h"
 #include "VulLevelManager.generated.h"
 
-DECLARE_MULTICAST_DELEGATE_TwoParams(FVulLevelDelegate, const UVulLevelData*, const AVulLevelManager*)
+DECLARE_MULTICAST_DELEGATE_TwoParams(FVulLevelDelegate, const UVulLevelData*, const class UVulLevelManager*)
 
 /**
  * Configuration for a level manager, see AVulLevelManager below.
@@ -53,6 +53,8 @@ struct FVulLevelSettings
 	UPROPERTY(EditAnywhere)
 	FTimespan LoadTimeout = FTimespan::FromSeconds(10);
 
+	TOptional<TPair<FName, UVulLevelData*>> FindLevel(UWorld* World) const;
+
 	bool IsValid() const;
 };
 
@@ -64,31 +66,24 @@ struct FVulLevelSettings
  * can be configured & customized with your own definitions of level data which is
  * passed to all the relevant hooks.
  *
- * This actor should be placed in the root level, and will load all levels in and out
- * as sub-levels. The root level persists throughout the entire game's lifespan.
+ * This subsystem will be auto-activated if UVulRuntimeSettings::LevelSettings is configured.
  *
  * Actors may implement IVulLevelAwareActor to be notified when levels are toggled
  * by this manager.
  */
 UCLASS()
-class VULRUNTIME_API AVulLevelManager : public AActor
+class VULRUNTIME_API UVulLevelManager : public UGameInstanceSubsystem, public FTickableGameObject
 {
 	GENERATED_BODY()
 
 public:
-	// Sets default values for this actor's properties
-	AVulLevelManager();
+	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 
-	/**
-	 * Attempts to retrieve a level manager in the given world. This is a convenience
-	 * function for easy global access to a level manager. Expects a level manager
-	 * actor in the root world.
-	 */
-	static AVulLevelManager* Get(UWorld* World);
+	virtual bool IsAllowedToTick() const override;
+	virtual void Tick(float DeltaTime) override;
+	virtual TStatId GetStatId() const override;
 
 	FVulLevelDelegate OnLevelLoadComplete;
-
-	virtual void Tick(float DeltaTime) override;
 
 	UPROPERTY(EditAnywhere)
 	FVulLevelSettings Settings;
@@ -148,14 +143,6 @@ public:
 	 */
 	ULevelStreaming* GetLastLoadedLevel() const;
 
-	/**
-	 * Initializes the level manager with the provided settings.
-	 */
-	void VulInit(const FVulLevelSettings& InSettings);
-
-protected:
-	virtual void BeginPlay() override;
-
 private:
 	UVulLevelData* ResolveData(const FName& LevelName);
 
@@ -163,6 +150,13 @@ private:
 
 	void ShowLevel(const FName& LevelName);
 	void HideLevel(const FName& LevelName);
+
+	/**
+	 * Initializes the level manager with the provided settings in normal operation.
+	 *
+	 * Will immediately load the first level, as per settings.
+	 */
+	void InitLevelManager(const FVulLevelSettings& InSettings, UWorld* World);
 
 	/**
 	 * Generates a unique action info input required for streaming levels. Required for the level streaming API.
@@ -249,12 +243,34 @@ private:
 
 	/**
 	 * Tracks whether we still need to level-aware actors' on shown function.
+	 *
+	 * We do not immediately invoke these calls; instead we tick until the level
+	 * is completely ready, then fire them.
 	 */
 	bool bIsPendingActorOnShow = false;
+
+	/**
+	 * True if this level manager is in its normal level streaming mode. This is set
+	 * false when we're loading the game with a non-root level (i.e. from the editor with
+	 * a specific level open). In this scenario, we call actor & widgets hooks for that
+	 * level, but do not support level switching.
+	 */
+	bool bIsInStreamingMode = true;
+
+	/**
+	 * This tracks whether we need an OnLevelShow call. We need a player controller for this,
+	 * so attempt it each tick until one is available. If this is set, we're awaiting a call
+	 * against this data.
+	 */
+	TWeakObjectPtr<UVulLevelData> OnShowLevelData;
+
+	FDelegateHandle WorldInitDelegateHandle;
+
+	void CallActorsLevelShown(ULevel* Level);
 };
 
 template <typename WidgetType>
-WidgetType* AVulLevelManager::LastSpawnedWidget() const
+WidgetType* UVulLevelManager::LastSpawnedWidget() const
 {
 	for (const auto& Widget : Widgets)
 	{
@@ -270,4 +286,9 @@ WidgetType* AVulLevelManager::LastSpawnedWidget() const
 	}
 
 	return nullptr;
+}
+
+namespace VulRuntime
+{
+	VULRUNTIME_API UVulLevelManager* LevelManager(UWorld* WorldCtx);
 }
