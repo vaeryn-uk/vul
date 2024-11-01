@@ -40,9 +40,9 @@ https://www.youtube.com/watch?v=CNd7nqUgnj0 explains how to achieve a simple wal
 for creature legs.
 
 * Ensure a mirrored bone structure on left and right (`BoneName_L`, then Right Click > Symmetrize).
-* Create an animation, define a frame range, e.g. 100. Keyframe all bones at 0.
+* Create an animation, define a frame range, e.g. 100. Keyframe all bones at 1.
 * Make sure the body is at a height that allows some leg bending (i.e. legs should not be fully stretched).
-* At frame 0, left legs should be at forward extreme and right leg at back extreme, on the ground.
+* At frame 1, left legs should be at forward extreme and right leg at back extreme, on the ground.
 * With both front IK bones selected, Copy this to end frame.
 * Copy this to 50% mirrored (`Ctrl`+`Shift`+`V`)
 * At 75% frame, take the left leg off the floor & rotate paw/foot.
