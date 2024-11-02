@@ -28,3 +28,8 @@ bool FVulNiagaraCollection::AreSystemsComplete() const
 		return NC->IsComplete();
 	});
 }
+
+const TVulComponentCollection<UNiagaraComponent>& FVulNiagaraCollection::GetCollection() const
+{
+	return Collection;
+}
