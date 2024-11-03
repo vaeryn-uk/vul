@@ -15,7 +15,7 @@
  * Components are indicated as belonging to a collection via component tags.
  */
 template <typename ComponentType>
-struct VULRUNTIME_API TVulComponentCollection
+struct TVulComponentCollection
 {
 	/**
 	 * Creates a collection of components for Actor that have the provided tag.
