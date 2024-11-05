@@ -150,9 +150,10 @@ void UVulLevelManager::ShowLevel(const FName& LevelName)
 
 	const auto Level = ResolvedData->Level;
 
-	if (GetLevelStreaming(LevelName)->GetShouldBeVisibleFlag())
+	const auto LS = GetLevelStreaming(LevelName);
+	if (!IsValid(LS) || GetLevelStreaming(LevelName)->GetShouldBeVisibleFlag())
 	{
-		// Already shown.
+		// Not valid or already shown.
 		return;
 	}
 
@@ -161,7 +162,7 @@ void UVulLevelManager::ShowLevel(const FName& LevelName)
 	// Remove all widgets from the viewport from previous levels.
 	RemoveAllWidgets(GetWorld());
 
-	LastLoadedLevel = GetLevelStreaming(LevelName);
+	LastLoadedLevel = LS;
 	LastLoadedLevel->SetShouldBeVisible(true);
 
 	// Need to ensure that visibility is finalized as it seems that not all actors are
@@ -177,7 +178,10 @@ void UVulLevelManager::HideLevel(const FName& LevelName)
 {
 	UE_LOG(LogVul, Display, TEXT("Hiding level %s"), *LevelName.ToString())
 
-	GetLevelStreaming(LevelName)->SetShouldBeVisible(false);
+	if (const auto LS = GetLevelStreaming(LevelName); IsValid(LS))
+	{
+		LS->SetShouldBeVisible(false);
+	}
 }
 
 FLatentActionInfo UVulLevelManager::NextLatentAction()
@@ -270,6 +274,8 @@ void UVulLevelManager::StartProcessing(FLoadRequest* Request)
 {
 	Request->StartedAt = FVulTime::WorldTime(GetWorld());
 
+	LastUnLoadedLevel = NAME_None;
+
 	if (CurrentLevel.IsSet())
 	{
 		// Unload the current level.
@@ -279,6 +285,8 @@ void UVulLevelManager::StartProcessing(FLoadRequest* Request)
 		checkf(IsValid(Current), TEXT("Could not resolve current level object"))
 
 		UnloadStreamingLevel(CurrentLevel.GetValue(), Current->Level);
+
+		LastUnLoadedLevel = CurrentLevel.GetValue();
 	}
 
 	if (!Settings.LoadingLevelName.IsNone())
@@ -313,7 +321,9 @@ void UVulLevelManager::StartProcessing(FLoadRequest* Request)
 	// Actually load the requested level.
 	LoadStreamingLevel(LevelName, Data->Level);
 
-	LoadAssets(Data->AssetsToLoad());
+	TArray<FSoftObjectPath> Assets;
+	Data->AssetsToLoad(Assets);
+	LoadAssets(Assets);
 }
 
 void UVulLevelManager::Process(FLoadRequest* Request)
@@ -326,7 +336,13 @@ void UVulLevelManager::Process(FLoadRequest* Request)
 
 	if (WaitForUnload.IsSet())
 	{
-		const auto StreamingState = GetLevelStreaming(WaitForUnload.GetValue())->GetLevelStreamingState();
+		const auto LS = GetLevelStreaming(WaitForUnload.GetValue());
+		if (!IsValid(LS))
+		{
+			return;
+		}
+
+		const auto StreamingState = LS->GetLevelStreamingState();
 		if (StreamingState != ELevelStreamingState::Unloaded && StreamingState != ELevelStreamingState::Removed)
 		{
 			// Previous level unload is not complete.
@@ -364,7 +380,8 @@ void UVulLevelManager::Process(FLoadRequest* Request)
 		return;
 	}
 
-	if (!GetLevelStreaming(Request->LevelName.GetValue())->IsLevelLoaded() || AreWaitingForAdditionalAssets())
+	const auto LS = GetLevelStreaming(Request->LevelName.GetValue());
+	if (!IsValid(LS) || !LS->IsLevelLoaded() || AreWaitingForAdditionalAssets())
 	{
 		// Loading is not complete.
 		return;
@@ -407,18 +424,40 @@ bool UVulLevelManager::IsReloadOfSameLevel(const FName& LevelName) const
 	return !Queue.IsEmpty() && Queue.Last().LevelName == LevelName;
 }
 
-void UVulLevelManager::CallActorsLevelShown(ULevel* Level)
+void UVulLevelManager::NotifyActorsLevelShown(ULevel* Level)
 {
+	const auto Info = GenerateLevelShownInfo();
+
 	for (auto I = 0; I < Level->Actors.Num(); I++)
 	{
 		const auto Actor = Level->Actors[I];
 		if (const auto LevelAware = Cast<IVulLevelAwareActor>(Actor))
 		{
-			LevelAware->OnVulLevelShown();
+			LevelAware->OnVulLevelShown(Info);
 		}
 	}
+}
 
-	bIsPendingActorOnShow = false;
+FVulLevelShownInfo UVulLevelManager::GenerateLevelShownInfo()
+{
+	FVulLevelShownInfo Info;
+
+	Info.World = GetWorld();
+	Info.LevelManager = this;
+
+	if (bIsInStreamingMode)
+	{
+		Info.ShownLevel = LastLoadedLevel->GetLoadedLevel();
+		if (LastUnLoadedLevel.IsValid())
+		{
+			Info.PreviousLevelData = ResolveData(LastUnLoadedLevel);
+		}
+	} else
+	{
+		Info.ShownLevel = GetWorld()->GetCurrentLevel();
+	}
+
+	return Info;
 }
 
 ULevelStreaming* UVulLevelManager::GetLevelStreaming(const FName& LevelName, const TCHAR* Reason)
@@ -430,13 +469,41 @@ ULevelStreaming* UVulLevelManager::GetLevelStreaming(const FName& LevelName, con
 
 	const auto Loaded = UGameplayStatics::GetStreamingLevel(this, FName(*Data->Level.GetLongPackageName()));
 
-	checkf(
+	if (!ensureMsgf(
 		Loaded != nullptr,
 		TEXT("Request to load level %s failed as it was not found in the persistent level"),
 		*LevelName.ToString()
-	)
+	))
+	{
+		return nullptr;
+	}
 
 	return Loaded;
+}
+
+bool UVulLevelManager::SpawnLevelWidgets(UVulLevelData* LevelData)
+{
+	const auto Ctrl = VulRuntime::WorldGlobals::GetFirstPlayerController(this);
+	if (!ensureMsgf(IsValid(Ctrl), TEXT("Cannot find player controller to spawn level load widgets")))
+	{
+		return false;
+	}
+
+	for (const auto& Widget : LevelData->Widgets)
+	{
+		const auto SpawnedWidget = CreateWidget(Ctrl, Widget.Widget.LoadSynchronous());
+		if (!ensureMsgf(IsValid(SpawnedWidget), TEXT("Failed to spawn level widget")))
+		{
+			continue;
+		}
+
+		if (VulRuntime::UserInterface::AttachRootUMG(SpawnedWidget, Ctrl, Widget.ZOrder))
+		{
+			Widgets.Add(SpawnedWidget);
+		}
+	}
+
+	return true;
 }
 
 void UVulLevelManager::Tick(float DeltaTime)
@@ -455,41 +522,24 @@ void UVulLevelManager::Tick(float DeltaTime)
 
 	if (OnShowLevelData.IsValid())
 	{
-		const auto Ctrl = VulRuntime::WorldGlobals::GetFirstPlayerController(this);
-		if (ensureMsgf(IsValid(Ctrl), TEXT("Cannot find player controller to spawn level load widgets")))
+		if (!bIsInStreamingMode)
 		{
-			// Spawn any widgets defined for this level.
-			for (const auto& Widget : OnShowLevelData->Widgets)
+			// Non-streaming mode: just invoke what we can globally.
+			if (SpawnLevelWidgets(OnShowLevelData.Get()))
 			{
-				const auto SpawnedWidget = CreateWidget(Ctrl, Widget.Widget.LoadSynchronous());
-				if (!ensureMsgf(IsValid(SpawnedWidget), TEXT("Failed to spawn level widget")))
-				{
-					continue;
-				}
-
-				if (VulRuntime::UserInterface::AttachRootUMG(SpawnedWidget, Ctrl, Widget.ZOrder))
-				{
-					Widgets.Add(SpawnedWidget);
-				}
+				NotifyActorsLevelShown(GetWorld()->GetCurrentLevel());
+				OnShowLevelData->OnLevelShown(GenerateLevelShownInfo());
+				OnShowLevelData.Reset();
 			}
-
-			bIsPendingActorOnShow = true;
-			OnShowLevelData->OnLevelShown();
-			OnShowLevelData.Reset();
-		}
-	}
-
-	if (bIsPendingActorOnShow)
-	{
-		if (LastLoadedLevel.IsValid() && LastLoadedLevel->HasLoadedLevel())
+		} else if (LastLoadedLevel.IsValid() && LastLoadedLevel->HasLoadedLevel())
 		{
-			CallActorsLevelShown(LastLoadedLevel->GetLoadedLevel());
-		} else if (!bIsInStreamingMode)
-		{
-			// Just initiate actors directly in the world.
-			for (const auto& Level : GetWorld()->GetLevels())
+			// Normal, streaming mode. When the level has fully loaded and we have
+			// the controller required to spawn widgets, call relevant hooks.
+			if (SpawnLevelWidgets(OnShowLevelData.Get()))
 			{
-				CallActorsLevelShown(Level);
+				NotifyActorsLevelShown(GetLastLoadedLevel()->GetLoadedLevel());
+				OnShowLevelData->OnLevelShown(GenerateLevelShownInfo());
+				OnShowLevelData.Reset();
 			}
 		}
 	}
@@ -508,7 +558,10 @@ void UVulLevelManager::LoadLevel(const FName& LevelName, FVulLevelDelegate::FDel
 	}
 
 	// Validate the level name.
-	GetLevelStreaming(LevelName);
+	if (const auto LS = GetLevelStreaming(LevelName); !IsValid(LS))
+	{
+		return;
+	}
 
 	// Special case: if LevelName is the same as the level we're loading, add an unload
 	// and a load entry.
@@ -536,7 +589,10 @@ FActorSpawnParameters UVulLevelManager::SpawnParams()
 	if (bIsInStreamingMode)
 	{
 		const auto Level = GetLevelStreaming(CurrentLevel.GetValue(), TEXT("SpawnParams"));
-		Params.OverrideLevel = Level->GetLoadedLevel();
+		if (IsValid(Level))
+		{
+			Params.OverrideLevel = Level->GetLoadedLevel();
+		}
 	}
 
 	return Params;

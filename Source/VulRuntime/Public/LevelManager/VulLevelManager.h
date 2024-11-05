@@ -59,6 +59,41 @@ struct FVulLevelSettings
 };
 
 /**
+ * Data made available when a level is shown.
+ */
+USTRUCT()
+struct VULRUNTIME_API FVulLevelShownInfo
+{
+	GENERATED_BODY()
+
+	/**
+	 * The level manager instance that is currently managing levels.
+	 */
+	UPROPERTY()
+	class UVulLevelManager* LevelManager;
+
+	/**
+	 * The world the level manager is operating within.
+	 */
+	UPROPERTY()
+	UWorld* World;
+
+	/**
+	 * The level data that was unloaded & hidden prior to a new level showing, if any.
+	 *
+	 * Note this will never be set if the level manager is not operating in streaming mode.
+	 */
+	UPROPERTY()
+	UVulLevelData* PreviousLevelData = nullptr;
+
+	/**
+	 * The level assets that was just shown. Can access the level's actors.
+	 */
+	UPROPERTY()
+	ULevel* ShownLevel;
+};
+
+/**
  * Responsible for loading levels using Unreal's streaming level model.
  *
  * This provides a simple framework for switching levels with a loading screen
@@ -148,6 +183,11 @@ private:
 
 	ULevelStreaming* GetLevelStreaming(const FName& LevelName, const TCHAR* FailReason = TEXT(""));
 
+	/**
+	 * Spawns the widgets specified in LevelData, returning true if this was done.
+	 */
+	bool SpawnLevelWidgets(UVulLevelData* LevelData);
+
 	void ShowLevel(const FName& LevelName);
 	void HideLevel(const FName& LevelName);
 
@@ -167,6 +207,7 @@ private:
 	 * The last level that was successfully loaded by this manager (including loading level).
 	 */
 	TWeakObjectPtr<ULevelStreaming> LastLoadedLevel = nullptr;
+	FName LastUnLoadedLevel;
 
 	/**
 	 * The current level being loaded or has loaded.
@@ -242,14 +283,6 @@ private:
 	TArray<TWeakObjectPtr<UWidget>> Widgets;
 
 	/**
-	 * Tracks whether we still need to level-aware actors' on shown function.
-	 *
-	 * We do not immediately invoke these calls; instead we tick until the level
-	 * is completely ready, then fire them.
-	 */
-	bool bIsPendingActorOnShow = false;
-
-	/**
 	 * True if this level manager is in its normal level streaming mode. This is set
 	 * false when we're loading the game with a non-root level (i.e. from the editor with
 	 * a specific level open). In this scenario, we call actor & widgets hooks for that
@@ -266,7 +299,9 @@ private:
 
 	FDelegateHandle WorldInitDelegateHandle;
 
-	void CallActorsLevelShown(ULevel* Level);
+	void NotifyActorsLevelShown(ULevel* Level);
+
+	FVulLevelShownInfo GenerateLevelShownInfo();
 };
 
 template <typename WidgetType>

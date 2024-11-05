@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "VulLevelManager.h"
 #include "UObject/Interface.h"
 #include "VulLevelAwareActor.generated.h"
 
@@ -25,5 +26,5 @@ public:
 	 * This is analogous to BeginPlay, but is guaranteed to run after Vul level management
 	 * has shown the actor's level.
 	 */
-	virtual void OnVulLevelShown();
+	virtual void OnVulLevelShown(const FVulLevelShownInfo& Info);
 };

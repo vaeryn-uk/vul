@@ -210,23 +210,29 @@ TVulDataPtr<RowType> UVulDataRepository::Get(
 {
 	const auto LogPrefix = ContextString.IsEmpty() ? "" : FString::Printf(TEXT("%s:"), *ContextString);
 
-	if (!ensureAlwaysMsgf(!Repo.IsNull(), TEXT("%sCannot Get row: UVulDataRepository is not set"), *LogPrefix))
+	if (!ensureMsgf(!Repo.IsNull(), TEXT("%sCannot Get row: UVulDataRepository is not set"), *LogPrefix))
 	{
 		return TVulDataPtr<RowType>();
 	}
 
-	if (!ensureAlwaysMsgf(!TableName.IsNone(), TEXT("%sCannot Get row: TableName is not set"), *LogPrefix))
+	if (!ensureMsgf(!TableName.IsNone(), TEXT("%sCannot Get row: TableName is not set"), *LogPrefix))
 	{
 		return TVulDataPtr<RowType>();
 	}
 
-	if (!ensureAlwaysMsgf(!RowName.IsNone(), TEXT("%sCannot Get row: RowName is not set"), *LogPrefix))
+	if (!ensureMsgf(!RowName.IsNone(), TEXT("%sCannot Get row: RowName is not set"), *LogPrefix))
 	{
 		return TVulDataPtr<RowType>();
 	}
 
-	if (!ensureAlwaysMsgf(
-		Repo->DataTables.Contains(TableName),
+	const auto LoadedRepo = Repo.LoadSynchronous();
+	if (!ensureMsgf(IsValid(LoadedRepo), TEXT("%sCannot Get row: UVulDataRepository cannot be loaded"), *LogPrefix))
+	{
+		return TVulDataPtr<RowType>();
+	}
+
+	if (!ensureMsgf(
+		LoadedRepo->DataTables.Contains(TableName),
 		TEXT("%sCannot Get row: table %s is not in repo"),
 		*LogPrefix,
 		*TableName.ToString()
@@ -236,7 +242,7 @@ TVulDataPtr<RowType> UVulDataRepository::Get(
 	}
 
 	const auto Found = Repo->FindRaw<RowType>(TableName, RowName);
-	if (!ensureAlwaysMsgf(
+	if (!ensureMsgf(
 		Found != nullptr,
 		TEXT("%sCannot Get row: row %s is not found in table %s"),
 		*LogPrefix,

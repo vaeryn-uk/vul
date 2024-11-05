@@ -1,5 +1,5 @@
 ﻿#include "LevelManager/VulLevelAwareActor.h"
 
-void IVulLevelAwareActor::OnVulLevelShown()
+void IVulLevelAwareActor::OnVulLevelShown(const FVulLevelShownInfo& Info)
 {
 }

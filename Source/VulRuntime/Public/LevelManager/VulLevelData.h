@@ -1,9 +1,37 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "LevelSequence.h"
 #include "Components/Widget.h"
 #include "UObject/Object.h"
 #include "VulLevelData.generated.h"
+
+/**
+ * Describes a level that plays a level sequence (e.g. for cinematics).
+ */
+USTRUCT()
+struct VULRUNTIME_API FVulSequenceLevelData
+{
+	GENERATED_BODY()
+
+	/**
+	 * A tag we look for in the just-loaded level for the first sequence actor to play.
+	 *
+	 * This allows you to create sequence actors in editor and have them found dynamically
+	 * via a tag.
+	 */
+	UPROPERTY(EditAnywhere)
+	FName LevelSequenceTag = NAME_None;
+
+	/**
+	 * Once the associated sequence is complete, we load this level (the value should match an entry
+	 * in FVulLevelSettings).
+	 */
+	UPROPERTY(EditAnywhere)
+	FName NextLevel;
+
+	bool IsValid() const;
+};
 
 /**
  * Defines a UMG widget that will be automatically added to the viewport when a level is spawned.
@@ -58,19 +86,29 @@ public:
 	TArray<FVulLevelDataWidget> Widgets;
 
 	/**
+	 * Set this to make the level a cinematic level.
+	 * If set, the sequence is automatically played, then the next level is loaded when complete.
+	 */
+	UPROPERTY(EditAnywhere)
+	FVulSequenceLevelData SequenceSettings;
+
+	/**
 	 * Called when this level is shown (after loading is complete). You can use this to execute your
 	 * own level-specific functionality.
 	 */
-	virtual void OnLevelShown();
+	virtual void OnLevelShown(const struct FVulLevelShownInfo& Info);
 
 	/**
-	 * Returns a list of assets that will be loaded as part of this level's loading.
+	 * Adds to a list of assets that will be loaded as part of this level's loading.
 	 *
 	 * Loading will not complete (and a new level not shown) until all of these assets are loaded.
-	 *
-	 * Right now, no special consideration is given to this objects once they are loaded in terms
-	 * of their lifetime.
-	 * TODO: How do we ensure that assets are not garbage collected in a useful way?
 	 */
-	virtual TArray<FSoftObjectPath> AssetsToLoad();
+	virtual void AssetsToLoad(TArray<FSoftObjectPath>& Assets);
+
+private:
+	UFUNCTION()
+	void OnSequenceFinished();
+
+	UPROPERTY()
+	class UVulLevelManager* LevelManager;
 };
