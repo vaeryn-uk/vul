@@ -586,6 +586,14 @@ FActorSpawnParameters UVulLevelManager::SpawnParams()
 	checkf(CurrentLevel.IsSet(), TEXT("Cannot create SpawnParams as no level is loaded"))
 
 	FActorSpawnParameters Params;
+	SetSpawnParams(Params);
+	return Params;
+}
+
+void UVulLevelManager::SetSpawnParams(FActorSpawnParameters& Params)
+{
+	checkf(CurrentLevel.IsSet(), TEXT("Cannot create SpawnParams as no level is loaded"))
+
 	if (bIsInStreamingMode)
 	{
 		const auto Level = GetLevelStreaming(CurrentLevel.GetValue(), TEXT("SpawnParams"));
@@ -594,7 +602,5 @@ FActorSpawnParameters UVulLevelManager::SpawnParams()
 			Params.OverrideLevel = Level->GetLoadedLevel();
 		}
 	}
-
-	return Params;
 }
 

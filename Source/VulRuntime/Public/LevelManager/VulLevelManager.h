@@ -166,6 +166,32 @@ public:
 	FActorSpawnParameters SpawnParams();
 
 	/**
+	 * Convenience function to spawn an actor in the given world in the current level.
+	 *
+	 * This exists as the UWorld::SpawnActor signatures always a bit verbose to use.
+	 *
+	 * SpawnParams will always have its LevelOverride set to the current level that
+	 * we're showing.
+	 */
+	template <typename ActorType>
+	ActorType* SpawnActor(
+		UClass* Class,
+		const FVector& Location = FVector::ZeroVector,
+		const FRotator& Rotation = FRotator::ZeroRotator,
+		const TOptional<FActorSpawnParameters>& SpawnParams = {}
+	) {
+		FActorSpawnParameters Params;
+		if (SpawnParams.IsSet())
+		{
+			Params = *SpawnParams;
+		}
+		
+		SetSpawnParams(Params);
+
+		return GetWorld()->SpawnActor<ActorType>(Class, Location, Rotation, Params);
+	}
+
+	/**
 	 * Gets a widget spawned as a result of the last level load of the given type.
 	 *
 	 * Returns nullptr if a suitable widget cannot be found.
@@ -302,6 +328,8 @@ private:
 	void NotifyActorsLevelShown(ULevel* Level);
 
 	FVulLevelShownInfo GenerateLevelShownInfo();
+	
+	void SetSpawnParams(FActorSpawnParameters& Param);
 };
 
 template <typename WidgetType>
