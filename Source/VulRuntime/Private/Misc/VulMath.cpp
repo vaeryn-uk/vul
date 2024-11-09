@@ -69,3 +69,14 @@ float FVulMath::HeadingAngleBetween2D(const FTransform& Start, const FVector& En
 
 	return (Final - Start.Rotator()).Vector().GetSafeNormal2D().HeadingAngle();
 }
+
+FVector FVulMath::PointInBox(const FBox& Box, const FVector& Position)
+{
+	const auto Extent = Box.Max - Box.Min;
+	
+	return FVector(
+		Box.Min.X + Extent.X * Position.X,
+		Box.Min.Y + Extent.Y * Position.Y,
+		Box.Min.Z + Extent.Z * Position.Z
+	);
+}

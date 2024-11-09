@@ -193,5 +193,28 @@ bool TestMath::RunTest(const FString& Parameters)
 		});
 	}
 
+	{
+		struct Data
+		{
+			FBox Box;
+			FVector Position;
+			FVector Expected;
+		};
+
+		auto Ddt = DDT<Data>(this, "PointInBox", [](TC Test, Data Case)
+		{
+			Test.Equal(FVulMath::PointInBox(Case.Box, Case.Position), Case.Expected);
+		});
+
+		const auto Box = FBox(FVector(0, 0, 0), FVector(2, 2, 2));
+
+		Ddt.Run("0,0,0", {.Box = Box, .Position = {0, 0, 0}, .Expected = {0, 0, 0}});
+		Ddt.Run("0.5,0,0", {.Box = Box, .Position = {0.5, 0, 0}, .Expected = {1, 0, 0}});
+		Ddt.Run("0.5,0.5,0.5", {.Box = Box, .Position = {0.5, 0.5, 0.5}, .Expected = {1, 1, 1}});
+		Ddt.Run("1,0.75,1", {.Box = Box, .Position = {1, .75, 1}, .Expected = {2, 1.5, 2}});
+		Ddt.Run("1,1,1", {.Box = Box, .Position = {1, 1, 1}, .Expected = {2, 2, 2}});
+		Ddt.Run("-1,1,2", {.Box = Box, .Position = {-1, 1, 2}, .Expected = {-2, 2, 4}});
+	}
+
 	return !HasAnyErrors();
 }

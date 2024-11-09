@@ -76,4 +76,12 @@ public:
 	 * Returns a heading angle in radians, as per UE::Math::TVector::HeadingAngle.
 	 */
 	static float HeadingAngleBetween2D(const FTransform& Start, const FVector& End);
+
+	/**
+	 * Returns a point within a box indicated by Position.
+	 *
+	 * Position is a value between 0-1 for each axis, e.g. 0.5, 0.5, 0.5 will return
+	 * the center of the box.
+	 */
+	static FVector PointInBox(const FBox& Box, const FVector& Position);
 };
