@@ -122,7 +122,57 @@ struct VULRUNTIME_API FVulFutureTime
 	 */
 	float ClampedAlpha() const;
 
+	FVulTime GetTime() const;
 private:
 	float Seconds = 0;
 	FVulTime Time;
+};
+
+/**
+ * A window of time, generally in the future.
+ *
+ * E.g. "after 3 seconds have passed, I want something to happen for 2 seconds".
+ */
+USTRUCT()
+struct VULRUNTIME_API FVulTimeWindow
+{
+	GENERATED_BODY()
+
+	/**
+	 * Creates a new time window based on the world time. Begin and Finish are seconds in the future.
+	 */
+	static FVulTimeWindow WorldTime(
+		UWorld* World,
+		const float Begin,
+		const float Finish
+	);
+
+	/**
+	 * Returns now in relation to the time window:
+	 *
+	 * <0 if we've not yet begun.
+	 * 0-1 if we're somewhere in the window.
+	 * >1 if we're past the window.
+	 */
+	float Alpha() const;
+
+	/**
+	 * True if we are currently in the middle the window (have begun, but not started).
+	 */
+	float NowInWindow() const;
+
+	/**
+	 * True if we have passed the start of the window (including if we've gone passed the window entirely).
+	 */
+	bool HasBegun() const;
+
+	/**
+	 * True if the window has completed.
+	 */
+	bool HasFinished() const;
+
+private:
+	float Start = -1;
+	float End = -1;
+	FVulTime::FVulNowFn NowFn;
 };

@@ -115,3 +115,39 @@ float FVulFutureTime::ClampedAlpha() const
 {
 	return Time.ClampedAlpha(Seconds);
 }
+
+FVulTimeWindow FVulTimeWindow::WorldTime(UWorld* World, const float Begin, const float Finish)
+{
+	FVulTimeWindow Ret;
+	
+	Ret.NowFn = [World]
+	{
+		checkf(::IsValid(World), TEXT("Cannot generate now time as world is invalid"))
+		return World->GetTimeSeconds();
+	};
+	
+	Ret.Start = Ret.NowFn() + Begin;
+	Ret.End = Ret.NowFn() + Finish;
+	
+	return Ret;
+}
+
+float FVulTimeWindow::Alpha() const
+{
+	return (NowFn() - Start) / (End - Start);
+}
+
+float FVulTimeWindow::NowInWindow() const
+{
+	return FMath::IsWithin(Alpha(), 0, 1);
+}
+
+bool FVulTimeWindow::HasBegun() const
+{
+	return Alpha() >= 0.f;
+}
+
+bool FVulTimeWindow::HasFinished() const
+{
+	return Alpha() >= 1.f;
+}
