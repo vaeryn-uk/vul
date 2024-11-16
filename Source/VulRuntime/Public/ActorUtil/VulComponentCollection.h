@@ -135,6 +135,18 @@ struct VULRUNTIME_API FVulNiagaraCollection
 	void Activate();
 
 	/**
+	 * De-activate all niagara systems in this collection, waiting for particle systems to complete.
+	 */
+	void Deactivate();
+
+	/**
+	 * De-activate all niagara systems in this collection immediately.
+	 *
+	 * Forcefully kills particle systems.
+	 */
+	void DeactivateImmediate();
+
+	/**
 	 * Moves all niagara systems in this collection to specified world position.
 	 */
 	void Relocate(const FVector& WorldPos);

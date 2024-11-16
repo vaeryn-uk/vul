@@ -13,6 +13,22 @@ void FVulNiagaraCollection::Activate()
 	});
 }
 
+void FVulNiagaraCollection::Deactivate()
+{
+	Collection.ForEach([](UNiagaraComponent* Component)
+	{
+		Component->Deactivate();
+	});
+}
+
+void FVulNiagaraCollection::DeactivateImmediate()
+{
+	Collection.ForEach([](UNiagaraComponent* Component)
+	{
+		Component->DeactivateImmediate();
+	});
+}
+
 void FVulNiagaraCollection::Relocate(const FVector& WorldPos)
 {
 	Collection.ForEach([WorldPos](UNiagaraComponent* Component)
