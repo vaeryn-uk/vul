@@ -132,9 +132,9 @@ FVulTimeWindow FVulTimeWindow::WorldTime(UWorld* World, const float Begin, const
 	return Ret;
 }
 
-float FVulTimeWindow::Alpha() const
+float FVulTimeWindow::Alpha(const float Adjustment) const
 {
-	return (NowFn() - Start) / (End - Start);
+	return (NowFn() + Adjustment - Start) / (End - Start);
 }
 
 float FVulTimeWindow::NowInWindow() const

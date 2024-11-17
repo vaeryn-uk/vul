@@ -153,8 +153,11 @@ struct VULRUNTIME_API FVulTimeWindow
 	 * <0 if we've not yet begun.
 	 * 0-1 if we're somewhere in the window.
 	 * >1 if we're past the window.
+	 * 
+	 * Adjustment optionally allows us to check a different time.
+	 * This is added to the time now before the check is performed.
 	 */
-	float Alpha() const;
+	float Alpha(const float Adjustment = 0.f) const;
 
 	/**
 	 * True if we are currently in the middle the window (have begun, but not started).
