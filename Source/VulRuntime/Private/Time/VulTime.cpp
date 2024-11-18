@@ -151,3 +151,8 @@ bool FVulTimeWindow::HasFinished() const
 {
 	return Alpha() >= 1.f;
 }
+
+float FVulTimeWindow::Length() const
+{
+	return End - Start;
+}

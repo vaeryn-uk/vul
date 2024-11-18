@@ -174,6 +174,11 @@ struct VULRUNTIME_API FVulTimeWindow
 	 */
 	bool HasFinished() const;
 
+	/**
+	 * Number of seconds from the start of the window until the end.
+	 */
+	float Length() const;
+
 private:
 	float Start = -1;
 	float End = -1;
