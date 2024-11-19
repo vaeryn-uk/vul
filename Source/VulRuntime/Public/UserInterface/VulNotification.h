@@ -200,19 +200,15 @@ struct TVulNotificationCollection
 
 		if (Existing >= 0)
 		{
-			if (Entries[Existing].Notification == Notification)
-			{
-				// No changes.
-				return;
-			}
-
 			// Replace if a ref match.
 			if (Entries[Existing].Widget.IsValid())
 			{
+				// Always invoke UpdateFn, even if the notification content is the same, as
+				// the time is likely to be different.
 				UpdateFn(
 					Notification,
 					Entries[Existing].Widget.Get(),
-					Entries[Existing].Time.Alpha(Entries[Existing].Notification.RenderTime)
+					Time.Alpha(Notification.RenderTime)
 				);
 
 				Entries[Existing] = {Notification, Time, Entries[Existing].Widget};
