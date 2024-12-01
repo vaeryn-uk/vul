@@ -82,6 +82,16 @@ ULevelStreaming* UVulLevelManager::GetLastLoadedLevel() const
 	return nullptr;
 }
 
+UVulLevelData* UVulLevelManager::CurrentLevelData()
+{
+	if (!CurrentLevel.IsSet() || State != EVulLevelManagerState::Idle)
+	{
+		return nullptr;
+	}
+
+	return ResolveData(CurrentLevel.GetValue());
+}
+
 void UVulLevelManager::InitLevelManager(const FVulLevelSettings& InSettings, UWorld* World)
 {
 	Settings = InSettings;
@@ -275,6 +285,7 @@ void UVulLevelManager::StartProcessing(FLoadRequest* Request)
 	Request->StartedAt = FVulTime::WorldTime(GetWorld());
 
 	LastUnLoadedLevel = NAME_None;
+	State = EVulLevelManagerState::Loading;
 
 	if (CurrentLevel.IsSet())
 	{
@@ -399,6 +410,7 @@ void UVulLevelManager::Process(FLoadRequest* Request)
 
 	const auto Resolved = ResolveData(Request->LevelName.GetValue());
 	OnLevelLoadComplete.Broadcast(Resolved, this);
+	State = EVulLevelManagerState::Idle;
 	Request->Delegate.Broadcast(Resolved, this);
 
 	NextRequest();

@@ -94,6 +94,23 @@ struct VULRUNTIME_API FVulLevelShownInfo
 };
 
 /**
+ * Describes the various states that the level manager is in with regards to loading levels.
+ */
+UENUM()
+enum class EVulLevelManagerState : uint8
+{
+	/**
+	 * The level manager is not actively loading any levels.
+	 */
+	Idle,
+	
+	/**
+	 * A level is currently being loaded.
+	 */
+	Loading,
+};
+
+/**
  * Responsible for loading levels using Unreal's streaming level model.
  *
  * This provides a simple framework for switching levels with a loading screen
@@ -203,6 +220,13 @@ public:
 	 * Returns the level last-loaded by this level manager, or nullptr.
 	 */
 	ULevelStreaming* GetLastLoadedLevel() const;
+
+	/**
+	 * Returns the current non-loading-screen level data that the game is playing, if any.
+	 * 
+	 * Returns null if we're currently loading anything.
+	 */
+	UVulLevelData* CurrentLevelData();
 
 private:
 	UVulLevelData* ResolveData(const FName& LevelName);
@@ -330,6 +354,8 @@ private:
 	FVulLevelShownInfo GenerateLevelShownInfo();
 	
 	void SetSpawnParams(FActorSpawnParameters& Param);
+
+	EVulLevelManagerState State = EVulLevelManagerState::Idle;
 };
 
 template <typename WidgetType>
