@@ -228,6 +228,22 @@ struct TVulNotificationCollection
 	}
 
 	/**
+	 * Like Add, but this won't override an existing notification if one is present.
+	 */
+	void AddOnce(const NotificationType& Notification, UWorld* World)
+	{
+		const auto Exists = Entries.ContainsByPredicate([Notification](FEntryStruct Entry)
+		{
+			return Notification == Entry.Notification && Entry.Widget.IsValid();
+		});
+
+		if (!Exists)
+		{
+			Add(Notification, World);
+		}
+	}
+
+	/**
 	 * Gets all active notifications in the order they should be displayed.
 	 */
 	const TArray<FEntryStruct>& Get() const

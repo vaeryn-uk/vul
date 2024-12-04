@@ -116,6 +116,19 @@ float FVulFutureTime::ClampedAlpha() const
 	return Time.ClampedAlpha(Seconds);
 }
 
+FVulFutureTime FVulFutureTime::Scale(const float Factor) const
+{
+	FVulFutureTime Out;
+	Out.Time = Time;
+	Out.Seconds = Seconds * Factor;
+	return Out;
+}
+
+float FVulFutureTime::GetSeconds() const
+{
+	return Seconds;
+}
+
 FVulTimeWindow FVulTimeWindow::WorldTime(UWorld* World, const float Begin, const float Finish)
 {
 	FVulTimeWindow Ret;

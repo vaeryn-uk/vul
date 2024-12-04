@@ -122,7 +122,14 @@ struct VULRUNTIME_API FVulFutureTime
 	 */
 	float ClampedAlpha() const;
 
-	FVulTime GetTime() const;
+	/**
+	 * Returns a new future time scaled by the given Factor.
+	 *
+	 * This only scales the future time, e.g. a Factor of .5 will halve the time in the future.
+	 */
+	FVulFutureTime Scale(const float Factor) const;
+
+	float GetSeconds() const;
 private:
 	float Seconds = 0;
 	FVulTime Time;
