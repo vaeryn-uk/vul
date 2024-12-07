@@ -42,22 +42,26 @@ void UVulLevelManager::Initialize(FSubsystemCollectionBase& Collection)
 		return;
 	}
 
-	WorldInitDelegateHandle = World->OnLevelsChanged().AddWeakLambda(
+	// Wait until we start in the world before the level manager kicks in.
+	// When trying to start right away, issues were found in non-editor builds
+	// where the actual default map is not loaded when this Initialize function
+	// is running.
+	WorldInitDelegateHandle = FWorldDelegates::OnWorldTickStart.AddWeakLambda(
 		this,
-		[this, World]
+		[this](UWorld* World, ELevelTick Tick, float F)
 		{
 			if (!IsValid(World))
 			{
 				return;
 			}
 
-			ensureAlwaysMsgf(
-				World->OnLevelsChanged().Remove(WorldInitDelegateHandle),
-				TEXT("Could not remove UVulRuntimeSubsystem world change delegate")
-			);
-
 			UE_LOG(LogVul, Display, TEXT("Initializing UVulLevelManager with configured LevelSettings."))
 			InitLevelManager(VulRuntime::Settings()->LevelSettings, World);
+
+			ensureAlwaysMsgf(
+				FWorldDelegates::OnWorldTickStart.Remove(WorldInitDelegateHandle),
+				TEXT("Could not remove UVulRuntimeSubsystem world change delegate")
+			);
 		}
 	);
 }
