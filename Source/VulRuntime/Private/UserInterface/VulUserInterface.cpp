@@ -45,9 +45,8 @@ TOptional<FVector2D> VulRuntime::UserInterface::CalculateScreenPosition(
 	}
 
 	const auto PixelOffset = FVector2D(Offset.X * ScreenSize.X, Offset.Y * ScreenSize.Y);
-	const auto WidgetOffset = FVector2D(-Widget->GetDesiredSize().X * Anchor.X, -Widget->GetDesiredSize().Y * Anchor.Y);
 
-	auto Result = ActorPos + PixelOffset + WidgetOffset;
+	auto Result = ActorPos + PixelOffset + AnchorOffset(Widget, Anchor);
 
 	if (ClampToScreen)
 	{
@@ -59,4 +58,9 @@ TOptional<FVector2D> VulRuntime::UserInterface::CalculateScreenPosition(
 	}
 
 	return Result;
+}
+
+FVector2D VulRuntime::UserInterface::AnchorOffset(UWidget* Widget, const FVector2D& Anchor)
+{
+	return FVector2D(-Widget->GetDesiredSize().X * Anchor.X, -Widget->GetDesiredSize().Y * Anchor.Y);
 }

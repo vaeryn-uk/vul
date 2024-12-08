@@ -32,4 +32,11 @@ namespace VulRuntime::UserInterface
 		const FVector2D& Anchor = FVector2D(.5f, .5f),
 		const bool ClampToScreen = false
 	);
+
+	/**
+	 * Returns a pixel offset to apply to a widget to adjust its position so it respects Anchor.
+	 *
+	 * Add this to a screen position to have your widget centered (anchor = {0.5, 0.5}), for example.
+	 */
+	FVector2D VULRUNTIME_API AnchorOffset(UWidget* Widget, const FVector2D& Anchor = FVector2D(.5f, .5f));
 }
