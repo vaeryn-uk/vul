@@ -4,6 +4,7 @@
 #include "Time/VulTime.h"
 #include "UObject/Object.h"
 #include "Components/Widget.h"
+#include "Misc/VulTempValue.h"
 #include "VulNotification.generated.h"
 
 /**
@@ -98,6 +99,7 @@ struct TVulNotificationCollection
 		NotificationType Notification;
 		FVulTime Time;
 		TWeakObjectPtr<WidgetType> Widget;
+		FVulTempWidgetVisibility TempVisibility;
 	};
 
 	TVulNotificationCollection() = default;
@@ -123,6 +125,22 @@ struct TVulNotificationCollection
 		}
 
 		return Dirty;
+	}
+
+	void TempVisibility(const ESlateVisibility Visibility)
+	{
+		for (auto& Entry : Entries)
+		{
+			Entry.TempVisibility.Store(Entry.Widget.Get(), Visibility);
+		}
+	}
+
+	void RestoreTempVisibility()
+	{
+		for (auto& Entry : Entries)
+		{
+			Entry.TempVisibility.Restore(Entry.Widget.Get());
+		}
 	}
 
 	/**
