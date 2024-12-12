@@ -34,6 +34,19 @@ namespace VulRuntime::UserInterface
 	);
 
 	/**
+	 * Returns an XY pixel position given the provided 0-1 XY position.
+	 *
+	 * Anchor can be used to control how the widget is positioned relative to the requested Position.
+	 */
+	TOptional<FVector2D> VULRUNTIME_API CalculateScreenPosition(
+		UWidget* Widget,
+		APlayerController* Controller,
+		const FVector2D& Position = FVector2D(0, 0),
+		const FVector2D& Anchor = FVector2D(.5f, .5f),
+		const bool ClampToScreen = false
+	);
+
+	/**
 	 * Returns a pixel offset to apply to a widget to adjust its position so it respects Anchor.
 	 *
 	 * Add this to a screen position to have your widget centered (anchor = {0.5, 0.5}), for example.

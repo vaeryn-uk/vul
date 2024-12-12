@@ -60,6 +60,34 @@ TOptional<FVector2D> VulRuntime::UserInterface::CalculateScreenPosition(
 	return Result;
 }
 
+TOptional<FVector2D> VulRuntime::UserInterface::CalculateScreenPosition(
+	UWidget* Widget,
+	APlayerController* Controller,
+	const FVector2D& Position,
+	const FVector2D& Anchor,
+	const bool ClampToScreen
+) {
+	FIntVector2 ScreenSize;
+	Controller->GetViewportSize(ScreenSize.X, ScreenSize.Y);
+	if (ScreenSize == FIntVector2::ZeroValue)
+	{
+		return {};
+	}
+
+	auto Result = FVector2D(Position.X * ScreenSize.X, Position.Y * ScreenSize.Y) + AnchorOffset(Widget, Anchor);
+	
+	if (ClampToScreen)
+	{
+		Result = FVector2D::Clamp(
+			Result,
+			Widget->GetDesiredSize() / 2,
+			FVector2D(ScreenSize.X, ScreenSize.Y) - (Widget->GetDesiredSize() / 2)
+		);
+	}
+
+	return Result;
+}
+
 FVector2D VulRuntime::UserInterface::AnchorOffset(UWidget* Widget, const FVector2D& Anchor)
 {
 	return FVector2D(-Widget->GetDesiredSize().X * Anchor.X, -Widget->GetDesiredSize().Y * Anchor.Y);
