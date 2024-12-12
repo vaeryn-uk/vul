@@ -22,9 +22,9 @@ struct TVulTempValue
 		Stack.Push(Old);
 	}
 	
-	Value Restore()
+	TOptional<Value> Restore()
 	{
-		if (!ensureMsgf(!Stack.IsEmpty(), TEXT("Cannot restore a temp value with an empty stack")))
+		if (Stack.IsEmpty())
 		{
 			Value V{};
 			return V;
@@ -58,16 +58,14 @@ struct FVulTempWidgetVisibility
 	/**
 	 * Restore the visibility of the widget that was set when we previously called Store.
 	 */
-	ESlateVisibility Restore(UWidget* Widget)
+	void Restore(UWidget* Widget)
 	{
 		const auto Ret = TempValue.Restore();
 		
-		if (IsValid(Widget))
+		if (IsValid(Widget) && Ret.IsSet())
 		{
-			Widget->SetVisibility(Ret);
+			Widget->SetVisibility(Ret.GetValue());
 		}
-
-		return Ret;
 	}
 	
 private:
