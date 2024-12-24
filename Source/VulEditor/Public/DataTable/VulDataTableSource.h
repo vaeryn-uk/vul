@@ -3,7 +3,7 @@
 #include "CoreMinimal.h"
 #include "Parsing.h"
 #include "UObject/Object.h"
-#include "UnrealYAML/Public/Node.h"
+#include "UnrealYAML/Public/UnrealYAMLNode.h"
 #include "VulDataTableSource.generated.h"
 
 /**

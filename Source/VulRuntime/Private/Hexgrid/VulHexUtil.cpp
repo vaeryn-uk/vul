@@ -156,7 +156,7 @@ FVulHexAddr VulRuntime::Hexgrid::AveragePosition(const TMap<FVulHexAddr, float>&
 		return FVulHexAddr::Origin();
 	}
 
-	FVector2D QR;
+	FVector2D QR{};
 	float Total = 0;
 
 	for (const auto& Entry : WeightedTiles)
