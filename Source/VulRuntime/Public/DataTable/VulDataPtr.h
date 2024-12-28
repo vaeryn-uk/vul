@@ -3,6 +3,10 @@
 #include "CoreMinimal.h"
 #include "VulDataPtr.generated.h"
 
+
+template <typename RowType>
+struct TVulDataPtr;
+
 /**
  * A lightweight pointer to data retrieved from a data repository.
  *
@@ -51,6 +55,9 @@ struct VULRUNTIME_API FVulDataPtr
 
 		return static_cast<const T*>(EnsurePtr());
 	}
+
+	template <typename T, typename = TEnableIf<TIsDerivedFrom<T, FTableRowBase>::Value>>
+	TVulDataPtr<T> GetAsDataPtr() const;
 
 	template <typename T, typename = TEnableIf<TIsDerivedFrom<T, FTableRowBase>::Value>>
 	const TSharedPtr<T> GetSharedPtr() const
@@ -229,4 +236,10 @@ template <typename To, typename From, typename = TEnableIf<TIsDerivedFrom<To, Fr
 TVulDataPtr<To> Cast(const TVulDataPtr<From>& Ptr)
 {
 	return Cast<To>(Ptr.Data());
+}
+
+template <typename T, typename>
+TVulDataPtr<T> FVulDataPtr::GetAsDataPtr() const
+{
+	return Cast<T>(*this);
 }
