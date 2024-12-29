@@ -1,10 +1,12 @@
 ﻿# Python Scripting in UE
 
+## Setup
+
 These steps describe how to get a Python workflow set up in your IDE which
 utilizes Unreal's built-in Python interpreter. This is aimed at writing & running
 python outside the editor.
 
-## Editor Setup
+### Editor Setup
 
 * Ensure your project has the Python plugin enabled.
   ![img/python-plugin.png](img/python-plugin.png)
@@ -16,7 +18,7 @@ python outside the editor.
     in project settings, but in editor settings, its specific to you.
 * Restart the editor
 
-## IDE setup (Rider)
+### IDE setup (Rider)
 
 * Add a `System Interpreter` which points at the embedded Python executable, e.g.
   ![img/rider-ue-python-interpreter.png](img/rider-ue-python-interpreter.png)
@@ -41,7 +43,7 @@ The end result is auto-complete for the `unreal` module:
 
 ![img/rider-python-autocomplete.png](img/rider-python-autocomplete.png)
 
-## Dependencies
+### Dependencies
 
 Unreal supports declaring your own Python dependencies in Plugins (`.uplugin`), but seemingly
 not projects directly (`.uproject`). A workaround is to create a plugin in your project solely
@@ -73,7 +75,19 @@ You can add an Unreal module in the usual way (`Source/MyProjectPython.Build.cs`
 it in the `Modules` definition above to introduce CPP code. This may be a natural place for some binding
 code.
 
-## Executing your code
+### Executing your code
 
 See the `PythonScript` action in [MyProject.ps1](../MyProject.ps1) which contains an 
 example of how to run a script from the CLI quickly without needing to boot the editor.
+
+## Writing Python Code
+
+The Unreal reflection system is used to expose types to Python scripts. These are all accessed from
+the `unreal` module.
+
+https://dev.epicgames.com/documentation/en-us/unreal-engine/python-api/index?application_version=5.5
+
+Some tips:
+* `UCLASS`es must have `BlueprintType` to be exposed.
+* If you want to write & reuse python code in your project, you can add additional python paths to resolve
+  them in Project Settings.
