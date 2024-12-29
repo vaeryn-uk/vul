@@ -89,5 +89,9 @@ https://dev.epicgames.com/documentation/en-us/unreal-engine/python-api/index?app
 
 Some tips:
 * `UCLASS`es must have `BlueprintType` to be exposed.
+  * Similarly, `UFUNCTION`/`UPROPERTY`s need to be accessible to blueprints (e.g. `BlueprintReadWrite`) 
+    for the corresponding python functionality to exist.
 * If you want to write & reuse python code in your project, you can add additional python paths to resolve
   them in Project Settings.
+* Haven't yet found a convenient way to regenerate python bindings after making changes to Unreal types;
+  building & restarting the editor is the only known solution thus far.
