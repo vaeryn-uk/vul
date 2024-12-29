@@ -22,13 +22,16 @@ Cook          - Cook project content. Required to run the game outside the edito
 CookAndBuild  - Cook and build the project and write the game files into `Builds` for a standalone version.
 Zip           - Takes the latest build project and zips it up as the given `-Version`.
 Profile       - Starts Unreal Insights for profiling
+PythonScript  - Executes a python script in this project via UE's python environment (requires `-Script`).
 #>
 
 param (
     [Parameter(Mandatory = $true)]
     [String]$Action,
     [Parameter(Mandatory = $false)]
-    [String]$Version
+    [String]$Version,
+    [Parameter(Mandatory = $false)]
+    [String]$Script
 )
 
 ### Review these common variables for your project. ###
@@ -38,15 +41,15 @@ $UeDir = "C:\Program Files\Epic Games\UE_5.5"
 $ProjectName = "MyProject"
 # Where your project lives. We assume this file is in it root.
 $ProjectDir = $PSScriptRoot
-# The editor version we initiate. Must exist ing $UeDir.
-$EditorExe = "UnrealEditor-Win64-DebugGame-Cmd.exe"
+# The editor version we use for commands.
+$EditorCmd = "$UeDir\Engine\Binaries\Win64\UnrealEditor-Win64-DebugGame-Cmd.exe"
 
 $DateTime = Get-Date -Format "yyyy.MM.dd-HH.mm.ss"
 
 if ($Action -eq "Cook")
 {
     Start-Process `
-         -FilePath "$UeDir\Engine\Binaries\Win64\$EditorExe" `
+         -FilePath "$EditorCmd" `
          -ArgumentList (
     "`"$ProjectDir\$ProjectName.uproject`" -run=Cook  -TargetPlatform=Windows  -unversioned -fileopenlog",
     "-abslog=`"$UeDir\Engine\Programs\AutomationTool\Saved\Cook-$DateTime.txt`" -stdout -CrashForUAT",
@@ -119,6 +122,30 @@ elseif ($Action -eq "Profile")
     Write-Output "-------------------------------"
     Write-Output "   Unreal Insights started"
     Write-Output "-------------------------------"
+}
+elseif ($Action -eq "PythonScript") {
+    $Script = "$ProjectDir\$Script"
+
+    if ( [string]::IsNullOrEmpty($Script))
+    {
+        Write-Host "Cannot run python script without a script file (-Script)"
+        exit 1
+    }
+
+    if (-Not (Test-Path -Path $Script)) {
+        Write-Error "File not found (-Script): $Script"
+        exit 1
+    }
+
+    Start-Process `
+        -FilePath "$EditorCmd" `
+        -ArgumentList (
+    "$ProjectDir\$ProjectName.uproject",
+    "-unattended",
+    "-run=pythonscript",
+    "-script=$Script"
+    )`
+        -NoNewWindow -Wait
 }
 else
 {
