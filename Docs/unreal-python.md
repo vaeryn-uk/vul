@@ -80,6 +80,15 @@ code.
 See the `PythonScript` action in [MyProject.ps1](../MyProject.ps1) which contains an 
 example of how to run a script from the CLI quickly without needing to boot the editor.
 
+Alternatively, you can boot the editor and run your scripts from the console (`):
+
+```
+py C:\absolute\path\to\your\script.py
+```
+
+This has the advantage of being able to change assets on the fly, and hit breakpoints in your CPP
+if the editor has been started with a debugger attached.
+
 ## Writing Python Code
 
 The Unreal reflection system is used to expose types to Python scripts. These are all accessed from

@@ -41,7 +41,7 @@ struct FVulDataRepositoryReference
  * this object to the root. Keeping this in memory is critical for the correct behaviour
  * of FVulDataPtr.
  */
-UCLASS()
+UCLASS(BlueprintType)
 class VULRUNTIME_API UVulDataRepository : public UObject
 {
 	GENERATED_BODY()
