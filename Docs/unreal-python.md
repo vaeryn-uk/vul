@@ -80,6 +80,9 @@ code.
 See the `PythonScript` action in [MyProject.ps1](../MyProject.ps1) which contains an 
 example of how to run a script from the CLI quickly without needing to boot the editor.
 
+Note that you'll need to look in log files in the `Saved` directory to see any `unreal.log`
+output.
+
 Alternatively, you can boot the editor and run your scripts from the console (`):
 
 ```
@@ -88,6 +91,18 @@ py C:\absolute\path\to\your\script.py
 
 This has the advantage of being able to change assets on the fly, and hit breakpoints in your CPP
 if the editor has been started with a debugger attached.
+
+**Beware**: When executing in-editor, note that repeated runs will take place in a single Python
+execution environment which can cause strange behaviour if making changes to your scripts. In particular:
+
+* Any changes you make to your own code that is `import`ed in to the scripts you run will not update.
+  This is especially confusing as any stack traces or error messages from that code _will_ show the
+  changes.
+* Any `import`ed modules that you use that store state will persist that state between your `py`
+  commands.
+
+To ensure a clean environment, it's best to restart the editor completely after making changes 
+to any `import`ed files.
 
 ## Writing Python Code
 
