@@ -34,5 +34,15 @@ bool TestMeasure::RunTest(const FString& Parameters)
 		TestEqual("Measure Modify clamped max result pct", Measure.Percent(), 1.f);
 	}
 
+	{ // Measure copy constructor.
+		FTestMeasure M1(10.f);
+		auto M2 = M1;
+
+		M2.Modify(-5.f);
+
+		TestEqual("Copied measure is changed", M2.CurrentValue(), 5.f);
+		TestEqual("Original measure is not changed", M1.CurrentValue(), 10.f);
+	}
+
 	return !HasAnyErrors();
 }

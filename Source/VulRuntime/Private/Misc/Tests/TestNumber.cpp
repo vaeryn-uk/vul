@@ -129,6 +129,30 @@ bool TestNumber::RunTest(const FString& Parameters)
 		TestEqual("Number watch #3: new", CapturedNew, 30);
 	}
 
+	// Test copy constructor
+	{
+		int WatchCallCount = 0;
+		
+		auto Original = TestType(10);
+		Original.Watch().Add([] { return true; }, [&](int New, int Old)
+		{
+			WatchCallCount++;
+		});
+		
+		auto Copied = Original;
+		TestEqual("Copy: value correct", Copied.Value(), 10);
+
+		Original.Modify(TestMod::MakeFlat(-5));
+		TestEqual("Copy: original changed", Original.Value(), 5);
+		TestEqual("Copy: copied not changed", Copied.Value(), 10);
+		TestEqual("Copy: watch only called once", WatchCallCount, 1);
+
+		Copied.Modify(TestMod::MakeFlat(-2));
+		TestEqual("Copy: original not changed", Original.Value(), 5);
+		TestEqual("Copy: copied changed", Copied.Value(), 8);
+		TestEqual("Copy: watch still only called once", WatchCallCount, 2);
+	}
+
 	// Make the test pass by returning true, or fail by returning false.
 	return true;
 }

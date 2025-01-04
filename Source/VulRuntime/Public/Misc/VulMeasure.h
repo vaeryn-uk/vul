@@ -27,6 +27,24 @@ struct TVulMeasure
 		Init(InCurrent, InMax);
 	}
 
+	TVulMeasure(const TVulMeasure& Other)
+	{
+		Current = MakeShared<TVulNumber<NumberType>>(*Other.Current);
+		Max = MakeShared<TVulNumber<NumberType>>(*Other.Max);
+	}
+
+	/**
+	 * Creates a snapshot of the current measure with all modifications removed.
+	 *
+	 * The result can be freely changed without impacting this measure. Useful for
+	 * performing changes to a measure to query what will happen, e.g. "if 10 damage is done,
+	 * is a character dead?"
+	 */
+	TVulMeasure Snapshot() const
+	{
+		return TVulMeasure(CurrentValue(), MaxValue());
+	}
+
 	static TVulMeasure Sum(const TArray<TVulMeasure>& Measures)
 	{
 		NumberType Sum = 0;

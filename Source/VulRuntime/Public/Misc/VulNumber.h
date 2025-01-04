@@ -126,7 +126,15 @@ public:
 	TVulNumber(const NumberType InBase, FClamp InClamp) : Base(InBase), Clamp(InClamp) {};
 	TVulNumber(const NumberType InBase, const NumberType ClampMin, const NumberType ClampMax)
 		: Base(InBase)
-		, Clamp({MakeShared<TVulNumber>(ClampMin), MakeShared<TVulNumber>(ClampMax)}) {};
+		, Clamp({MakeShared<TVulNumber>(ClampMin), MakeShared<TVulNumber>(ClampMax)}) {}
+
+	TVulNumber(const TVulNumber& Other)
+	{
+		Base = Other.Base;
+		Modifications = Other.Modifications;
+		Clamp = Other.Clamp;
+		// Don't copy watches.
+	}
 
 	/**
 	 * Describes the effect of a modification that's been applied.
