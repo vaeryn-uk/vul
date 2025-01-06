@@ -222,11 +222,15 @@ struct TVulRngManager
 	 * Seed all streams provided by this manager.
 	 *
 	 * For any given seed, from this point on, all streams produce deterministic results.
+	 *
+	 * If the provided seed is the empty string, one will be randomly-generated.
 	 */
 	void Seed(const FString& Seed)
 	{
-		CurrentSeed = Seed;
-		const auto IntSeed = FCrc::StrCrc32(*Seed);
+		FString ToSet = Seed.IsEmpty() ? RandomSeed() : Seed;
+		
+		CurrentSeed = ToSet;
+		const auto IntSeed = FCrc::StrCrc32(*ToSet);
 
 		for (auto& Entry : Entries)
 		{
