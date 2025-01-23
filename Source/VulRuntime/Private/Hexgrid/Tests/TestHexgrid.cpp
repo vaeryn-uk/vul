@@ -199,7 +199,7 @@ bool TestHexgrid::RunTest(const FString& Parameters)
 			Opts.CostFn = [Data](
 				const TestGrid::FVulTile& From,
 				const TestGrid::FVulTile& To,
-				TVulHexgrid<FString>* Grid
+				const TVulHexgrid<FString>* Grid
 			) -> TOptional<int> {
 				if (Data.Obstacles.Contains(To.Addr))
 				{
@@ -344,7 +344,7 @@ TestGrid::FPathResult TestPath(
 	auto Grid = MakeGrid(GridSize);
 
 	TestGrid::TVulQueryOptions Opts;
-	Opts.CostFn = [Impassable](const TestGrid::FVulTile& From, const TestGrid::FVulTile& To, TestGrid* Grid) -> TOptional<int>
+	Opts.CostFn = [Impassable](const TestGrid::FVulTile& From, const TestGrid::FVulTile& To, const TestGrid* Grid) -> TOptional<int>
 	{
 		if (Impassable.Contains(To.Addr))
 		{

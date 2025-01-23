@@ -4,6 +4,7 @@
 #include "VulHexAddr.h"
 #include "VulHexUtil.h"
 #include "Containers/VulPriorityQueue.h"
+#include "Misc/VulRngManager.h"
 #include "UObject/Object.h"
 
 /**
@@ -35,6 +36,8 @@ struct TVulHexgrid
 		FVulHexAddr Addr;
 		TileData Data;
 	};
+	
+	typedef TFunction<bool (const FVulTile&)> FVulTileValidFn;
 
 	TVulHexgrid() = default;
 
@@ -51,6 +54,8 @@ struct TVulHexgrid
 		{
 			AddTile(Addr, Allocator);
 		}
+
+		Size = InSize;
 	}
 
 	/**
@@ -77,12 +82,26 @@ struct TVulHexgrid
 	 */
 	struct TVulQueryOptions
 	{
-		static TOptional<CostType> DefaultCostFn(const FVulTile& From, const FVulTile& To, TVulHexgrid* Grid)
+		typedef TFunction<TOptional<CostType> (const FVulTile& From, const FVulTile& To, const TVulHexgrid* Grid)> FCostFn;
+		typedef TFunction<CostType (const FVulHexAddr& From, const FVulHexAddr& To)> FHeuristicFn;
+		
+		static TOptional<CostType> DefaultCostFn(const FVulTile& From, const FVulTile& To, const TVulHexgrid* Grid)
 		{
 			return 1;
 		}
 
-		typedef TFunction<TOptional<CostType> (const FVulTile& From, const FVulTile& To, TVulHexgrid* Grid)> FCostFn;
+		/**
+		 * Returns the Euclidean distance between two tile addresses.
+		 */
+		static CostType DefaultHeuristic(const FVulHexAddr& From, const FVulHexAddr& To)
+		{
+			return From.Distance(To);
+		}
+		
+		TVulQueryOptions(
+			FCostFn InCostFn = &DefaultCostFn,
+			FHeuristicFn InHeuristic = &DefaultHeuristic
+		) : CostFn(InCostFn), Heuristic(InHeuristic) {}
 
 		/**
 		 * Given a tile From and its adjacent tile To, this function returns a cost to move between
@@ -93,18 +112,10 @@ struct TVulHexgrid
 		FCostFn CostFn = &DefaultCostFn;
 
 		/**
-		 * Returns the euclidean distance between two tile addresses.
-		 */
-		static CostType DefaultHeuristic(const FVulHexAddr& From, const FVulHexAddr& To)
-		{
-			return From.Distance(To);
-		}
-
-		/**
 		 * The heuristic that's used to estimate the cost to move between two (far) tiles.
 		 * Our A* pathfinding uses this to guide which routes to check out next in its search.
 		 */
-		TFunction<CostType (const FVulHexAddr& From, const FVulHexAddr& To)> Heuristic = &DefaultHeuristic;
+		FHeuristicFn Heuristic = &DefaultHeuristic;
 	};
 
 	struct FTraceResult
@@ -118,6 +129,12 @@ struct TVulHexgrid
 		 * If this trace made it to the requested destination without hitting an obstacle.
 		 */
 		bool Complete = false;
+
+		/**
+		 * How many tiles this trace covers excluding the start tile. This is effectively a range
+		 * check. E.g. two adjacent tiles will have a trace distance of 1.
+		 */
+		int Distance() const { return FMath::Max(Tiles.Num() - 1, 0); }
 	};
 
 	/**
@@ -141,9 +158,9 @@ struct TVulHexgrid
 	FTraceResult Trace(
 		const FVulHexAddr& From,
 		const FVulHexAddr& To,
-		const TFunction<bool (const FVulTile&)>& Check = [](const FVulTile&) { return true; },
+		const FVulTileValidFn& Check = [](const FVulTile&) { return true; },
 		const float Leeway = 0.01
-	) {
+	) const {
 		TRACE_CPUPROFILER_EVENT_SCOPE_STR("VulHexgrid::Trace")
 
 		FVulWorldHexGridSettings Settings;
@@ -225,6 +242,18 @@ struct TVulHexgrid
 		 */
 		TArray<FVulTile> Tiles = {};
 
+		TArray<FVulHexAddr> Addrs() const
+		{
+			TArray<FVulHexAddr> Out;
+
+			for (const auto Tile : Tiles)
+			{
+				Out.Add(Tile.Addr);
+			}
+
+			return Out;
+		}
+
 		/**
 		 * The cost of this path, according to the algorithm passed to our pathfinding.
 		 */
@@ -246,7 +275,7 @@ struct TVulHexgrid
 		const FVulHexAddr& From,
 		const TOptional<CostType> MaxCost = {},
 		const TVulQueryOptions& Opts = TVulQueryOptions()
-	) {
+	)  const {
 		TMap<FVulHexAddr, FPathResult> Result;
 
 		TArray<TPair<FVulHexAddr, FPathResult>> WorkingSet;
@@ -316,8 +345,8 @@ struct TVulHexgrid
 	FPathResult Path(
 		const FVulHexAddr& From,
 		const FVulHexAddr& To,
-		const TVulQueryOptions& Opts = TVulQueryOptions())
-	{
+		const TVulQueryOptions& Opts = TVulQueryOptions()
+	) const {
 		TRACE_CPUPROFILER_EVENT_SCOPE_STR("VulHexgrid::Path")
 
 		if (From == To)
@@ -431,7 +460,7 @@ struct TVulHexgrid
 	}
 
 	/**
-	 * Gets all of the addresses that make up this grid.
+	 * Gets all the addresses that make up this grid.
 	 */
 	TArray<FVulHexAddr> GetTileAddrs() const
 	{
@@ -529,6 +558,38 @@ struct TVulHexgrid
 		const TFunction<TOptional<float> (const FVulTile&)>& ScoreFn,
 		const bool Ascending = true
 	) const;
+
+	/**
+	 * Splits the grid in two lists where each tile only appears in either list (or none).
+	 *
+	 * ValidFn filters tiles out entirely, returning false if a tile should not appear in either list.
+	 * By default, all tiles are included.
+	 * 
+	 * SplitFn is responsible for partitioning each tile, returning true for the first list, and false for the second.
+	 * By default, we split down the Q=0 axis (where Q=0 is in the first list).
+	 */
+	void SplitTiles(
+		TArray<FVulHexAddr>& First,
+		TArray<FVulHexAddr>& Second,
+		const FVulTileValidFn& ValidFn = [](const FVulTile& Tile) { return true; },
+		const TFunction<bool (const FVulTile&)>& SplitFn = [](const FVulTile& Tile) { return Tile.Addr.Q >= 0; }
+	) const {
+		for (const auto Tile : Tiles)
+		{
+			if (!ValidFn(Tile.Value))
+			{
+				continue;
+			}
+			
+			if (SplitFn(Tile.Value))
+			{
+				First.Add(Tile.Key);
+			} else
+			{
+				Second.Add(Tile.Key);
+			}
+		}
+	}
 
 private:
 
