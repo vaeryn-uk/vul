@@ -150,7 +150,7 @@ bool TestNumber::RunTest(const FString& Parameters)
 		Copied.Modify(TestMod::MakeFlat(-2));
 		TestEqual("Copy: original not changed", Original.Value(), 5);
 		TestEqual("Copy: copied changed", Copied.Value(), 8);
-		TestEqual("Copy: watch still only called once", WatchCallCount, 2);
+		TestEqual("Copy: watch still only called once", WatchCallCount, 1);
 	}
 
 	// Make the test pass by returning true, or fail by returning false.

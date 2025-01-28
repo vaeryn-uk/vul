@@ -33,6 +33,17 @@ struct TVulMeasure
 		Max = MakeShared<TVulNumber<NumberType>>(*Other.Max);
 	}
 
+	TVulMeasure& operator=(const TVulMeasure& Other)
+	{
+		if (this != &Other) // Guard against self-assignment
+		{
+			*Current = *Other.Current;
+			*Max = *Other.Max;
+		}
+		
+		return *this;
+	}
+
 	/**
 	 * Creates a snapshot of the current measure with all modifications removed.
 	 *
