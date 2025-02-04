@@ -153,6 +153,31 @@ bool TestNumber::RunTest(const FString& Parameters)
 		TestEqual("Copy: watch still only called once", WatchCallCount, 1);
 	}
 
+	{ // Modification ID overwrites.
+		auto Number = TestType(10);
+
+		auto ModId = FGuid::NewGuid();
+		TestType::FModificationResult Result;
+		
+		auto Mod1 = TestMod::MakeFlat(1, ModId);
+		Result = Number.Modify(Mod1);
+		TestEqual("ModId Mod1 applied: value", Number.Value(), 11);
+		TestEqual("ModId Mod1 applied: change", Result.Change(), 1);
+		TestEqual("ModId Mod1 applied: was applied", Result.WasApplied, true);
+
+		auto Mod2 = TestMod::MakeFlat(3, ModId);
+		Result = Number.Modify(Mod2);
+		TestEqual("ModId Mod2 applied: value", Number.Value(), 13);
+		TestEqual("ModId Mod2 applied: change", Result.Change(), 2);
+		TestEqual("ModId Mod2 applied: was applied", Result.WasApplied, true);
+
+		auto Mod3 = TestMod::MakeFlat(3, ModId); // This should do nothing because it's an identical modification.
+		Result = Number.Modify(Mod3);
+		TestEqual("ModId Mod3 applied: value", Number.Value(), 13);
+		TestEqual("ModId Mod3 applied: change", Result.Change(), 0);
+		TestEqual("ModId Mod3 applied: was applied", Result.WasApplied, false);
+	}
+
 	// Make the test pass by returning true, or fail by returning false.
 	return true;
 }

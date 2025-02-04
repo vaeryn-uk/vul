@@ -5,17 +5,39 @@
 #include "UObject/Object.h"
 
 /**
- * Describes a single modification to a TVulNumber.
+ * Modification IDs by default are FGuids.
  */
-template <typename NumberType>
+struct TVulNumberDefaultIdStrategy {
+	static FGuid Get() { return FGuid::NewGuid(); }
+};
+
+/**
+ * Describes a single modification to a TVulNumber.
+ *
+ * The type of modification ID can be changed, but must implement equality operators.
+ * ModificationIDs are optional to callers, so we provide a DefaultIdGenerator that can provide
+ * alternative default IDs if FGuids are not used.
+ */
+template <typename NumberType, typename ModificationId = FGuid, typename DefaultIdGenerator = TVulNumberDefaultIdStrategy>
 struct TVulNumberModification
 {
-	FGuid Id;
+	ModificationId Id;
+
+	bool operator==(const TVulNumberModification& Other) const
+	{
+		return Id == Other.Id
+			&& Flat == Other.Flat
+			&& Percent == Other.Percent
+			&& BasePercent == Other.BasePercent
+			&& Set == Other.Set
+			&& Clamp == Other.Clamp
+		;
+	}
 
 	/**
 	 * Modifies a number by a percentage. E.g. 1.1 increases a value by 10%.
 	 */
-	static TVulNumberModification MakePercent(const float InPercent, const FGuid& Id = FGuid())
+	static TVulNumberModification MakePercent(const float InPercent, const ModificationId& Id = DefaultIdGenerator::Get())
 	{
 		TVulNumberModification Out;
 		Out.Percent = InPercent;
@@ -24,9 +46,9 @@ struct TVulNumberModification
 	}
 
 	/**
-	 * Modifies a number by a flat amount; this is simple added to the value.
+	 * Modifies a number by a flat amount; this is simply added to the value.
 	 */
-	static TVulNumberModification MakeFlat(const NumberType Flat, const FGuid& Id = FGuid())
+	static TVulNumberModification MakeFlat(const NumberType Flat, const ModificationId& Id = DefaultIdGenerator::Get())
 	{
 		TVulNumberModification Out;
 		Out.Flat = Flat;
@@ -37,7 +59,7 @@ struct TVulNumberModification
 	/**
 	 * A modification that simply sets the value to the provided amount (ignoring whatever the current value is).
 	 */
-	static TVulNumberModification MakeSet(const NumberType Amount, const FGuid& Id = FGuid())
+	static TVulNumberModification MakeSet(const NumberType Amount, const ModificationId& Id = DefaultIdGenerator::Get())
 	{
 		TVulNumberModification Out;
 		Out.Set = Amount;
@@ -52,7 +74,7 @@ struct TVulNumberModification
 	 *   -  +0.2 increases the value by 20% of the base amount.
 	 *   -  -1.0 decreases the value by 100% of the base amount.
 	 */
-	static TVulNumberModification MakeBasePercent(const float InBasePercent, const FGuid& Id = FGuid())
+	static TVulNumberModification MakeBasePercent(const float InBasePercent, const ModificationId& Id = DefaultIdGenerator::Get())
 	{
 		TVulNumberModification Out;
 		Out.BasePercent = InBasePercent;
@@ -84,7 +106,8 @@ struct TVulNumberModification
 /**
  * A numeric value with support for RPG-like operations.
  *
- * - Supports modification which are tracked separately, applied in order, and can be withdrawn independently.
+ * - Supports modification which are tracked separately, applied in order, and can be withdrawn or overwritten
+ *   independently.
  * - A base value that is maintained independently of any modifications; modifications are applied on top of the base.
  * - Ability to clamp the value with another TVulNumber for dynamic bound setting. Clamps are applied against the
  *   base and when calculating all modifications.
@@ -93,7 +116,7 @@ struct TVulNumberModification
  * Note that you may want to consider TVulCharacterStat as a simpler replacement for this implementation
  * if you are dealing with RPG stats in your game.
  */
-template <typename NumberType>
+template <typename NumberType, typename ModificationId = FGuid>
 class TVulNumber
 {
 public:
@@ -145,7 +168,7 @@ public:
 		 * The ID of the modification that was applied, if any. This can be used to revoke the change
 		 * later.
 		 */
-		FGuid Id;
+		ModificationId Id;
 		/**
 		 * The raw value before the modification is applied.
 		 */
@@ -160,17 +183,58 @@ public:
 		 */
 		NumberType Change() const
 		{
-			return Before - After;
+			return After - Before;
 		}
+
+		/**
+		 * True if the modification was actually applied.
+		 *
+		 * This is false when overwriting an existing modification (matched on ID) with the
+		 * same effect modification.
+		 *
+		 * Note: this may be true even if the effective change is zero, as modifications can be
+		 * applied that don't actually change the result value (e.g. +0.0000001% on a small int
+		 * value).
+		 */
+		bool WasApplied;
 	};
 
 	/**
 	 * Applies a modification that can later be revoked.
 	 */
-	FModificationResult Modify(const TVulNumberModification<NumberType>& Modification)
+	FModificationResult Modify(const TVulNumberModification<NumberType, ModificationId>& Modification)
 	{
-		auto Result = Set([&] { Modifications.Add(Modification); });
+		const auto ExistingIndex = Modifications.IndexOfByPredicate([&](
+				const TVulNumberModification<NumberType, ModificationId>& Candidate
+			)
+			{
+				return Candidate.Id == Modification.Id;
+			}
+		);
+
+		// Short-circuit if the modification we're overriding is identical to the existing one.
+		if (ExistingIndex != INDEX_NONE && Modification == Modifications[ExistingIndex])
+		{
+			return {
+				.Id = Modification.Id,
+				.Before = Value(),
+				.After = Value(),
+				.WasApplied = false,
+			};
+		}
+		
+		auto Result = Set([&]
+		{
+			if (ExistingIndex != INDEX_NONE)
+			{
+				Modifications.RemoveAt(ExistingIndex);
+			}
+			
+			Modifications.Add(Modification);
+		});
+		
 		Result.Id = Modification.Id;
+		
 		return Result;
 	}
 
@@ -179,7 +243,7 @@ public:
 	 */
 	FModificationResult Modify(const NumberType Amount)
 	{
-		return Modify(TVulNumberModification<NumberType>::MakeFlat(Amount));
+		return Modify(TVulNumberModification<NumberType, ModificationId>::MakeFlat(Amount));
 	}
 
 	/**
@@ -198,7 +262,7 @@ public:
 	/**
 	 * Removes a single modification via its ID that was issued when applying the modification.
 	 */
-	void Remove(const FGuid& Id)
+	void Remove(const ModificationId& Id)
 	{
 		Set([&]
 		{
@@ -283,6 +347,7 @@ private:
 		return {
 			.Before = Old,
 			.After =  New,
+			.WasApplied = true,
 		};
 	}
 
@@ -306,7 +371,7 @@ private:
 		return Value;
 	}
 
-	TArray<TVulNumberModification<NumberType>> Modifications;
+	TArray<TVulNumberModification<NumberType, ModificationId>> Modifications;
 
 	NumberType Base;
 

@@ -167,7 +167,7 @@ private:
 	}
 
 	/**
-	 * Fine-grained control of buckets behave.
+	 * Fine-grained control of how buckets behave.
 	 */
 	TMap<SourceType, FBucketConfig> BucketConfig;
 };
