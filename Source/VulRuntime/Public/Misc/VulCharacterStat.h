@@ -12,8 +12,6 @@
  *
  * This implementation is a second attempt of TVulNumber, but with reduced functionality and
  * a focus on simplicity.
- *
- * TODO: This implementation needs tests.
  */
 template <typename NumberType, typename SourceType>
 class TVulCharacterStat
@@ -36,12 +34,12 @@ public:
 	/**
 	 * Clamps the total contribution that can be made by a single source.
 	 *
-	 * This clamp is applied on modification, rather than retrieval, so Delta
+	 * Unlike Base, this clamp is applied on modification, rather than retrieval, so Delta
 	 * to a bucket that is already at its bound(s) will do nothing.
 	 */
 	void Clamp(const SourceType Source, const TOptional<NumberType>& Min, const TOptional<NumberType>& Max)
 	{
-		BucketConfig[Source] = FBucketConfig{.Min = Min, .Max = Max};
+		BucketConfig.Add(Source, FBucketConfig{.Min = Min, .Max = Max});
 	}
 
 	/**
@@ -77,40 +75,53 @@ public:
 	/**
 	 * Sets the base or source to the given value, overriding any previous value.
 	 */
-	void Set(const NumberType N, const TOptional<SourceType>& Source = {})
+	bool Set(const NumberType N, const TOptional<SourceType>& Source = {})
 	{
-		Delta(N - Get(Source));
+		if (!Source.IsSet())
+		{
+			if (Base == N)
+			{
+				return false;
+			}
+
+			return true;
+		}
+
+		auto ValueToSet = N;
+		if (BucketConfig.Contains(Source.GetValue()))
+		{
+			ValueToSet = Clamp(N, BucketConfig[Source.GetValue()].Min, BucketConfig[Source.GetValue()].Max);
+		}
+
+		if (!Buckets.Contains(Source.GetValue()))
+		{
+			Buckets.Add(Source.GetValue(), 0);
+		}
+
+		if (Buckets[Source.GetValue()] == ValueToSet)
+		{
+			return false;
+		}
+
+		Buckets.Add(Source.GetValue(), ValueToSet);
+		
+		return true;
 	}
 
 	/**
 	 * Applies a change to the stat by the provided value, optionally bucketed to Source.
+	 *
+	 * Note this will add to existing sources, rather than override them.
 	 */
 	void Delta(const NumberType N, const TOptional<SourceType>& Source = {})
 	{
 		if (!Source.IsSet())
 		{
-			Base += N;
+			Set(N + Base);
 			return;
 		}
 
-		const auto Src = Source.GetValue();
-
-		if (Buckets.Contains(Src))
-		{
-			Buckets[Src] += N;
-		} else
-		{
-			Buckets.Add(Src, N);
-		}
-
-		if (BucketConfig.Contains(Src))
-		{
-			Buckets[Src] = Clamp(
-				Buckets[Src],
-				BucketConfig[Src].Min,
-				BucketConfig[Src].Max
-			);
-		}
+		Set(N + Get(Source), Source);
 	}
 
 	/**
