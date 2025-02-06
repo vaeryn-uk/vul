@@ -74,6 +74,8 @@ public:
 
 	/**
 	 * Sets the base or source to the given value, overriding any previous value.
+	 *
+	 * Returns true if the new value differs from the previous.
 	 */
 	bool Set(const NumberType N, const TOptional<SourceType>& Source = {})
 	{
