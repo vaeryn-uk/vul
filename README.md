@@ -117,6 +117,15 @@ values in game logic, such as health and stats in an RPG system.
 `TVulCharacterStat` is similar to above, but is simplified for stats that have modifications
 bucketed by defined sources, which are each tracked independently.
 
+### Enum functionality
+
+The `VulRuntime::Enum` namespace provides some utility functionality for working with UEnums in your
+code.
+
+`VulEnumTable` allows you to combine a config/data-table-driven approach connected to explicit
+enum definitions in your code to yield benefits of generic config-driven functionality with the 
+freedom to safely hard-code functionality to well-known enum values.
+
 ### Level management
 
 A `UVulLevelManager` can be configured from Vul's project settings, see `UVulRuntimeSettings::LevelSettings`.

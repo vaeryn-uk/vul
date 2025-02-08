@@ -116,11 +116,12 @@ struct TVulNumberModification
  * Note that you may want to consider TVulCharacterStat as a simpler replacement for this implementation
  * if you are dealing with RPG stats in your game.
  */
-template <typename NumberType, typename ModificationId = FGuid>
+template <typename NumberType, typename ModificationId = FGuid, typename DefaultIdGenerator = TVulNumberDefaultIdStrategy>
 class TVulNumber
 {
 public:
 	typedef TPair<TSharedPtr<TVulNumber>, TSharedPtr<TVulNumber>> FClamp;
+	using FModification = TVulNumberModification<NumberType, ModificationId, DefaultIdGenerator>;
 
 	/**
 	 * Helper to create a clamp definition where either boundary is optional and expressed
@@ -202,10 +203,10 @@ public:
 	/**
 	 * Applies a modification that can later be revoked.
 	 */
-	FModificationResult Modify(const TVulNumberModification<NumberType, ModificationId>& Modification)
+	FModificationResult Modify(const FModification& Modification)
 	{
 		const auto ExistingIndex = Modifications.IndexOfByPredicate([&](
-				const TVulNumberModification<NumberType, ModificationId>& Candidate
+				const FModification& Candidate
 			)
 			{
 				return Candidate.Id == Modification.Id;
@@ -243,7 +244,7 @@ public:
 	 */
 	FModificationResult Modify(const NumberType Amount)
 	{
-		return Modify(TVulNumberModification<NumberType, ModificationId>::MakeFlat(Amount));
+		return Modify(FModification::MakeFlat(Amount));
 	}
 
 	/**
@@ -371,7 +372,7 @@ private:
 		return Value;
 	}
 
-	TArray<TVulNumberModification<NumberType, ModificationId>> Modifications;
+	TArray<FModification> Modifications;
 
 	NumberType Base;
 
