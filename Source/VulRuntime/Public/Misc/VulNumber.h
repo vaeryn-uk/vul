@@ -160,6 +160,8 @@ public:
 		// Don't copy watches.
 	}
 
+	NumberType GetBase() const { return Base; }
+
 	/**
 	 * Describes the effect of a modification that's been applied.
 	 */
