@@ -6,6 +6,16 @@ bool FVulDataPtr::IsSet() const
 	return !RowName.IsNone();
 }
 
+FString FVulDataPtr::ToString() const
+{
+	if (!IsSet())
+	{
+		return "";
+	}
+	
+	return FString::Printf(TEXT("%s:%s"), *Repository->GetName(), *RowName.ToString());
+}
+
 const FName& FVulDataPtr::GetRowName() const
 {
 	return RowName;

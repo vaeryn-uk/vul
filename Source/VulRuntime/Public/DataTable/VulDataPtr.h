@@ -77,6 +77,8 @@ struct VULRUNTIME_API FVulDataPtr
 		return StaticCastSharedPtr<T, void>(SharedPtr);
 	}
 
+	FString ToString() const;
+
 	/**
 	 * Returns the referenced data if the reference is set, else nullptr.
 	 */
@@ -212,6 +214,13 @@ private:
 
 	FVulDataPtr DataPtr;
 };
+
+template <typename RowType>
+uint32 GetTypeHash(const TVulDataPtr<RowType>& Ptr)
+{
+	return FCrc::StrCrc32(Ptr.DataPtr.ToString());
+}
+
 
 /**
  * Casts an untyped ptr to a typed one, returning an unset pointer if the conversion

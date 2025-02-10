@@ -111,7 +111,10 @@ private:
 		if (!Loaded)
 		{
 			const auto Dt = GetTable();
-			checkf(IsValid(Dt), TEXT("TVulEnumTable: must provide a data table"));
+			if (!ensureAlwaysMsgf(IsValid(Dt), TEXT("TVulEnumTable: must provide a data table")))
+			{
+				return;
+			}
 
 			TArray<RowType*> Rows;
 			Dt->GetAllRows("TVulEnumTable", Rows);
