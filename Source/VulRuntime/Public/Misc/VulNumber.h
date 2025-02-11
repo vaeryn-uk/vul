@@ -202,6 +202,27 @@ public:
 		bool WasApplied;
 	};
 
+	struct FModificationInfo
+	{
+		NumberType Change;
+		TOptional<ModificationId> Id = {};
+	};
+
+	/**
+	 * Breakdowns the current number by its base + modifications.
+	 *
+	 * Each entry is described as a single modification, returned in-order starting with the base which
+	 * reports its change assuming a start from 0.
+	 */
+	TArray<FModificationInfo> Breakdown() const
+	{
+		TArray<FModificationInfo> Out;
+
+		Calculate(&Out);
+
+		return Out;
+	}
+
 	/**
 	 * Applies a modification that can later be revoked.
 	 */
@@ -293,11 +314,31 @@ public:
 	 */
 	NumberType Value() const
 	{
+		return Calculate();
+	}
+
+	typedef TVulObjectWatches<NumberType> WatchCollection;
+	WatchCollection& Watch() const
+	{
+		return Watches;
+	}
+
+private:
+	NumberType Calculate(TArray<FModificationInfo>* ModificationInfo = nullptr) const
+	{
 		auto Out = Base;
+
+		if (ModificationInfo != nullptr)
+		{
+			ModificationInfo->Add(FModificationInfo{
+				.Change = Base,
+			});
+		}
 
 		for (auto Modification : Modifications)
 		{
 			auto New = Out;
+			auto Old = Out;
 
 			if (Modification.Percent.IsSet())
 			{
@@ -324,18 +365,18 @@ public:
 			}
 
 			Out = ApplyClamps(Out);
+
+			if (ModificationInfo != nullptr)
+			{
+				ModificationInfo->Add(FModificationInfo{
+					.Change = New - Old,
+					.Id = Modification.Id,
+				});
+			}
 		}
 
 		return ApplyClamps(Out);
 	}
-
-	typedef TVulObjectWatches<NumberType> WatchCollection;
-	WatchCollection& Watch() const
-	{
-		return Watches;
-	}
-
-private:
 	/**
 	 * Consistently applies a change to the value. Enforces clamps and triggers watches.
 	 */

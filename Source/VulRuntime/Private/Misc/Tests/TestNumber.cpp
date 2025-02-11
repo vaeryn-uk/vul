@@ -178,6 +178,29 @@ bool TestNumber::RunTest(const FString& Parameters)
 		TestEqual("ModId Mod3 applied: was applied", Result.WasApplied, false);
 	}
 
+	{ // Test Breakdown.
+		auto Number = TestType(10);
+		
+		const auto Mod1 = Number.Modify(TestMod::MakeFlat(1)).Id;
+		const auto Mod2 = Number.Modify(TestMod::MakeSet(5)).Id;
+		const auto Mod3 = Number.Modify(TestMod::MakePercent(2.f)).Id;
+
+		const auto Breakdown = Number.Breakdown();
+		TestEqual("Breakdown: Total", Number.Value(), 10);
+		if (TestEqual("Breakdown: Count", Breakdown.Num(), 4))
+		{
+			TestEqual("Breakdown[Base].Id", Breakdown[0].Id.IsSet(), false);
+			TestEqual("Breakdown[Base].Change", Breakdown[0].Change, 10);
+			
+			TestEqual("Breakdown[Mod1].Id", Breakdown[1].Id.GetValue(), Mod1);
+			TestEqual("Breakdown[Mod1].Change", Breakdown[1].Change, 1);
+			TestEqual("Breakdown[Mod2].Id", Breakdown[2].Id.GetValue(), Mod2);
+			TestEqual("Breakdown[Mod2].Change", Breakdown[2].Change, -6);
+			TestEqual("Breakdown[Mod3].Id", Breakdown[3].Id.GetValue(), Mod3);
+			TestEqual("Breakdown[Mod3].Change", Breakdown[3].Change, 5);
+		}
+	}
+
 	// Make the test pass by returning true, or fail by returning false.
 	return true;
 }
