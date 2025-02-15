@@ -142,6 +142,21 @@ struct FVulField
 		return Out;
 	}
 
+	/**
+	 * Overloads that allow for declaration of FVulFields in const contexts.
+	 * 
+	 * Warning: the constness of the property will be lost (as a FVulField is writable
+	 * by design). This must never be used on properties within objects that are defined
+	 * as const; this is only intended for use within mutable objects (e.g. constructed via
+	 * MakeShared) when defining fieldsets for de/serialization.
+	 */
+	template <typename T>
+	static FVulField Create(const T* Ptr) { return Create<T>(const_cast<T*>(Ptr)); }
+	template <typename V>
+	static FVulField Create(const TArray<V>* Ptr) { return Create<V>(const_cast<TArray<V>*>(Ptr)); }
+	template <typename K, typename V>
+	static FVulField Create(const TMap<K, V>* Ptr) { return Create<K, V>(const_cast<TMap<K, V>*>(Ptr)); }
+
 	bool Set(const TSharedPtr<FJsonValue>& Value) { return Write(Value, Ptr); }
 	bool Get(TSharedPtr<FJsonValue>& Out) const { return Read(Ptr, Out); }
 

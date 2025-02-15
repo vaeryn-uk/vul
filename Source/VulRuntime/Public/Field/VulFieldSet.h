@@ -16,13 +16,13 @@ struct FVulFieldSet
 {
 	void Add(const FVulField& Field, const FString& Identifier, bool ReadOnly = false);
 
-	bool Serialize(TSharedPtr<FJsonValueObject>& Out) const;
+	bool Serialize(TSharedPtr<FJsonValue>& Out) const;
 	bool Deserialize(const TSharedPtr<FJsonValue>& Data);
 	
 	template <typename CharType = TCHAR, typename PrintPolicy = TCondensedJsonPrintPolicy<CharType>>
 	bool SerializeToJson(FString& Out) const
 	{
-		TSharedPtr<FJsonValueObject> Json;
+		TSharedPtr<FJsonValue> Json;
 		if (!Serialize(Json))
 		{
 			return false;

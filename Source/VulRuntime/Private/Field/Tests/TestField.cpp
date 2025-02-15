@@ -22,28 +22,28 @@ bool TestField::RunTest(const FString& Parameters)
 		};
 		
 		TSharedPtr<FJsonValue> Value;
-
+	
 		auto BoolField = FVulField::Create(&TestObj.B);
 		TC.Equal(true, BoolField.Get(Value), "bool does get");
 		TC.Equal(true, Value->AsBool(), "bool does get correctly");
 		TC.Equal(true, BoolField.Set(MakeShared<FJsonValueBoolean>(false)), "bool does set");
 		TC.Equal(false, TestObj.B, "bool is set correctly");
 		TC.Equal(false, BoolField.Set(MakeShared<FJsonValueNumber>(13)), "bool rejects non-bool");
-
+	
 		auto IntField = FVulField::Create(&TestObj.I);
 		TC.Equal(true, IntField.Get(Value), "int does get");
 		TC.Equal(13.0, Value->AsNumber(), "int does get correctly");
 		TC.Equal(true, IntField.Set(MakeShared<FJsonValueNumber>(26)), "int does set");
 		TC.Equal(26, TestObj.I, "int is set correctly");
 		TC.Equal(false, IntField.Set(MakeShared<FJsonValueBoolean>(false)), "int rejects non-int");
-
+	
 		auto StringField = FVulField::Create(&TestObj.S);
 		TC.Equal(true, StringField.Get(Value), "str does get");
 		TC.Equal(FString("hello world"), Value->AsString(), "str does get correctly");
 		TC.Equal(true, StringField.Set(MakeShared<FJsonValueString>("goodbye")), "str does set");
 		TC.Equal(FString("goodbye"), TestObj.S, "str is set correctly");
 		TC.Equal(false, StringField.Set(MakeShared<FJsonValueBoolean>(false)), "str rejects non-str");
-
+	
 		auto MapField = FVulField::Create(&TestObj.M);
 		FString MapStr;
 		TC.Equal(true, MapField.ToJsonString(MapStr), "map does get");
@@ -58,7 +58,7 @@ bool TestField::RunTest(const FString& Parameters)
 			TC.Equal(TestObj.M.Contains("quxxx"), true, "map is set correct: quxxx key");
 			TC.Equal(TestObj.M["quxxx"], 17, "map is set correct: quxxx value");
 		}
-
+	
 		auto ArrayField = FVulField::Create(&TestObj.A);
 		FString ArrayStr;
 		TC.Equal(true, ArrayField.ToJsonString(MapStr), "arr does get");
@@ -70,7 +70,6 @@ bool TestField::RunTest(const FString& Parameters)
 			TC.Equal(TestObj.A[1], true, "arr is set correct [0]");
 		}
 	});
-
 	
 	VulTest::Case(this, "Field set usage", [](VulTest::TC TC)
 	{
@@ -81,7 +80,7 @@ bool TestField::RunTest(const FString& Parameters)
 			.M = {{"foo", 13}, {"bar", 14}},
 			.A = {true, false, true},
 		};
-
+	
 		FString ObjStr;
 		TC.Equal(true, TestObj.FieldSet().SerializeToJson(ObjStr), "serialize to json");
 		TC.Equal(
@@ -89,7 +88,7 @@ bool TestField::RunTest(const FString& Parameters)
 			ObjStr,
 			"serialize to json: string correct"
 		);
-
+	
 		FString NewJson = "{\"bool\":false,\"int\":5,\"string\":\"hi\",\"map\":{\"qux\":10},\"array\":[true, true, true, false]}";
 		TC.Equal(true, TestObj.FieldSet().DeserializeFromJson(NewJson), "deserialize from json");
 		TC.Equal(false, TestObj.B, "deserialize from json: bool");
@@ -97,6 +96,35 @@ bool TestField::RunTest(const FString& Parameters)
 		TC.Equal(FString("hi"), TestObj.S, "deserialize from json: str");
 		TC.Equal(TMap<FString, int>{{"qux", 10}}, TestObj.M, "deserialize from json: map");
 		TC.Equal(TArray{true, true, true, false}, TestObj.A, "deserialize from json: array");
+	});
+
+	VulTest::Case(this, "Nested objects", [](VulTest::TC TC)
+	{
+		FVulTestFieldParent TestParent = {
+			.Inner = {
+				.B = true,
+				.I = 13,
+				.S = "hello world",
+				.M = {{"foo", 13}, {"bar", 14}},
+				.A = {true, false, true},
+			}
+		};
+
+		FString ObjStr;
+		TC.Equal(true, TestParent.FieldSet().SerializeToJson(ObjStr), "serialize to json");
+		TC.Equal(
+			FString("{\"inner\":{\"bool\":true,\"int\":13,\"string\":\"hello world\",\"map\":{\"foo\":13,\"bar\":14},\"array\":[true,false,true]}}"),
+			ObjStr,
+			"serialize to json: string correct"
+		);
+
+		FString NewJson = "{\"inner\":{\"bool\":false,\"int\":5,\"string\":\"hi\",\"map\":{\"qux\":10},\"array\":[true, true, true, false]}}";
+		TC.Equal(true, TestParent.FieldSet().DeserializeFromJson(NewJson), "deserialize from json");
+		TC.Equal(false, TestParent.Inner.B, "deserialize from json: bool");
+		TC.Equal(5, TestParent.Inner.I, "deserialize from json: int");
+		TC.Equal(FString("hi"), TestParent.Inner.S, "deserialize from json: str");
+		TC.Equal(TMap<FString, int>{{"qux", 10}}, TestParent.Inner.M, "deserialize from json: map");
+		TC.Equal(TArray{true, true, true, false}, TestParent.Inner.A, "deserialize from json: array");
 	});
 	
 	return true;

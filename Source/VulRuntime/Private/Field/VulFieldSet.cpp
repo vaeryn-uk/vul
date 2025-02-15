@@ -5,7 +5,7 @@ void FVulFieldSet::Add(const FVulField& Field, const FString& Identifier, bool R
 	Fields.Add(Identifier, {.Field = Field, .ReadOnly = ReadOnly, .Identifier = Identifier});
 }
 
-bool FVulFieldSet::Serialize(TSharedPtr<FJsonValueObject>& Out) const
+bool FVulFieldSet::Serialize(TSharedPtr<FJsonValue>& Out) const
 {
 	auto Obj = MakeShared<FJsonObject>();
 	

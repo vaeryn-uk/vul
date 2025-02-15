@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Field/VulField.h"
+#include "Field/VulFieldSet.h"
 #include "UObject/Object.h"
 #include "TestVulFieldStructs.generated.h"
 
@@ -16,7 +17,7 @@ struct FVulTestFieldType
 	TMap<FString, int> M;
 	TArray<bool> A;
 
-	FVulFieldSet FieldSet()
+	FVulFieldSet FieldSet() const
 	{
 		FVulFieldSet Out;
 
@@ -27,5 +28,38 @@ struct FVulTestFieldType
 		Out.Add(FVulField::Create(&A), "array");
 
 		return Out;
+	}
+};
+
+
+USTRUCT()
+struct FVulTestFieldParent
+{
+	GENERATED_BODY()
+	
+	FVulTestFieldType Inner;
+	
+	FVulFieldSet FieldSet() const
+	{
+		FVulFieldSet Out;
+
+		Out.Add(FVulField::Create(&Inner), "inner");
+
+		return Out;
+	}
+};
+
+template<>
+struct FVulFieldSerializer<FVulTestFieldType>
+{
+	static TSharedPtr<FJsonValue> Serialize(const FVulTestFieldType& T)
+	{
+		TSharedPtr<FJsonValue> Out;
+		return T.FieldSet().Serialize(Out) ? Out : nullptr;
+	}
+
+	static bool Deserialize(const TSharedPtr<FJsonValue>& Data, FVulTestFieldType& Out)
+	{
+		return Out.FieldSet().Deserialize(Data);
 	}
 };
