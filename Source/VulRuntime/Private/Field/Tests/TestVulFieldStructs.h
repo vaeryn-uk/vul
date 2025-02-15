@@ -12,4 +12,5 @@ struct FVulTestFieldType
 	bool B;
 	int I;
 	FString S;
+	TMap<FString, int> M;
 };
