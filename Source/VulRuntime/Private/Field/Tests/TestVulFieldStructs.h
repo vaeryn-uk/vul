@@ -13,4 +13,5 @@ struct FVulTestFieldType
 	int I;
 	FString S;
 	TMap<FString, int> M;
+	TArray<bool> A;
 };

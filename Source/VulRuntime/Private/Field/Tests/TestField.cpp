@@ -13,7 +13,14 @@ bool TestField::RunTest(const FString& Parameters)
 {
 	VulTest::Case(this, "Basic field access", [](VulTest::TC TC)
 	{
-		FVulTestFieldType TestObj = {.B = true, .I = 13, .S = "hello world", .M = {{"foo", 13}, {"bar", 14}}};
+		FVulTestFieldType TestObj = {
+			.B = true,
+			.I = 13,
+			.S = "hello world",
+			.M = {{"foo", 13}, {"bar", 14}},
+			.A = {true, false, true},
+		};
+		
 		TSharedPtr<FJsonValue> Value;
 
 		auto BoolField = FVulField::Create(&TestObj.B);
@@ -50,6 +57,17 @@ bool TestField::RunTest(const FString& Parameters)
 			TC.Equal(TestObj.M["quxx"], 16, "map is set correct: quxx value");
 			TC.Equal(TestObj.M.Contains("quxxx"), true, "map is set correct: quxxx key");
 			TC.Equal(TestObj.M["quxxx"], 17, "map is set correct: quxxx value");
+		}
+
+		auto ArrayField = FVulField::Create(&TestObj.A);
+		FString ArrayStr;
+		TC.Equal(true, ArrayField.ToJsonString(MapStr), "arr does get");
+		TC.Equal(FString("[true,false,true]"), MapStr, "arr does get correctly");
+		TC.Equal(true, ArrayField.SetFromJsonString("[false,true]"), "arr does set");
+		if (TC.Equal(TestObj.A.Num(), 2, "arr is set correct: Num()"))
+		{
+			TC.Equal(TestObj.A[0], false, "arr is set correct [0]");
+			TC.Equal(TestObj.A[1], true, "arr is set correct [0]");
 		}
 	});
 	

@@ -23,6 +23,51 @@ struct FVulField
 		};
 		return Out;
 	}
+	template <typename V>
+	static FVulField Create(TArray<V>* Ptr)
+	{
+		FVulField Out;
+		Out.Ptr = Ptr;
+		Out.Read = [](void* Ptr, TSharedPtr<FJsonValue>& Out)
+		{
+			TArray<TSharedPtr<FJsonValue>> Array;
+
+			for (const auto& Entry : *reinterpret_cast<TArray<V>*>(Ptr))
+			{
+				Array.Add(FVulFieldSerializer<V>::Serialize(Entry));
+			}
+
+			Out = MakeShared<FJsonValueArray>(Array);
+
+			return true;
+		};
+		Out.Write = [](const TSharedPtr<FJsonValue>& Value, void* Ptr)
+		{
+			TArray<V>* Array = reinterpret_cast<TArray<V>*>(Ptr);
+			Array->Reset();
+
+			TArray<TSharedPtr<FJsonValue>>* JsonArray;
+			if (Value->Type != EJson::Array || !Value->TryGetArray(JsonArray))
+			{
+				return false;
+			}
+
+			for (const auto Entry : *JsonArray)
+			{
+				V ValueObj;
+				if (!FVulFieldSerializer<V>::Deserialize(Entry, ValueObj))
+				{
+					return false;
+				}
+
+				Array->Add(ValueObj);
+			}
+
+			return true;
+		};
+		
+		return Out;
+	}
 	
 	template <typename K, typename V>
 	static FVulField Create(TMap<K, V>* Ptr)
@@ -53,14 +98,13 @@ struct FVulField
 		Out.Write = [](const TSharedPtr<FJsonValue>& Value, void* Ptr)
 		{
 			TMap<K, V>* Map = reinterpret_cast<TMap<K, V>*>(Ptr);
+			Map->Reset();
 
 			TSharedPtr<FJsonObject>* Obj;
 			if (Value->Type != EJson::Object || !Value->TryGetObject(Obj))
 			{
 				return false;
 			}
-
-			Map->Reset();
 
 			for (const auto Entry : (*Obj)->Values)
 			{
