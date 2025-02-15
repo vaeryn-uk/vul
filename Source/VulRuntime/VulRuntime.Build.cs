@@ -28,6 +28,7 @@ public class VulRuntime : ModuleRules
                 "VulTest",
                 "DeveloperSettings",
                 "UMG",
+                "Json",
             }
         );
 
