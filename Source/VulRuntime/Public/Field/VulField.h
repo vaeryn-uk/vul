@@ -52,14 +52,55 @@ struct FVulField
 		};
 		Out.Write = [](const TSharedPtr<FJsonValue>& Value, void* Ptr)
 		{
-			// TODO.
-			return false;
+			TMap<K, V>* Map = reinterpret_cast<TMap<K, V>*>(Ptr);
+
+			TSharedPtr<FJsonObject>* Obj;
+			if (Value->Type != EJson::Object || !Value->TryGetObject(Obj))
+			{
+				return false;
+			}
+
+			Map->Reset();
+
+			for (const auto Entry : (*Obj)->Values)
+			{
+				K Key;
+				if (!FVulFieldSerializer<K>::Deserialize(MakeShared<FJsonValueString>(Entry.Key), Key))
+				{
+					return false;
+				}
+
+				V ValueObj;
+				if (!FVulFieldSerializer<V>::Deserialize(Entry.Value, ValueObj))
+				{
+					return false;
+				}
+
+				Map->Add(Key, ValueObj);
+			}
+
+			return true;
 		};
+		
 		return Out;
 	}
 
 	bool Set(const TSharedPtr<FJsonValue>& Value) { return Write(Value, Ptr); }
 	bool Get(TSharedPtr<FJsonValue>& Out) const { return Read(Ptr, Out); }
+
+	template <typename CharType = TCHAR>
+	bool SetFromJsonString(const FString& JsonStr)
+	{
+		TSharedPtr<FJsonValue> ParsedJson;
+		auto Reader = TJsonReaderFactory<CharType>::Create(JsonStr);
+
+		if (!FJsonSerializer::Deserialize(Reader, ParsedJson) || !ParsedJson.IsValid())
+		{
+			return false;
+		}
+
+		return Set(ParsedJson);
+	}
 
 	template <typename CharType = TCHAR, typename PrintPolicy = TCondensedJsonPrintPolicy<CharType>>
 	bool ToJsonString(FString& Out) const

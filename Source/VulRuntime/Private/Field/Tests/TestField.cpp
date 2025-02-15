@@ -41,6 +41,16 @@ bool TestField::RunTest(const FString& Parameters)
 		FString MapStr;
 		TC.Equal(true, MapField.ToJsonString(MapStr), "map does get");
 		TC.Equal(FString("{\"foo\":13,\"bar\":14}"), MapStr, "map does get correctly");
+		TC.Equal(true, MapField.SetFromJsonString("{\"qux\":15, \"quxx\":16, \"quxxx\": 17}"), "map does set");
+		if (TC.Equal(TestObj.M.Num(), 3, "map is set correct: Num()"))
+		{
+			TC.Equal(TestObj.M.Contains("qux"), true, "map is set correct: qux key");
+			TC.Equal(TestObj.M["qux"], 15, "map is set correct: qux value");
+			TC.Equal(TestObj.M.Contains("quxx"), true, "map is set correct: quxx key");
+			TC.Equal(TestObj.M["quxx"], 16, "map is set correct: quxx value");
+			TC.Equal(TestObj.M.Contains("quxxx"), true, "map is set correct: quxxx key");
+			TC.Equal(TestObj.M["quxxx"], 17, "map is set correct: quxxx value");
+		}
 	});
 	
 	return true;
