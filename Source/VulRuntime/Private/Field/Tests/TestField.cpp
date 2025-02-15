@@ -11,7 +11,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool TestField::RunTest(const FString& Parameters)
 {
-	VulTest::Case(this, "Basic field access", [](VulTest::TC TC)
+	VulTest::Case(this, "Field access", [](VulTest::TC TC)
 	{
 		FVulTestFieldType TestObj = {
 			.B = true,
@@ -69,6 +69,34 @@ bool TestField::RunTest(const FString& Parameters)
 			TC.Equal(TestObj.A[0], false, "arr is set correct [0]");
 			TC.Equal(TestObj.A[1], true, "arr is set correct [0]");
 		}
+	});
+
+	
+	VulTest::Case(this, "Field set usage", [](VulTest::TC TC)
+	{
+		FVulTestFieldType TestObj = {
+			.B = true,
+			.I = 13,
+			.S = "hello world",
+			.M = {{"foo", 13}, {"bar", 14}},
+			.A = {true, false, true},
+		};
+
+		FString ObjStr;
+		TC.Equal(true, TestObj.FieldSet().SerializeToJson(ObjStr), "serialize to json");
+		TC.Equal(
+			FString("{\"bool\":true,\"int\":13,\"string\":\"hello world\",\"map\":{\"foo\":13,\"bar\":14},\"array\":[true,false,true]}"),
+			ObjStr,
+			"serialize to json: string correct"
+		);
+
+		FString NewJson = "{\"bool\":false,\"int\":5,\"string\":\"hi\",\"map\":{\"qux\":10},\"array\":[true, true, true, false]}";
+		TC.Equal(true, TestObj.FieldSet().DeserializeFromJson(NewJson), "deserialize from json");
+		TC.Equal(false, TestObj.B, "deserialize from json: bool");
+		TC.Equal(5, TestObj.I, "deserialize from json: int");
+		TC.Equal(FString("hi"), TestObj.S, "deserialize from json: str");
+		TC.Equal(TMap<FString, int>{{"qux", 10}}, TestObj.M, "deserialize from json: map");
+		TC.Equal(TArray{true, true, true, false}, TestObj.A, "deserialize from json: array");
 	});
 	
 	return true;

@@ -53,14 +53,14 @@ namespace VulTest
 			TArray<KeyType> ActualKeys;
 			Actual.GetKeys(ActualKeys);
 
-			if (!Equal(ActualKeys, ExpectedKeys, Message + "TMap Keys"))
+			if (!Equal(ActualKeys, ExpectedKeys, Message + " TMap Keys"))
 			{
 				return false;
 			}
 
 			for (const auto& Entry : Expected)
 			{
-				if (!Equal(Actual[Entry.Key], Entry.Value, Message + "TMap entry"))
+				if (!Equal(Actual[Entry.Key], Entry.Value, Message + " TMap entry"))
 				{
 					return false;
 				}
@@ -90,6 +90,9 @@ namespace VulTest
 						Ok = false;
 					}
 				}
+			} else
+			{
+				Ok = false;
 			}
 
 			return Ok;

@@ -4,6 +4,19 @@
 #include "VulFieldSerializers.h"
 #include "UObject/Object.h"
 
+/**
+ * A field that can be conveniently serialized/deserialized.
+ *
+ * This is a wrapper around a pointer that allows Get and Set operations.
+ * For the de/serialization itself, FVulFieldSerializer must be implemented
+ * for the type you're wrapping.
+ *
+ * Note the FVulField and associated APIs deal with FJsonValue. This is the chosen
+ * portable intermediate representation, though the fields API has been
+ * designed to be a more generic de/serialization toolkit than just strictly JSON.
+ *
+ * When describing your types' fields, you'll likely want a VulFieldSet.
+ */
 struct FVulField
 {
 	template <typename T>
@@ -137,7 +150,6 @@ struct FVulField
 	{
 		TSharedPtr<FJsonValue> ParsedJson;
 		auto Reader = TJsonReaderFactory<CharType>::Create(JsonStr);
-
 		if (!FJsonSerializer::Deserialize(Reader, ParsedJson) || !ParsedJson.IsValid())
 		{
 			return false;
@@ -154,17 +166,13 @@ struct FVulField
 		{
 			return false;
 		}
-
-		FString OutputString;
-		auto Writer = TJsonWriterFactory<CharType, PrintPolicy>::Create(&OutputString);
-
+		
+		auto Writer = TJsonWriterFactory<CharType, PrintPolicy>::Create(&Out);
 		if (!FJsonSerializer::Serialize(Obj, "", Writer))
 		{
 			return false;
 		}
 
-		// Set the output string
-		Out = OutputString;
 		return true;
 	}
 
