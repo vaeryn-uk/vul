@@ -1,21 +1,6 @@
 ﻿#pragma once
-#include "FVulFieldSerializationContext.h"
 
-template <typename T>
-struct FVulFieldSerializer
-{
-	static bool Serialize(const T& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
-	{
-		static_assert(sizeof(T) == -1, "Error: " __FUNCSIG__ " is not defined.");
-		return nullptr;
-	}
-
-	static bool Deserialize(const TSharedPtr<FJsonValue>& Data, T& Out, FVulFieldDeserializationContext& Ctx)
-	{
-		static_assert(sizeof(T) == -1, "Error: " __FUNCSIG__ " is not defined.");
-		return false;
-	}
-};
+#include "VulFieldSerializationContext.h"
 
 template<>
 struct FVulFieldSerializer<bool>
@@ -86,7 +71,7 @@ struct FVulFieldSerializer<TArray<V>>
 		for (const auto Item : Value)
 		{
 			TSharedPtr<FJsonValue> ToAdd;
-			if (!FVulFieldSerializer<V>::Serialize(Item, ToAdd, Ctx))
+			if (!Ctx.Serialize<V>(Item, ToAdd, Ctx))
 			{
 				return false;
 			}
@@ -111,7 +96,7 @@ struct FVulFieldSerializer<TArray<V>>
 		for (const auto Entry : Data->AsArray())
 		{
 			V Value;
-			if (!FVulFieldSerializer<V>::Deserialize(Entry, Value, Ctx))
+			if (!Ctx.Deserialize<V>(Entry, Value, Ctx))
 			{
 				return false;
 			}
@@ -133,7 +118,7 @@ struct FVulFieldSerializer<TMap<K, V>>
 		for (const auto Entry : Value)
 		{
 			TSharedPtr<FJsonValue> ItemKey;
-			if (!FVulFieldSerializer<K>::Serialize(Entry.Key, ItemKey, Ctx))
+			if (!Ctx.Serialize<K>(Entry.Key, ItemKey, Ctx))
 			{
 				return false;
 			}
@@ -144,7 +129,7 @@ struct FVulFieldSerializer<TMap<K, V>>
 			}
 			
 			TSharedPtr<FJsonValue> ItemValue;
-			if (!FVulFieldSerializer<V>::Serialize(Entry.Value, ItemValue, Ctx))
+			if (!Ctx.Serialize<V>(Entry.Value, ItemValue, Ctx))
 			{
 				return false;
 			}
@@ -169,13 +154,13 @@ struct FVulFieldSerializer<TMap<K, V>>
 		for (const auto Entry : Data->AsObject()->Values)
 		{
 			K KeyToAdd;
-			if (!FVulFieldSerializer<K>::Deserialize(MakeShared<FJsonValueString>(Entry.Key), KeyToAdd, Ctx))
+			if (!Ctx.Deserialize<K>(MakeShared<FJsonValueString>(Entry.Key), KeyToAdd, Ctx))
 			{
 				return false;
 			}
 			
 			V ValueToAdd;
-			if (!FVulFieldSerializer<V>::Deserialize(Entry.Value, ValueToAdd, Ctx))
+			if (!Ctx.Deserialize<V>(Entry.Value, ValueToAdd, Ctx))
 			{
 				return false;
 			}

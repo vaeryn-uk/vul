@@ -1,7 +1,9 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
-#include "VulFieldSerializers.h"
+#include "VulFieldSerializer.h"
+#include "VulFieldCommonSerializers.h"
+#include "VulFieldSerializationContext.h"
 #include "UObject/Object.h"
 
 /**
@@ -26,11 +28,11 @@ struct FVulField
 		Out.Ptr = Ptr;
 		Out.Read = [](void* Ptr, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
 		{
-			return FVulFieldSerializer<T>::Serialize(*reinterpret_cast<T*>(Ptr), Out, Ctx);
+			return Ctx.Serialize<T>(*reinterpret_cast<T*>(Ptr), Out, Ctx);
 		};
 		Out.Write = [](const TSharedPtr<FJsonValue>& Value, void* Ptr, FVulFieldDeserializationContext& Ctx)
 		{
-			return FVulFieldSerializer<T>::Deserialize(Value, *reinterpret_cast<T*>(Ptr), Ctx);
+			return Ctx.Deserialize<T>(Value, *reinterpret_cast<T*>(Ptr), Ctx);
 		};
 		return Out;
 	}

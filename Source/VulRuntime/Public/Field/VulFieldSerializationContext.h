@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "VulFieldSerializer.h"
 #include "UObject/Object.h"
 
 struct FVulFieldSerializationErrors
@@ -36,11 +37,23 @@ struct FVulFieldSerializationErrors
 struct FVulFieldSerializationContext
 {
 	FVulFieldSerializationErrors Errors;
+
+	template <typename T>
+	bool Serialize(const T& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
+	{
+		return FVulFieldSerializer<T>::Serialize(Value, Out, Ctx);
+	}
 };
 
 struct FVulFieldDeserializationContext
 {
 	FVulFieldSerializationErrors Errors;
+
+	template<typename T>
+	bool Deserialize(const TSharedPtr<FJsonValue>& Data, T& Out, FVulFieldDeserializationContext& Ctx)
+	{
+		return FVulFieldSerializer<T>::Deserialize(Data, Out, Ctx);
+	}
 };
 
 FString JsonTypeToString(EJson Type)
