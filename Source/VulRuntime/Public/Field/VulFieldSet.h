@@ -14,7 +14,7 @@
  */
 struct FVulFieldSet
 {
-	void Add(const FVulField& Field, const FString& Identifier, bool ReadOnly = false);
+	void Add(const FVulField& Field, const FString& Identifier);
 
 	bool Serialize(TSharedPtr<FJsonValue>& Out) const;
 	bool Serialize(TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx) const;
@@ -61,12 +61,5 @@ struct FVulFieldSet
 		return DeserializeFromJson<CharType>(JsonStr, Ctx);
 	}
 private:
-	struct FFieldDescription
-	{
-		FVulField Field;
-		bool ReadOnly = false;
-		FString Identifier;
-	};
-
-	TMap<FString, FFieldDescription> Fields;
+	TMap<FString, FVulField> Fields;
 };

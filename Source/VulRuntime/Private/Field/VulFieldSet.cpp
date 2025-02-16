@@ -1,8 +1,8 @@
 ﻿#include "Field/VulFieldSet.h"
 
-void FVulFieldSet::Add(const FVulField& Field, const FString& Identifier, bool ReadOnly)
+void FVulFieldSet::Add(const FVulField& Field, const FString& Identifier)
 {
-	Fields.Add(Identifier, {.Field = Field, .ReadOnly = ReadOnly, .Identifier = Identifier});
+	Fields.Add(Identifier, Field);
 }
 
 bool FVulFieldSet::Serialize(TSharedPtr<FJsonValue>& Out) const
@@ -15,15 +15,15 @@ bool FVulFieldSet::Serialize(TSharedPtr<FJsonValue>& Out, FVulFieldSerialization
 {
 	auto Obj = MakeShared<FJsonObject>();
 	
-	for (const auto Field : Fields)
+	for (const auto Entry : Fields)
 	{
 		TSharedPtr<FJsonValue> JsonValue;
-		if (!Field.Value.Field.Serialize(JsonValue, Ctx))
+		if (!Entry.Value.Serialize(JsonValue, Ctx))
 		{
 			return false;
 		}
 		
-		Obj->Values.Add(Field.Key, JsonValue);
+		Obj->Values.Add(Entry.Key, JsonValue);
 	}
 
 	Out = MakeShared<FJsonValueObject>(Obj);
@@ -46,12 +46,12 @@ bool FVulFieldSet::Deserialize(const TSharedPtr<FJsonValue>& Data, FVulFieldDese
 	
 	for (const auto Entry : (*Obj)->Values)
 	{
-		if (!Fields.Contains(Entry.Key) || Fields[Entry.Key].ReadOnly)
+		if (!Fields.Contains(Entry.Key) || Fields[Entry.Key].IsReadOnly())
 		{
 			continue;
 		}
 
-		if (!Fields[Entry.Key].Field.Deserialize(Entry.Value, Ctx))
+		if (!Fields[Entry.Key].Deserialize(Entry.Value, Ctx))
 		{
 			return false;
 		}

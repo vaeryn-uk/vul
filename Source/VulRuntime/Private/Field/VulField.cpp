@@ -21,3 +21,8 @@ bool FVulField::Serialize(TSharedPtr<FJsonValue>& Out, FVulFieldSerializationCon
 {
 	return Read(Ptr, Out, Ctx);
 }
+
+bool FVulField::IsReadOnly() const
+{
+	return bIsReadOnly;
+}

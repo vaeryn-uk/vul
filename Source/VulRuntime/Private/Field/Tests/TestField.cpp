@@ -127,7 +127,6 @@ bool TestField::RunTest(const FString& Parameters)
 		TC.Equal(TArray{true, true, true, false}, TestParent.Inner.A, "deserialize from json: array");
 	});
 	
-	
 	VulTest::Case(this, "TOptional", [](VulTest::TC TC)
 	{
 		TOptional<FString> OptStr = {};
@@ -144,6 +143,35 @@ bool TestField::RunTest(const FString& Parameters)
 
 		TC.Equal(FVulField::Create(&OptStr).Deserialize(MakeShared<FJsonValueNull>()), true, "null does deserialize");
 		TC.Equal(!OptStr.IsSet(), true, "str is not set");
+	});
+	
+	VulTest::Case(this, "Read Only fields", [](VulTest::TC TC)
+	{
+		struct FTestType
+		{
+			FString Str1;
+			FString Str2;
+		};
+
+		FTestType Struct = {.Str1 = "foo", .Str2 = "bar"};
+
+		FVulFieldSet FieldSet;
+		FieldSet.Add(FVulField::Create(Struct.Str1), "str1");
+		FieldSet.Add(FVulField::Create(&Struct.Str2), "str2");
+
+		FString JsonStr;
+		if (TC.Equal(FieldSet.SerializeToJson(JsonStr), true, "serialize"))
+		{
+			TC.Equal(JsonStr, FString("{\"str1\":\"foo\",\"str2\":\"bar\"}"), "serialize correctly");
+		}
+
+		if (TC.Equal(FieldSet.DeserializeFromJson("{\"str1\":\"foo2\",\"str2\":\"bar2\"}"), true, "deserialize"))
+		{
+			TC.Equal(Struct.Str1, FString("foo"), "deserialize: str1 is unchanged");
+			TC.Equal(Struct.Str2, FString("bar2"), "deserialize: str2 is unchanged");
+		}
+
+		TC.Equal(FVulField::Create(Struct.Str1).DeserializeFromJson("\"somestr\""), false, "direct deserialize fails");
 	});
 	
 	return true;

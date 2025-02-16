@@ -21,6 +21,9 @@
  */
 struct FVulField
 {
+	/**
+	 * Define a field that can serialized and deserialized.
+	 */
 	template <typename T>
 	static FVulField Create(T* Ptr)
 	{
@@ -33,6 +36,28 @@ struct FVulField
 		Out.Write = [](const TSharedPtr<FJsonValue>& Value, void* Ptr, FVulFieldDeserializationContext& Ctx)
 		{
 			return Ctx.Deserialize<T>(Value, *reinterpret_cast<T*>(Ptr));
+		};
+		return Out;
+	}
+	
+	/**
+	 * Define a field that can only be serialized. This field will be ignored when deserializing
+	 * from a field set, and direct attempts to deserialize this will fail.
+	 */
+	template <typename T>
+	static FVulField Create(const T& Ptr)
+	{
+		FVulField Out;
+		Out.bIsReadOnly = true;
+		Out.Ptr = const_cast<T*>(&Ptr); // const cast to satisfy Ptr. We won't ever write to this, however.
+		Out.Read = [](void* Ptr, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
+		{
+			return Ctx.Serialize<T>(*reinterpret_cast<T*>(Ptr), Out);
+		};
+		Out.Write = [](const TSharedPtr<FJsonValue>& Value, void* Ptr, FVulFieldDeserializationContext& Ctx)
+		{
+			Ctx.Errors.Add(TEXT("cannot write read-only field"));
+			return false;
 		};
 		return Out;
 	}
@@ -100,7 +125,10 @@ struct FVulField
 		return SerializeToJson<CharType, PrintPolicy>(Out, Ctx);
 	}
 
+	bool IsReadOnly() const;
+
 private:
+	bool bIsReadOnly = false;
 	void* Ptr = nullptr;
 	TFunction<bool (void*, TSharedPtr<FJsonValue>&, FVulFieldSerializationContext& Ctx)> Read;
 	TFunction<bool (const TSharedPtr<FJsonValue>&, void*, FVulFieldDeserializationContext& Ctx)> Write;
