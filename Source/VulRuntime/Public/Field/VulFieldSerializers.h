@@ -76,3 +76,49 @@ struct FVulFieldSerializer<FString>
 		return Ctx.Errors.AddIfNot(Data->TryGetString(Out), TEXT("serialized data is not a string"));
 	}
 };
+
+template<typename V>
+struct FVulFieldSerializer<TArray<V>>
+{
+	static bool Serialize(const TArray<V>& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
+	{
+		TArray<TSharedPtr<FJsonValue>> ArrayItems;
+		for (const auto Item : Value)
+		{
+			TSharedPtr<FJsonValue> ToAdd;
+			if (!FVulFieldSerializer<V>::Serialize(Item, ToAdd, Ctx))
+			{
+				return false;
+			}
+
+			ArrayItems.Add(ToAdd);
+		}
+
+		Out = MakeShared<FJsonValueArray>(ArrayItems);
+		
+		return true;
+	}
+	
+	static bool Deserialize(const TSharedPtr<FJsonValue>& Data, TArray<V>& Out, FVulFieldDeserializationContext& Ctx)
+	{
+		if (!Ctx.Errors.RequireJsonType(Data, EJson::Array))
+		{
+			return false;
+		}
+		
+		Out.Reset();
+
+		for (const auto Entry : Data->AsArray())
+		{
+			V Value;
+			if (!FVulFieldSerializer<V>::Deserialize(Entry, Value, Ctx))
+			{
+				return false;
+			}
+
+			Out.Add(Value);
+		}
+		
+		return true;
+	}
+};

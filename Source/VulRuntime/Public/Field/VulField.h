@@ -34,56 +34,6 @@ struct FVulField
 		};
 		return Out;
 	}
-	template <typename V>
-	static FVulField Create(TArray<V>* Ptr)
-	{
-		FVulField Out;
-		Out.Ptr = Ptr;
-		Out.Read = [](void* Ptr, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
-		{
-			TArray<TSharedPtr<FJsonValue>> Array;
-
-			for (const auto& Entry : *reinterpret_cast<TArray<V>*>(Ptr))
-			{
-				TSharedPtr<FJsonValue> Item;
-				if (!FVulFieldSerializer<V>::Serialize(Entry, Item, Ctx))
-				{
-					return false;
-				}
-				
-				Array.Add(Item);
-			}
-
-			Out = MakeShared<FJsonValueArray>(Array);
-
-			return true;
-		};
-		Out.Write = [](const TSharedPtr<FJsonValue>& Value, void* Ptr, FVulFieldDeserializationContext& Ctx)
-		{
-			TArray<V>* Array = reinterpret_cast<TArray<V>*>(Ptr);
-			Array->Reset();
-
-			if (!Ctx.Errors.RequireJsonType(Value, EJson::Array))
-			{
-				return false;
-			}
-
-			for (const auto Entry : Value->AsArray())
-			{
-				V ValueObj;
-				if (!FVulFieldSerializer<V>::Deserialize(Entry, ValueObj, Ctx))
-				{
-					return false;
-				}
-
-				Array->Add(ValueObj);
-			}
-
-			return true;
-		};
-		
-		return Out;
-	}
 	
 	template <typename K, typename V>
 	static FVulField Create(TMap<K, V>* Ptr)
@@ -163,8 +113,6 @@ struct FVulField
 	 */
 	template <typename T>
 	static FVulField Create(const T* Ptr) { return Create<T>(const_cast<T*>(Ptr)); }
-	template <typename V>
-	static FVulField Create(const TArray<V>* Ptr) { return Create<V>(const_cast<TArray<V>*>(Ptr)); }
 	template <typename K, typename V>
 	static FVulField Create(const TMap<K, V>* Ptr) { return Create<K, V>(const_cast<TMap<K, V>*>(Ptr)); }
 
