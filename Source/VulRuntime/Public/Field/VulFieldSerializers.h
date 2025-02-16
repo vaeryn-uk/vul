@@ -122,3 +122,67 @@ struct FVulFieldSerializer<TArray<V>>
 		return true;
 	}
 };
+
+template <typename K, typename V>
+struct FVulFieldSerializer<TMap<K, V>>
+{
+	static bool Serialize(const TMap<K, V>& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
+	{
+		auto OutObj = MakeShared<FJsonObject>();
+		
+		for (const auto Entry : Value)
+		{
+			TSharedPtr<FJsonValue> ItemKey;
+			if (!FVulFieldSerializer<K>::Serialize(Entry.Key, ItemKey, Ctx))
+			{
+				return false;
+			}
+
+			if (!Ctx.Errors.RequireJsonType(ItemKey, EJson::String))
+			{
+				return false;
+			}
+			
+			TSharedPtr<FJsonValue> ItemValue;
+			if (!FVulFieldSerializer<V>::Serialize(Entry.Value, ItemValue, Ctx))
+			{
+				return false;
+			}
+
+			OutObj->Values.Add(ItemKey->AsString(), ItemValue);
+		}
+
+		Out = MakeShared<FJsonValueObject>(OutObj);
+
+		return true;
+	}
+	
+	static bool Deserialize(const TSharedPtr<FJsonValue>& Data, TMap<K, V>& Out, FVulFieldDeserializationContext& Ctx)
+	{
+		if (!Ctx.Errors.RequireJsonType(Data, EJson::Object))
+		{
+			return false;
+		}
+
+		Out.Reset();
+
+		for (const auto Entry : Data->AsObject()->Values)
+		{
+			K KeyToAdd;
+			if (!FVulFieldSerializer<K>::Deserialize(MakeShared<FJsonValueString>(Entry.Key), KeyToAdd, Ctx))
+			{
+				return false;
+			}
+			
+			V ValueToAdd;
+			if (!FVulFieldSerializer<V>::Deserialize(Entry.Value, ValueToAdd, Ctx))
+			{
+				return false;
+			}
+
+			Out.Add(KeyToAdd, ValueToAdd);
+		}
+		
+		return true;
+	}
+};

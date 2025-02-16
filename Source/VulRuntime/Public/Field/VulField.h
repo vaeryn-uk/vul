@@ -34,74 +34,6 @@ struct FVulField
 		};
 		return Out;
 	}
-	
-	template <typename K, typename V>
-	static FVulField Create(TMap<K, V>* Ptr)
-	{
-		FVulField Out;
-		Out.Ptr = Ptr;
-		Out.Read = [](void* Ptr, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
-		{
-			auto Obj = MakeShared<FJsonObject>();
-
-			for (const auto& Entry : *reinterpret_cast<TMap<K, V>*>(Ptr))
-			{
-				TSharedPtr<FJsonValue> KeyJson;
-				if (!FVulFieldSerializer<K>::Serialize(Entry.Key, KeyJson, Ctx))
-				{
-					return false;
-				}
-
-				if (!Ctx.Errors.RequireJsonType(KeyJson, EJson::String))
-				{
-					return false;
-				}
-
-				TSharedPtr<FJsonValue> ValueJson;
-				if (!FVulFieldSerializer<V>::Serialize(Entry.Value, ValueJson, Ctx))
-				{
-					return false;
-				}
-				
-				Obj->Values.Add(KeyJson->AsString(), ValueJson);
-			}
-
-			Out = MakeShared<FJsonValueObject>(Obj);
-
-			return true;
-		};
-		Out.Write = [](const TSharedPtr<FJsonValue>& Value, void* Ptr, FVulFieldDeserializationContext& Ctx)
-		{
-			TMap<K, V>* Map = reinterpret_cast<TMap<K, V>*>(Ptr);
-			Map->Reset();
-
-			if (!Ctx.Errors.RequireJsonType(Value, EJson::Object))
-			{
-				return false;
-			}
-
-			for (const auto Entry : Value->AsObject()->Values)
-			{
-				K Key;
-				if (!FVulFieldSerializer<K>::Deserialize(MakeShared<FJsonValueString>(Entry.Key), Key, Ctx))
-				{
-					return false;
-				}
-
-				V ValueObj;
-				if (!FVulFieldSerializer<V>::Deserialize(Entry.Value, ValueObj, Ctx))
-				{
-					return false;
-				}
-
-				Map->Add(Key, ValueObj);
-			}
-
-			return true;
-		};
-		
-		return Out;
-	}
 
 	/**
 	 * Overloads that allow for declaration of FVulFields in const contexts.
@@ -113,8 +45,6 @@ struct FVulField
 	 */
 	template <typename T>
 	static FVulField Create(const T* Ptr) { return Create<T>(const_cast<T*>(Ptr)); }
-	template <typename K, typename V>
-	static FVulField Create(const TMap<K, V>* Ptr) { return Create<K, V>(const_cast<TMap<K, V>*>(Ptr)); }
 
 	bool Deserialize(const TSharedPtr<FJsonValue>& Value);
 	bool Deserialize(const TSharedPtr<FJsonValue>& Value, FVulFieldDeserializationContext& Ctx);
