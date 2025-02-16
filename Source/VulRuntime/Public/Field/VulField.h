@@ -24,15 +24,13 @@ struct FVulField
 	{
 		FVulField Out;
 		Out.Ptr = Ptr;
-		Out.Read = [](void* Ptr, TSharedPtr<FJsonValue>& Out)
+		Out.Read = [](void* Ptr, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
 		{
-			Out = FVulFieldSerializer<T>::Serialize(*reinterpret_cast<T*>(Ptr));
-
-			return true;
+			return FVulFieldSerializer<T>::Serialize(*reinterpret_cast<T*>(Ptr), Out, Ctx);
 		};
-		Out.Write = [](const TSharedPtr<FJsonValue>& Value, void* Ptr)
+		Out.Write = [](const TSharedPtr<FJsonValue>& Value, void* Ptr, FVulFieldDeserializationContext& Ctx)
 		{
-			return FVulFieldSerializer<T>::Deserialize(Value, *reinterpret_cast<T*>(Ptr));
+			return FVulFieldSerializer<T>::Deserialize(Value, *reinterpret_cast<T*>(Ptr), Ctx);
 		};
 		return Out;
 	}
@@ -41,34 +39,39 @@ struct FVulField
 	{
 		FVulField Out;
 		Out.Ptr = Ptr;
-		Out.Read = [](void* Ptr, TSharedPtr<FJsonValue>& Out)
+		Out.Read = [](void* Ptr, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
 		{
 			TArray<TSharedPtr<FJsonValue>> Array;
 
 			for (const auto& Entry : *reinterpret_cast<TArray<V>*>(Ptr))
 			{
-				Array.Add(FVulFieldSerializer<V>::Serialize(Entry));
+				TSharedPtr<FJsonValue> Item;
+				if (!FVulFieldSerializer<V>::Serialize(Entry, Item, Ctx))
+				{
+					return false;
+				}
+				
+				Array.Add(Item);
 			}
 
 			Out = MakeShared<FJsonValueArray>(Array);
 
 			return true;
 		};
-		Out.Write = [](const TSharedPtr<FJsonValue>& Value, void* Ptr)
+		Out.Write = [](const TSharedPtr<FJsonValue>& Value, void* Ptr, FVulFieldDeserializationContext& Ctx)
 		{
 			TArray<V>* Array = reinterpret_cast<TArray<V>*>(Ptr);
 			Array->Reset();
 
-			TArray<TSharedPtr<FJsonValue>>* JsonArray;
-			if (Value->Type != EJson::Array || !Value->TryGetArray(JsonArray))
+			if (!Ctx.Errors.RequireJsonType(Value, EJson::Array))
 			{
 				return false;
 			}
 
-			for (const auto Entry : *JsonArray)
+			for (const auto Entry : Value->AsArray())
 			{
 				V ValueObj;
-				if (!FVulFieldSerializer<V>::Deserialize(Entry, ValueObj))
+				if (!FVulFieldSerializer<V>::Deserialize(Entry, ValueObj, Ctx))
 				{
 					return false;
 				}
@@ -87,48 +90,56 @@ struct FVulField
 	{
 		FVulField Out;
 		Out.Ptr = Ptr;
-		Out.Read = [](void* Ptr, TSharedPtr<FJsonValue>& Out)
+		Out.Read = [](void* Ptr, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
 		{
 			auto Obj = MakeShared<FJsonObject>();
 
 			for (const auto& Entry : *reinterpret_cast<TMap<K, V>*>(Ptr))
 			{
-				const auto KeyJson = FVulFieldSerializer<K>::Serialize(Entry.Key);
-				
-				FString KeyStr;
-				if (KeyJson->Type != EJson::String || !KeyJson->TryGetString(KeyStr))
+				TSharedPtr<FJsonValue> KeyJson;
+				if (!FVulFieldSerializer<K>::Serialize(Entry.Key, KeyJson, Ctx))
 				{
 					return false;
 				}
 
-				Obj->Values.Add(KeyStr, FVulFieldSerializer<V>::Serialize(Entry.Value));
+				if (!Ctx.Errors.RequireJsonType(KeyJson, EJson::String))
+				{
+					return false;
+				}
+
+				TSharedPtr<FJsonValue> ValueJson;
+				if (!FVulFieldSerializer<V>::Serialize(Entry.Value, ValueJson, Ctx))
+				{
+					return false;
+				}
+				
+				Obj->Values.Add(KeyJson->AsString(), ValueJson);
 			}
 
 			Out = MakeShared<FJsonValueObject>(Obj);
 
 			return true;
 		};
-		Out.Write = [](const TSharedPtr<FJsonValue>& Value, void* Ptr)
+		Out.Write = [](const TSharedPtr<FJsonValue>& Value, void* Ptr, FVulFieldDeserializationContext& Ctx)
 		{
 			TMap<K, V>* Map = reinterpret_cast<TMap<K, V>*>(Ptr);
 			Map->Reset();
 
-			TSharedPtr<FJsonObject>* Obj;
-			if (Value->Type != EJson::Object || !Value->TryGetObject(Obj))
+			if (!Ctx.Errors.RequireJsonType(Value, EJson::Object))
 			{
 				return false;
 			}
 
-			for (const auto Entry : (*Obj)->Values)
+			for (const auto Entry : Value->AsObject()->Values)
 			{
 				K Key;
-				if (!FVulFieldSerializer<K>::Deserialize(MakeShared<FJsonValueString>(Entry.Key), Key))
+				if (!FVulFieldSerializer<K>::Deserialize(MakeShared<FJsonValueString>(Entry.Key), Key, Ctx))
 				{
 					return false;
 				}
 
 				V ValueObj;
-				if (!FVulFieldSerializer<V>::Deserialize(Entry.Value, ValueObj))
+				if (!FVulFieldSerializer<V>::Deserialize(Entry.Value, ValueObj, Ctx))
 				{
 					return false;
 				}
@@ -157,27 +168,37 @@ struct FVulField
 	template <typename K, typename V>
 	static FVulField Create(const TMap<K, V>* Ptr) { return Create<K, V>(const_cast<TMap<K, V>*>(Ptr)); }
 
-	bool Set(const TSharedPtr<FJsonValue>& Value) { return Write(Value, Ptr); }
-	bool Get(TSharedPtr<FJsonValue>& Out) const { return Read(Ptr, Out); }
+	bool Deserialize(const TSharedPtr<FJsonValue>& Value);
+	bool Deserialize(const TSharedPtr<FJsonValue>& Value, FVulFieldDeserializationContext& Ctx);
+	bool Serialize(TSharedPtr<FJsonValue>& Out) const;
+	bool Serialize(TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx) const;
 
 	template <typename CharType = TCHAR>
-	bool SetFromJsonString(const FString& JsonStr)
+	bool DeserializeFromJson(const FString& JsonStr, FVulFieldDeserializationContext& Ctx)
 	{
 		TSharedPtr<FJsonValue> ParsedJson;
 		auto Reader = TJsonReaderFactory<CharType>::Create(JsonStr);
 		if (!FJsonSerializer::Deserialize(Reader, ParsedJson) || !ParsedJson.IsValid())
 		{
+			Ctx.Errors.Add(TEXT("cannot parse invalid JSON string"));
 			return false;
 		}
 
-		return Set(ParsedJson);
+		return Deserialize(ParsedJson, Ctx);
+	}
+	
+	template <typename CharType = TCHAR>
+	bool DeserializeFromJson(const FString& JsonStr)
+	{
+		FVulFieldDeserializationContext Ctx;
+		return DeserializeFromJson<CharType>(JsonStr, Ctx);
 	}
 
 	template <typename CharType = TCHAR, typename PrintPolicy = TCondensedJsonPrintPolicy<CharType>>
-	bool ToJsonString(FString& Out) const
+	bool SerializeToJson(FString& Out, FVulFieldSerializationContext& Ctx) const
 	{
 		TSharedPtr<FJsonValue> Obj;
-		if (!Get(Obj) || !Obj.IsValid())
+		if (!Serialize(Obj, Ctx) || !Obj.IsValid())
 		{
 			return false;
 		}
@@ -185,14 +206,22 @@ struct FVulField
 		auto Writer = TJsonWriterFactory<CharType, PrintPolicy>::Create(&Out);
 		if (!FJsonSerializer::Serialize(Obj, "", Writer))
 		{
+			Ctx.Errors.Add(TEXT("serialization of JSON string failed"));
 			return false;
 		}
 
 		return true;
 	}
+	
+	template <typename CharType = TCHAR, typename PrintPolicy = TCondensedJsonPrintPolicy<CharType>>
+	bool SerializeToJson(FString& Out) const
+	{
+		FVulFieldSerializationContext Ctx;
+		return SerializeToJson<CharType, PrintPolicy>(Out, Ctx);
+	}
 
 private:
 	void* Ptr = nullptr;
-	TFunction<bool (void*, TSharedPtr<FJsonValue>&)> Read;
-	TFunction<bool (const TSharedPtr<FJsonValue>&, void*)> Write;
+	TFunction<bool (void*, TSharedPtr<FJsonValue>&, FVulFieldSerializationContext& Ctx)> Read;
+	TFunction<bool (const TSharedPtr<FJsonValue>&, void*, FVulFieldDeserializationContext& Ctx)> Write;
 };

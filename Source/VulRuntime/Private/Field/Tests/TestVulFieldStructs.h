@@ -52,14 +52,13 @@ struct FVulTestFieldParent
 template<>
 struct FVulFieldSerializer<FVulTestFieldType>
 {
-	static TSharedPtr<FJsonValue> Serialize(const FVulTestFieldType& T)
+	static bool Serialize(const FVulTestFieldType& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
 	{
-		TSharedPtr<FJsonValue> Out;
-		return T.FieldSet().Serialize(Out) ? Out : nullptr;
+		return Value.FieldSet().Serialize(Out, Ctx);
 	}
 
-	static bool Deserialize(const TSharedPtr<FJsonValue>& Data, FVulTestFieldType& Out)
+	static bool Deserialize(const TSharedPtr<FJsonValue>& Data, FVulTestFieldType& Out, FVulFieldDeserializationContext& Ctx)
 	{
-		return Out.FieldSet().Deserialize(Data);
+		return Out.FieldSet().Deserialize(Data, Ctx);
 	}
 };

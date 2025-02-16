@@ -24,31 +24,31 @@ bool TestField::RunTest(const FString& Parameters)
 		TSharedPtr<FJsonValue> Value;
 	
 		auto BoolField = FVulField::Create(&TestObj.B);
-		TC.Equal(true, BoolField.Get(Value), "bool does get");
+		TC.Equal(true, BoolField.Serialize(Value), "bool does get");
 		TC.Equal(true, Value->AsBool(), "bool does get correctly");
-		TC.Equal(true, BoolField.Set(MakeShared<FJsonValueBoolean>(false)), "bool does set");
+		TC.Equal(true, BoolField.Deserialize(MakeShared<FJsonValueBoolean>(false)), "bool does set");
 		TC.Equal(false, TestObj.B, "bool is set correctly");
-		TC.Equal(false, BoolField.Set(MakeShared<FJsonValueNumber>(13)), "bool rejects non-bool");
+		TC.Equal(false, BoolField.Deserialize(MakeShared<FJsonValueNumber>(13)), "bool rejects non-bool");
 	
 		auto IntField = FVulField::Create(&TestObj.I);
-		TC.Equal(true, IntField.Get(Value), "int does get");
+		TC.Equal(true, IntField.Serialize(Value), "int does get");
 		TC.Equal(13.0, Value->AsNumber(), "int does get correctly");
-		TC.Equal(true, IntField.Set(MakeShared<FJsonValueNumber>(26)), "int does set");
+		TC.Equal(true, IntField.Deserialize(MakeShared<FJsonValueNumber>(26)), "int does set");
 		TC.Equal(26, TestObj.I, "int is set correctly");
-		TC.Equal(false, IntField.Set(MakeShared<FJsonValueBoolean>(false)), "int rejects non-int");
+		TC.Equal(false, IntField.Deserialize(MakeShared<FJsonValueBoolean>(false)), "int rejects non-int");
 	
 		auto StringField = FVulField::Create(&TestObj.S);
-		TC.Equal(true, StringField.Get(Value), "str does get");
+		TC.Equal(true, StringField.Serialize(Value), "str does get");
 		TC.Equal(FString("hello world"), Value->AsString(), "str does get correctly");
-		TC.Equal(true, StringField.Set(MakeShared<FJsonValueString>("goodbye")), "str does set");
+		TC.Equal(true, StringField.Deserialize(MakeShared<FJsonValueString>("goodbye")), "str does set");
 		TC.Equal(FString("goodbye"), TestObj.S, "str is set correctly");
-		TC.Equal(false, StringField.Set(MakeShared<FJsonValueBoolean>(false)), "str rejects non-str");
+		TC.Equal(false, StringField.Deserialize(MakeShared<FJsonValueBoolean>(false)), "str rejects non-str");
 	
 		auto MapField = FVulField::Create(&TestObj.M);
 		FString MapStr;
-		TC.Equal(true, MapField.ToJsonString(MapStr), "map does get");
+		TC.Equal(true, MapField.SerializeToJson(MapStr), "map does get");
 		TC.Equal(FString("{\"foo\":13,\"bar\":14}"), MapStr, "map does get correctly");
-		TC.Equal(true, MapField.SetFromJsonString("{\"qux\":15, \"quxx\":16, \"quxxx\": 17}"), "map does set");
+		TC.Equal(true, MapField.DeserializeFromJson("{\"qux\":15, \"quxx\":16, \"quxxx\": 17}"), "map does set");
 		if (TC.Equal(TestObj.M.Num(), 3, "map is set correct: Num()"))
 		{
 			TC.Equal(TestObj.M.Contains("qux"), true, "map is set correct: qux key");
@@ -61,9 +61,9 @@ bool TestField::RunTest(const FString& Parameters)
 	
 		auto ArrayField = FVulField::Create(&TestObj.A);
 		FString ArrayStr;
-		TC.Equal(true, ArrayField.ToJsonString(MapStr), "arr does get");
+		TC.Equal(true, ArrayField.SerializeToJson(MapStr), "arr does get");
 		TC.Equal(FString("[true,false,true]"), MapStr, "arr does get correctly");
-		TC.Equal(true, ArrayField.SetFromJsonString("[false,true]"), "arr does set");
+		TC.Equal(true, ArrayField.DeserializeFromJson("[false,true]"), "arr does set");
 		if (TC.Equal(TestObj.A.Num(), 2, "arr is set correct: Num()"))
 		{
 			TC.Equal(TestObj.A[0], false, "arr is set correct [0]");

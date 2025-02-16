@@ -1,15 +1,16 @@
 ﻿#pragma once
+#include "FVulFieldSerializationContext.h"
 
 template <typename T>
 struct FVulFieldSerializer
 {
-	static TSharedPtr<FJsonValue> Serialize(const T&)
+	static bool Serialize(const T& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
 	{
 		static_assert(sizeof(T) == -1, "Error: " __FUNCSIG__ " is not defined.");
 		return nullptr;
 	}
 
-	static bool Deserialize(const TSharedPtr<FJsonValue>&, T&)
+	static bool Deserialize(const TSharedPtr<FJsonValue>& Data, T& Out, FVulFieldDeserializationContext& Ctx)
 	{
 		static_assert(sizeof(T) == -1, "Error: " __FUNCSIG__ " is not defined.");
 		return false;
@@ -19,29 +20,59 @@ struct FVulFieldSerializer
 template<>
 struct FVulFieldSerializer<bool>
 {
-	static TSharedPtr<FJsonValue> Serialize(const bool& Value) { return MakeShared<FJsonValueBoolean>(Value); }
-	static bool Deserialize(const TSharedPtr<FJsonValue>& Json, bool& OutValue)
+	static bool Serialize(const bool& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
 	{
-		return Json->Type == EJson::Boolean && Json->TryGetBool(OutValue);
+		Out = MakeShared<FJsonValueBoolean>(Value);
+		return true;
+	}
+	
+	static bool Deserialize(const TSharedPtr<FJsonValue>& Data, bool& Out, FVulFieldDeserializationContext& Ctx)
+	{
+		if (!Ctx.Errors.RequireJsonType(Data, EJson::Boolean))
+		{
+			return false;
+		}
+
+		return Ctx.Errors.AddIfNot(Data->TryGetBool(Out), TEXT("serialized data is not a bool"));
 	}
 };
 
 template<>
 struct FVulFieldSerializer<int>
 {
-	static TSharedPtr<FJsonValue> Serialize(const int& Value) { return MakeShared<FJsonValueNumber>(Value); }
-	static bool Deserialize(const TSharedPtr<FJsonValue>& Json, int& OutValue)
+	static bool Serialize(const int& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
 	{
-		return Json->Type == EJson::Number && Json->TryGetNumber(OutValue);
+		Out = MakeShared<FJsonValueNumber>(Value);
+		return true;
+	}
+	
+	static bool Deserialize(const TSharedPtr<FJsonValue>& Data, int& Out, FVulFieldDeserializationContext& Ctx)
+	{
+		if (!Ctx.Errors.RequireJsonType(Data, EJson::Number))
+		{
+			return false;
+		}
+
+		return Ctx.Errors.AddIfNot(Data->TryGetNumber(Out), TEXT("serialized data is not a number"));
 	}
 };
 
 template<>
 struct FVulFieldSerializer<FString>
 {
-	static TSharedPtr<FJsonValue> Serialize(const FString& Value) { return MakeShared<FJsonValueString>(Value); }
-	static bool Deserialize(const TSharedPtr<FJsonValue>& Json, FString& OutValue)
-	{ 
-		return Json->Type == EJson::String && Json->TryGetString(OutValue);
+	static bool Serialize(const FString& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
+	{
+		Out = MakeShared<FJsonValueString>(Value);
+		return true;
+	}
+	
+	static bool Deserialize(const TSharedPtr<FJsonValue>& Data, FString& Out, FVulFieldDeserializationContext& Ctx)
+	{
+		if (!Ctx.Errors.RequireJsonType(Data, EJson::String))
+		{
+			return false;
+		}
+
+		return Ctx.Errors.AddIfNot(Data->TryGetString(Out), TEXT("serialized data is not a string"));
 	}
 };
