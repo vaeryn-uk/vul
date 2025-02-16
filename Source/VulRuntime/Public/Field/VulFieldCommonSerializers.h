@@ -71,7 +71,7 @@ struct FVulFieldSerializer<TArray<V>>
 		for (const auto Item : Value)
 		{
 			TSharedPtr<FJsonValue> ToAdd;
-			if (!Ctx.Serialize<V>(Item, ToAdd, Ctx))
+			if (!Ctx.Serialize<V>(Item, ToAdd))
 			{
 				return false;
 			}
@@ -96,7 +96,7 @@ struct FVulFieldSerializer<TArray<V>>
 		for (const auto Entry : Data->AsArray())
 		{
 			V Value;
-			if (!Ctx.Deserialize<V>(Entry, Value, Ctx))
+			if (!Ctx.Deserialize<V>(Entry, Value))
 			{
 				return false;
 			}
@@ -118,7 +118,7 @@ struct FVulFieldSerializer<TMap<K, V>>
 		for (const auto Entry : Value)
 		{
 			TSharedPtr<FJsonValue> ItemKey;
-			if (!Ctx.Serialize<K>(Entry.Key, ItemKey, Ctx))
+			if (!Ctx.Serialize<K>(Entry.Key, ItemKey))
 			{
 				return false;
 			}
@@ -129,7 +129,7 @@ struct FVulFieldSerializer<TMap<K, V>>
 			}
 			
 			TSharedPtr<FJsonValue> ItemValue;
-			if (!Ctx.Serialize<V>(Entry.Value, ItemValue, Ctx))
+			if (!Ctx.Serialize<V>(Entry.Value, ItemValue))
 			{
 				return false;
 			}
@@ -154,13 +154,13 @@ struct FVulFieldSerializer<TMap<K, V>>
 		for (const auto Entry : Data->AsObject()->Values)
 		{
 			K KeyToAdd;
-			if (!Ctx.Deserialize<K>(MakeShared<FJsonValueString>(Entry.Key), KeyToAdd, Ctx))
+			if (!Ctx.Deserialize<K>(MakeShared<FJsonValueString>(Entry.Key), KeyToAdd))
 			{
 				return false;
 			}
 			
 			V ValueToAdd;
-			if (!Ctx.Deserialize<V>(Entry.Value, ValueToAdd, Ctx))
+			if (!Ctx.Deserialize<V>(Entry.Value, ValueToAdd))
 			{
 				return false;
 			}
@@ -168,6 +168,39 @@ struct FVulFieldSerializer<TMap<K, V>>
 			Out.Add(KeyToAdd, ValueToAdd);
 		}
 		
+		return true;
+	}
+};
+
+template <typename T>
+struct FVulFieldSerializer<TOptional<T>>
+{
+	static bool Serialize(const TOptional<T>& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
+	{
+		if (!Value.IsSet())
+		{
+			Out = MakeShared<FJsonValueNull>();
+			return true;
+		}
+
+		return Ctx.Serialize<T>(Value.GetValue(), Out);
+	}
+
+	static bool Deserialize(const TSharedPtr<FJsonValue>& Data, TOptional<T>& Out, FVulFieldDeserializationContext& Ctx)
+	{
+		if (Data->Type == EJson::Null)
+		{
+			Out = TOptional<T>{};
+			return true;
+		}
+
+		T Inner;
+		if (!Ctx.Deserialize<T>(Data, Inner))
+		{
+			return false;
+		}
+
+		Out = Inner;
 		return true;
 	}
 };

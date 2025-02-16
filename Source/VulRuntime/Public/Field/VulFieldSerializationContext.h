@@ -39,9 +39,9 @@ struct FVulFieldSerializationContext
 	FVulFieldSerializationErrors Errors;
 
 	template <typename T>
-	bool Serialize(const T& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
+	bool Serialize(const T& Value, TSharedPtr<FJsonValue>& Out)
 	{
-		return FVulFieldSerializer<T>::Serialize(Value, Out, Ctx);
+		return FVulFieldSerializer<T>::Serialize(Value, Out, *this);
 	}
 };
 
@@ -50,9 +50,9 @@ struct FVulFieldDeserializationContext
 	FVulFieldSerializationErrors Errors;
 
 	template<typename T>
-	bool Deserialize(const TSharedPtr<FJsonValue>& Data, T& Out, FVulFieldDeserializationContext& Ctx)
+	bool Deserialize(const TSharedPtr<FJsonValue>& Data, T& Out)
 	{
-		return FVulFieldSerializer<T>::Deserialize(Data, Out, Ctx);
+		return FVulFieldSerializer<T>::Deserialize(Data, Out, *this);
 	}
 };
 

@@ -127,5 +127,24 @@ bool TestField::RunTest(const FString& Parameters)
 		TC.Equal(TArray{true, true, true, false}, TestParent.Inner.A, "deserialize from json: array");
 	});
 	
+	
+	VulTest::Case(this, "TOptional", [](VulTest::TC TC)
+	{
+		TOptional<FString> OptStr = {};
+
+		TSharedPtr<FJsonValue> Out;
+		TC.Equal(FVulField::Create(&OptStr).Serialize(Out), true, "null does serialize");
+		TC.Equal(Out->Type, EJson::Null, "null serialize correctly");
+
+		TC.Equal(FVulField::Create(&OptStr).Deserialize(MakeShared<FJsonValueString>("hello world")), true, "str does deserialize");
+		if (TC.Equal(OptStr.IsSet(), true, "str is set"))
+		{
+			TC.Equal(OptStr.GetValue(), FString("hello world"), "str is set");
+		}
+
+		TC.Equal(FVulField::Create(&OptStr).Deserialize(MakeShared<FJsonValueNull>()), true, "null does deserialize");
+		TC.Equal(!OptStr.IsSet(), true, "str is not set");
+	});
+	
 	return true;
 }
