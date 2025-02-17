@@ -31,11 +31,11 @@ struct FVulField
 		Out.Ptr = Ptr;
 		Out.Read = [](void* Ptr, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
 		{
-			return Ctx.Serialize<T>(*reinterpret_cast<T*>(Ptr), Out);
+			return Ctx.Serialize<T>(*static_cast<T*>(Ptr), Out);
 		};
 		Out.Write = [](const TSharedPtr<FJsonValue>& Value, void* Ptr, FVulFieldDeserializationContext& Ctx)
 		{
-			return Ctx.Deserialize<T>(Value, *reinterpret_cast<T*>(Ptr));
+			return Ctx.Deserialize<T>(Value, *static_cast<T*>(Ptr));
 		};
 		return Out;
 	}

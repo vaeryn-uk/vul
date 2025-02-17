@@ -61,6 +61,42 @@ struct FVulFieldDeserializationContext
 	{
 		return FVulFieldSerializer<T>::Deserialize(Data, Out, *this);
 	}
+
+	/**
+	 * Stores a deserialized value that can be recalled by later deserialization
+	 * to deserialize to the same object.
+	 *
+	 * This is designed to be called from FVulFieldSerializer::Deserialize.
+	 */
+	template <typename T>
+	bool Store(const TSharedPtr<FJsonValue>& Id, T* Value)
+	{
+		FString AsStr;
+		if (!Id->TryGetString(AsStr))
+		{
+			Errors.Add(TEXT("cannot store value as ID cannot be interpreted as a string"));
+			return false;
+		}
+
+		Memory.Add(AsStr, Value);
+		return true;
+	}
+
+	template <typename T>
+	bool Resolve(const TSharedPtr<FJsonValue>& Id, T& Ptr)
+	{
+		FString AsStr;
+		if (!Id->TryGetString(AsStr) || !Memory.Contains(AsStr))
+		{
+			return false;
+		}
+
+		Ptr = *static_cast<T*>(Memory[AsStr]);
+		return true;
+	}
+
+private:
+	TMap<FString, void*> Memory;
 };
 
 FString JsonTypeToString(EJson Type)

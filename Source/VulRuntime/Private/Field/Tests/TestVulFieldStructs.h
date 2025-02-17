@@ -148,3 +148,42 @@ struct FVulFieldSerializer<TSharedPtr<FVulFieldTestTreeBase>>
 		return Out->VulFieldSet().Deserialize(Data, Ctx);
 	}
 };
+
+struct FVulFieldTestSingleInstance
+{
+	int Int;
+	FString Str;
+
+	FVulFieldSet VulFieldSet() const
+	{
+		FVulFieldSet Set;
+		Set.Add(FVulField::Create(&Int), "int");
+		Set.Add(FVulField::Create(&Str), "str");
+		return Set;
+	}
+};
+
+template<>
+struct FVulFieldSerializer<TSharedPtr<FVulFieldTestSingleInstance>>
+{
+	static bool Serialize(const TSharedPtr<FVulFieldTestSingleInstance>& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
+	{
+		return Value->VulFieldSet().Serialize(Out, Ctx);
+	}
+	
+	static bool Deserialize(const TSharedPtr<FJsonValue>& Data, TSharedPtr<FVulFieldTestSingleInstance>& Out, FVulFieldDeserializationContext& Ctx)
+	{
+		if (Ctx.Resolve(Data, Out))
+		{
+			return true;
+		}
+
+		Out = MakeShared<FVulFieldTestSingleInstance>();
+		if (!Out->VulFieldSet().Deserialize(Data, Ctx))
+		{
+			return false;
+		}
+
+		return Ctx.Store(MakeShared<FJsonValueString>(Out->Str), &Out);
+	}
+};
