@@ -14,7 +14,28 @@
  */
 struct FVulFieldSet
 {
+	/**
+	 * Adds a field to the set. If read only, the field will only be
+	 * serialized, but ignored for deserialization. 
+	 */
 	void Add(const FVulField& Field, const FString& Identifier);
+
+	/**
+	 * Adds a virtual field - one whose value is derived from a function
+	 * call. These are only relevant when serializing a field set.
+	 *
+	 * This is useful for adding additional data to your serialized outputs,
+	 * where the data is supplemental and not required to reconstitute an
+	 * object correctly.
+	 */
+	template <typename T>
+	void Add(TFunction<T ()> Fn, const FString& Identifier)
+	{
+		Fns.Add(Identifier, [Fn](TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
+		{
+			return Ctx.Serialize<T>(Fn(), Out);
+		});
+	}
 
 	bool Serialize(TSharedPtr<FJsonValue>& Out) const;
 	bool Serialize(TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx) const;
@@ -62,4 +83,5 @@ struct FVulFieldSet
 	}
 private:
 	TMap<FString, FVulField> Fields;
+	TMap<FString, TFunction<bool (TSharedPtr<FJsonValue>&, FVulFieldSerializationContext&)>> Fns;
 };

@@ -173,6 +173,52 @@ bool TestField::RunTest(const FString& Parameters)
 
 		TC.Equal(FVulField::Create(Struct.Str1).DeserializeFromJson("\"somestr\""), false, "direct deserialize fails");
 	});
+
+	
+	VulTest::Case(this, "Tree structure", [](VulTest::TC TC)
+	{
+		TSharedPtr<FVulFieldTestTreeBase> Root = MakeShared<FVulFieldTestTreeBase>();
+		TSharedPtr<FVulFieldTestTreeNode1> NodeA = MakeShared<FVulFieldTestTreeNode1>();
+		NodeA->Int = 13;
+		TSharedPtr<FVulFieldTestTreeNode2> NodeB = MakeShared<FVulFieldTestTreeNode2>();
+		NodeB->String = "foo";
+		TSharedPtr<FVulFieldTestTreeNode1> NodeC = MakeShared<FVulFieldTestTreeNode1>();
+		NodeC->Int = -5;
+
+		NodeB->Children.Add(NodeC);
+		Root->Children.Add(NodeB);
+		Root->Children.Add(NodeA);
+
+		FString JsonStr;
+		if (!TC.Equal(FVulField::Create(&Root).SerializeToJson(JsonStr), true, "serialize"))
+		{
+			return;
+		}
+		
+		TC.Equal(
+			*JsonStr,
+			TEXT("{\"children\":[{\"children\":[{\"children\":[],\"int\":-5,\"type\":\"node1\"}],\"str\":\"foo\",\"type\":\"node2\"},{\"children\":[],\"int\":13,\"type\":\"node1\"}],\"type\":\"base\"}"),
+			"Json is equal"
+		);
+
+		// Deserialize it back in to an empty tree struct.
+		TSharedPtr<FVulFieldTestTreeBase> DeserializedRoot = MakeShared<FVulFieldTestTreeBase>();
+
+		FVulFieldDeserializationContext Ctx;
+		if (!TC.Equal(FVulField::Create(&DeserializedRoot).DeserializeFromJson(JsonStr, Ctx), true, "deserialize"))
+		{
+			return;
+		}
+
+		// Serialize it again as an easy way to assert the structure is correct.
+		FString JsonStr2;
+		if (!TC.Equal(FVulField::Create(&Root).SerializeToJson(JsonStr2), true, "serialize again"))
+		{
+			return;
+		}
+
+		TC.Equal(*JsonStr2, *JsonStr, "serialize");
+	});
 	
 	return true;
 }

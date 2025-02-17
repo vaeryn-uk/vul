@@ -25,6 +25,17 @@ bool FVulFieldSet::Serialize(TSharedPtr<FJsonValue>& Out, FVulFieldSerialization
 		
 		Obj->Values.Add(Entry.Key, JsonValue);
 	}
+	
+	for (const auto Entry : Fns)
+	{
+		TSharedPtr<FJsonValue> JsonValue;
+		if (!Entry.Value(JsonValue, Ctx))
+		{
+			return false;
+		}
+		
+		Obj->Values.Add(Entry.Key, JsonValue);
+	}
 
 	Out = MakeShared<FJsonValueObject>(Obj);
 	return true;

@@ -204,3 +204,57 @@ struct FVulFieldSerializer<TOptional<T>>
 		return true;
 	}
 };
+
+template <typename T>
+struct FVulFieldSerializer<TSharedPtr<T>>
+{
+	static bool Serialize(const TSharedPtr<T>& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
+	{
+		if (!Value.IsValid())
+		{
+			Out = MakeShared<FJsonValueNull>();
+			return true;
+		}
+		
+		return Ctx.Serialize<T>(*Value.Get(), Out);
+	}
+
+	static bool Deserialize(const TSharedPtr<FJsonValue>& Data, TSharedPtr<T>& Out, FVulFieldDeserializationContext& Ctx)
+	{
+		if (Data->Type == EJson::Null)
+		{
+			Out = nullptr;
+			return true;
+		}
+
+		Out = MakeShared<T>();
+		if (!Ctx.Deserialize<T>(Data, *Out.Get()))
+		{
+			return false;
+		}
+
+		return true;
+	}
+};
+
+template <typename T>
+struct FVulFieldSerializer<TSharedRef<T>>
+{
+	static bool Serialize(const TSharedRef<T>& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
+	{
+		return Ctx.Serialize<T>(Value.Get(), Out);
+	}
+
+	static bool Deserialize(const TSharedPtr<FJsonValue>& Data, TSharedRef<T>& Out, FVulFieldDeserializationContext& Ctx)
+	{
+		TSharedPtr<T> Inner = MakeShared<T>();
+		if (!Ctx.Deserialize<T>(Data, *Inner.Get()))
+		{
+			return false;
+		}
+
+		Out = Inner.ToSharedRef();
+
+		return true;
+	}
+};

@@ -30,6 +30,13 @@ struct FVulFieldSerializationErrors
 	 * and adding an error if not.
 	 */
 	bool RequireJsonType(const TSharedPtr<FJsonValue>& Value, const EJson Type);
+	
+	bool RequireJsonProperty(
+		const TSharedPtr<FJsonValue>& Value,
+		const FString& Property,
+		TSharedPtr<FJsonValue>& Out,
+		const TOptional<EJson> Type = {}
+	);
 
 	TArray<FString> Errors;
 };

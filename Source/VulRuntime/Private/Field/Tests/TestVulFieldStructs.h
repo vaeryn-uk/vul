@@ -62,3 +62,89 @@ struct FVulFieldSerializer<FVulTestFieldType>
 		return Out.FieldSet().Deserialize(Data, Ctx);
 	}
 };
+
+struct FVulFieldTestTreeBase
+{
+	virtual ~FVulFieldTestTreeBase() = default;
+	
+	TArray<TSharedPtr<FVulFieldTestTreeBase>> Children;
+
+	FVulFieldSet VulFieldSet() const
+	{
+		FVulFieldSet Set;
+		AddFields(Set);
+		return Set;
+	}
+
+	virtual FString Type() const { return "base";}
+
+protected:
+	virtual void AddFields(FVulFieldSet& Set) const
+	{
+		Set.Add<FString>([this] { return Type(); }, "type");
+		Set.Add(FVulField::Create(&Children), "children");
+	}
+};
+
+struct FVulFieldTestTreeNode1 : FVulFieldTestTreeBase
+{
+	int Int;
+
+	virtual FString Type() const override { return "node1"; }
+
+protected:
+	virtual void AddFields(FVulFieldSet& Set) const override
+	{
+		FVulFieldTestTreeBase::AddFields(Set);
+		Set.Add(FVulField::Create(&Int), "int");
+	}
+};
+
+struct FVulFieldTestTreeNode2 : FVulFieldTestTreeBase
+{
+	FString String;
+
+	virtual FString Type() const override { return "node2"; }
+
+protected:
+	virtual void AddFields(FVulFieldSet& Set) const override
+	{
+		FVulFieldTestTreeBase::AddFields(Set);
+		Set.Add(FVulField::Create(&String), "str");
+	}
+};
+
+template<>
+struct FVulFieldSerializer<TSharedPtr<FVulFieldTestTreeBase>>
+{
+	static bool Serialize(const TSharedPtr<FVulFieldTestTreeBase>& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
+	{
+		return Value->VulFieldSet().Serialize(Out, Ctx);
+	}
+
+	static bool Deserialize(const TSharedPtr<FJsonValue>& Data, TSharedPtr<FVulFieldTestTreeBase>& Out, FVulFieldDeserializationContext& Ctx)
+	{
+		TSharedPtr<FJsonValue> TypeStr;
+		if (!Ctx.Errors.RequireJsonProperty(Data, "type", TypeStr))
+		{
+			return false;
+		}
+
+		if (TypeStr->AsString() == "base")
+		{
+			Out = MakeShared<FVulFieldTestTreeBase>();
+		} else if (TypeStr->AsString() == "node1")
+		{
+			Out = MakeShared<FVulFieldTestTreeNode1>();
+		} else if (TypeStr->AsString() == "node2")
+		{
+			Out = MakeShared<FVulFieldTestTreeNode2>();
+		} else
+		{
+			Ctx.Errors.Add(TEXT("invalid type string `%s` for FVulFieldTestTreeBase deserialization"), *TypeStr->AsString());
+			return false;
+		}
+
+		return Out->VulFieldSet().Deserialize(Data, Ctx);
+	}
+};
