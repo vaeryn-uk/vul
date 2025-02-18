@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "VulFieldRefResolver.h"
 #include "VulFieldSerializer.h"
 #include "UObject/Object.h"
 
@@ -41,62 +42,97 @@ struct FVulFieldSerializationErrors
 	TArray<FString> Errors;
 };
 
+struct FVulFieldSerializationMemory
+{
+	template <typename T>
+	bool ResolveRef(const T& From, TSharedPtr<FJsonValue>& Ref, FVulFieldSerializationErrors& Errors)
+	{
+		if (const auto HaveRef = TVulFieldRefResolver<T>::Resolve(From, Ref); !HaveRef)
+		{
+			Ref = nullptr;
+			return true;
+		}
+
+		FString RefStr;
+		if (!Ref->TryGetString(RefStr))
+		{
+			Errors.Add(TEXT("Resolved a reference that cannot be represented as a JSON string"));
+			return false;
+		}
+
+		return true;
+	}
+	
+	TMap<FString, void*> Store;
+};
+
 struct FVulFieldSerializationContext
 {
 	FVulFieldSerializationErrors Errors;
+	FVulFieldSerializationMemory Memory;
 
 	template <typename T>
 	bool Serialize(const T& Value, TSharedPtr<FJsonValue>& Out)
 	{
-		return FVulFieldSerializer<T>::Serialize(Value, Out, *this);
+		TSharedPtr<FJsonValue> Ref;
+		if (!Memory.ResolveRef(Value, Ref, Errors))
+		{
+			return false;
+		}
+
+		if (Ref.IsValid() && Memory.Store.Contains(Ref->AsString()))
+		{
+			Out = Ref;
+			return true;
+		}
+		
+		if (!TVulFieldSerializer<T>::Serialize(Value, Out, *this))
+		{
+			return false;
+		}
+
+		if (Ref.IsValid())
+		{
+			Memory.Store.Add(Ref->AsString(), &Out);
+		}
+		
+		return true;
 	}
 };
 
 struct FVulFieldDeserializationContext
 {
 	FVulFieldSerializationErrors Errors;
+	FVulFieldSerializationMemory Memory;
 
 	template<typename T>
 	bool Deserialize(const TSharedPtr<FJsonValue>& Data, T& Out)
 	{
-		return FVulFieldSerializer<T>::Deserialize(Data, Out, *this);
-	}
-
-	/**
-	 * Stores a deserialized value that can be recalled by later deserialization
-	 * to deserialize to the same object.
-	 *
-	 * This is designed to be called from FVulFieldSerializer::Deserialize.
-	 */
-	template <typename T>
-	bool Store(const TSharedPtr<FJsonValue>& Id, T* Value)
-	{
-		FString AsStr;
-		if (!Id->TryGetString(AsStr))
+		FString PossibleRef;
+		if (Data->TryGetString(PossibleRef) && Memory.Store.Contains(PossibleRef))
 		{
-			Errors.Add(TEXT("cannot store value as ID cannot be interpreted as a string"));
-			return false;
+			Out = *static_cast<T*>(Memory.Store[PossibleRef]);
+			return true;
 		}
-
-		Memory.Add(AsStr, Value);
-		return true;
-	}
-
-	template <typename T>
-	bool Resolve(const TSharedPtr<FJsonValue>& Id, T& Ptr)
-	{
-		FString AsStr;
-		if (!Id->TryGetString(AsStr) || !Memory.Contains(AsStr))
+		
+		if (!TVulFieldSerializer<T>::Deserialize(Data, Out, *this))
 		{
 			return false;
 		}
 
-		Ptr = *static_cast<T*>(Memory[AsStr]);
+		TSharedPtr<FJsonValue> Ref;
+		if (!Memory.ResolveRef(Out, Ref, Errors))
+		{
+			return false;
+		}
+
+		if (Ref.IsValid())
+		{
+			Memory.Store.Add(Ref->AsString(), &Out);
+		}
+
 		return true;
 	}
-
-private:
-	TMap<FString, void*> Memory;
 };
 
 FString JsonTypeToString(EJson Type)

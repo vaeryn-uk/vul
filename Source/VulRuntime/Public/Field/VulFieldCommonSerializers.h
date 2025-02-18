@@ -3,7 +3,7 @@
 #include "VulFieldSerializationContext.h"
 
 template<>
-struct FVulFieldSerializer<bool>
+struct TVulFieldSerializer<bool>
 {
 	static bool Serialize(const bool& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
 	{
@@ -23,7 +23,7 @@ struct FVulFieldSerializer<bool>
 };
 
 template<>
-struct FVulFieldSerializer<int>
+struct TVulFieldSerializer<int>
 {
 	static bool Serialize(const int& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
 	{
@@ -43,7 +43,7 @@ struct FVulFieldSerializer<int>
 };
 
 template<>
-struct FVulFieldSerializer<FString>
+struct TVulFieldSerializer<FString>
 {
 	static bool Serialize(const FString& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
 	{
@@ -63,7 +63,7 @@ struct FVulFieldSerializer<FString>
 };
 
 template<typename V>
-struct FVulFieldSerializer<TArray<V>>
+struct TVulFieldSerializer<TArray<V>>
 {
 	static bool Serialize(const TArray<V>& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
 	{
@@ -109,7 +109,7 @@ struct FVulFieldSerializer<TArray<V>>
 };
 
 template <typename K, typename V>
-struct FVulFieldSerializer<TMap<K, V>>
+struct TVulFieldSerializer<TMap<K, V>>
 {
 	static bool Serialize(const TMap<K, V>& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
 	{
@@ -173,7 +173,7 @@ struct FVulFieldSerializer<TMap<K, V>>
 };
 
 template <typename T>
-struct FVulFieldSerializer<TOptional<T>>
+struct TVulFieldSerializer<TOptional<T>>
 {
 	static bool Serialize(const TOptional<T>& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
 	{
@@ -206,7 +206,7 @@ struct FVulFieldSerializer<TOptional<T>>
 };
 
 template <typename T>
-struct FVulFieldSerializer<TSharedPtr<T>>
+struct TVulFieldSerializer<TSharedPtr<T>>
 {
 	static bool Serialize(const TSharedPtr<T>& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
 	{
@@ -238,7 +238,39 @@ struct FVulFieldSerializer<TSharedPtr<T>>
 };
 
 template <typename T>
-struct FVulFieldSerializer<TSharedRef<T>>
+struct TVulFieldSerializer<T*>
+{
+	static bool Serialize(const T* const& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
+	{
+		if (Value == nullptr)
+		{
+			Out = MakeShared<FJsonValueNull>();
+			return true;
+		}
+		
+		return Ctx.Serialize<T>(*Value, Out);
+	}
+
+	static bool Deserialize(const TSharedPtr<FJsonValue>& Data, T*& Out, FVulFieldDeserializationContext& Ctx)
+	{
+		if (Data->Type == EJson::Null)
+		{
+			Out = nullptr;
+			return true;
+		}
+
+		Out = new T;
+		if (!Ctx.Deserialize<T>(Data, *Out))
+		{
+			return false;
+		}
+
+		return true;
+	}
+};
+
+template <typename T>
+struct TVulFieldSerializer<TSharedRef<T>>
 {
 	static bool Serialize(const TSharedRef<T>& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
 	{

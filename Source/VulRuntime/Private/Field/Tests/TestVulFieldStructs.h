@@ -50,7 +50,7 @@ struct FVulTestFieldParent
 };
 
 template<>
-struct FVulFieldSerializer<FVulTestFieldType>
+struct TVulFieldSerializer<FVulTestFieldType>
 {
 	static bool Serialize(const FVulTestFieldType& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
 	{
@@ -115,7 +115,7 @@ protected:
 };
 
 template<>
-struct FVulFieldSerializer<TSharedPtr<FVulFieldTestTreeBase>>
+struct TVulFieldSerializer<TSharedPtr<FVulFieldTestTreeBase>>
 {
 	static bool Serialize(const TSharedPtr<FVulFieldTestTreeBase>& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
 	{
@@ -164,26 +164,25 @@ struct FVulFieldTestSingleInstance
 };
 
 template<>
-struct FVulFieldSerializer<TSharedPtr<FVulFieldTestSingleInstance>>
+struct TVulFieldSerializer<FVulFieldTestSingleInstance>
 {
-	static bool Serialize(const TSharedPtr<FVulFieldTestSingleInstance>& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
+	static bool Serialize(const FVulFieldTestSingleInstance& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
 	{
-		return Value->VulFieldSet().Serialize(Out, Ctx);
+		return Value.VulFieldSet().Serialize(Out, Ctx);
 	}
 	
-	static bool Deserialize(const TSharedPtr<FJsonValue>& Data, TSharedPtr<FVulFieldTestSingleInstance>& Out, FVulFieldDeserializationContext& Ctx)
+	static bool Deserialize(const TSharedPtr<FJsonValue>& Data, FVulFieldTestSingleInstance& Out, FVulFieldDeserializationContext& Ctx)
 	{
-		if (Ctx.Resolve(Data, Out))
-		{
-			return true;
-		}
+		return Out.VulFieldSet().Deserialize(Data, Ctx);
+	}
+};
 
-		Out = MakeShared<FVulFieldTestSingleInstance>();
-		if (!Out->VulFieldSet().Deserialize(Data, Ctx))
-		{
-			return false;
-		}
-
-		return Ctx.Store(MakeShared<FJsonValueString>(Out->Str), &Out);
+template<>
+struct TVulFieldRefResolver<FVulFieldTestSingleInstance>
+{
+	static bool Resolve(const FVulFieldTestSingleInstance& Value, TSharedPtr<FJsonValue>& Out)
+	{
+		Out = MakeShared<FJsonValueString>(Value.Str);
+		return true;
 	}
 };

@@ -14,7 +14,7 @@ public class VulRuntime : ModuleRules
         PublicDependencyModuleNames.AddRange(
             new string[]
             {
-                "Core", "CommonUI", "Niagara", "LevelSequence", "MovieScene", "MovieSceneTracks"
+                "Core", "CommonUI", "Niagara", "LevelSequence", "MovieScene", "MovieSceneTracks", "Json"
             }
         );
 
@@ -28,7 +28,6 @@ public class VulRuntime : ModuleRules
                 "VulTest",
                 "DeveloperSettings",
                 "UMG",
-                "Json",
             }
         );
 

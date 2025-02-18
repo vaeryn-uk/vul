@@ -10,7 +10,7 @@
  * A field that can be conveniently serialized/deserialized.
  *
  * This is a wrapper around a pointer that allows Get and Set operations.
- * For the de/serialization itself, FVulFieldSerializer must be implemented
+ * For the de/serialization itself, TVulFieldSerializer must be implemented
  * for the type you're wrapping.
  *
  * Note the FVulField and associated APIs deal with FJsonValue. This is the chosen

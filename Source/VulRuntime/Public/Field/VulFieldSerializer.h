@@ -6,7 +6,7 @@
  * See VulFieldCommonSerializers.h for example implementations.
  */
 template <typename T>
-struct FVulFieldSerializer
+struct TVulFieldSerializer
 {
 	/**
 	 * Given the Value, turn it in to its serialized form, setting it to Out.
