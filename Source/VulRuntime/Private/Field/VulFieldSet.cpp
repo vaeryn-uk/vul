@@ -1,8 +1,42 @@
 ﻿#include "Field/VulFieldSet.h"
 
-void FVulFieldSet::Add(const FVulField& Field, const FString& Identifier)
+void FVulFieldSet::Add(const FVulField& Field, const FString& Identifier, const bool IsRef)
 {
 	Fields.Add(Identifier, Field);
+	
+	if (IsRef)
+	{
+		RefField = Identifier;
+	} 
+}
+
+TSharedPtr<FJsonValue> FVulFieldSet::GetRef() const
+{
+	if (!RefField.IsSet())
+	{
+		return nullptr;
+	}
+	
+	FVulFieldSerializationContext Ctx;
+	TSharedPtr<FJsonValue> Ref;
+
+	if (Fields.Contains(RefField.GetValue()))
+	{
+		if (Fields[RefField.GetValue()].Serialize(Ref, Ctx))
+		{
+			return Ref;
+		} // TODO: What if we fail to serialize it?
+	}
+
+	if (Fns.Contains(RefField.GetValue()))
+	{
+		if (Fns[RefField.GetValue()](Ref, Ctx))
+		{
+			return Ref;
+		} // TODO: What if we fail to serialize it?
+	}
+
+	return nullptr;
 }
 
 bool FVulFieldSet::Serialize(TSharedPtr<FJsonValue>& Out) const

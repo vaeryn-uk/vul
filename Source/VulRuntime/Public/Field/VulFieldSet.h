@@ -16,9 +16,12 @@ struct FVulFieldSet
 {
 	/**
 	 * Adds a field to the set. If read only, the field will only be
-	 * serialized, but ignored for deserialization. 
+	 * serialized, but ignored for deserialization.
+	 *
+	 * Set IsRef=true to have this field be the value used when using FVulField's
+	 * shared reference system.
 	 */
-	void Add(const FVulField& Field, const FString& Identifier);
+	void Add(const FVulField& Field, const FString& Identifier, const bool IsRef = false);
 
 	/**
 	 * Adds a virtual field - one whose value is derived from a function
@@ -27,15 +30,25 @@ struct FVulFieldSet
 	 * This is useful for adding additional data to your serialized outputs,
 	 * where the data is supplemental and not required to reconstitute an
 	 * object correctly.
+	 *
+	 * Set IsRef=true to have this field be the value used when using FVulField's
+	 * shared reference system.
 	 */
 	template <typename T>
-	void Add(TFunction<T ()> Fn, const FString& Identifier)
+	void Add(TFunction<T ()> Fn, const FString& Identifier, const bool IsRef = false)
 	{
 		Fns.Add(Identifier, [Fn](TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
 		{
 			return Ctx.Serialize<T>(Fn(), Out);
 		});
+		
+		if (IsRef)
+		{
+			RefField = Identifier;
+		} 
 	}
+
+	TSharedPtr<FJsonValue> GetRef() const;
 
 	bool Serialize(TSharedPtr<FJsonValue>& Out) const;
 	bool Serialize(TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx) const;
@@ -84,4 +97,40 @@ struct FVulFieldSet
 private:
 	TMap<FString, FVulField> Fields;
 	TMap<FString, TFunction<bool (TSharedPtr<FJsonValue>&, FVulFieldSerializationContext&)>> Fns;
+	TOptional<FString> RefField = {};
+};
+
+// TODO: concepts require C++20. This okay?
+template <typename T>
+concept HasVulFieldSet = requires(T t) {
+	{ t.VulFieldSet() } -> std::same_as<FVulFieldSet>;
+};
+
+template <HasVulFieldSet T>
+struct TVulFieldSerializer<T>
+{
+	static bool Serialize(const T& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
+	{
+		return Value.VulFieldSet().Serialize(Out, Ctx);
+	}
+
+	static bool Deserialize(const TSharedPtr<FJsonValue>& Data, T& Out, FVulFieldDeserializationContext& Ctx)
+	{
+		auto Result = Out.VulFieldSet().Deserialize(Data, Ctx);
+		if (!Result)
+		{
+			return false;
+		}
+		return Result;
+	}
+};
+
+template<HasVulFieldSet T>
+struct TVulFieldRefResolver<T>
+{
+	static bool Resolve(const T& Value, TSharedPtr<FJsonValue>& Out)
+	{
+		Out = Value.VulFieldSet().GetRef();
+		return Out.IsValid();
+	}
 };

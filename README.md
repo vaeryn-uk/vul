@@ -279,27 +279,29 @@ The field system is designed to support automatic serialization & deserializatio
 outside the Unreal reflection system. This template-driven feature allows serialization of your
 native CPP types & properties (non-`USTRUCT`/`UPROPERTY`/`UCLASS`) with minimal boilerplate code.
 
+At the heart of this system is `FVulField`, which wraps pointers that will read from/written to.
+As we're generally defining types that include properties that themselves need to be serialized,
+a `FVulFieldSet` is used to conveniently describe how your objects should be serialized.
+
 To plug your types in to the system, you will need to define serialization and deserialization 
 for those type based on `TVulFieldSerializer<T>`.
 ```
 TODO
 ```
 
-There are definitions for common types already in [VulFieldCommonSerializers.h](./Source/VulRuntime/Public/Field/VulFieldCommonSerializers.h).
-Note this includes container types, such as `TArray`, `TMap`, `TOptional`, `TSharedPtr`, so you should only
-need to define for your concrete types themselves; containerized versions will be inferred.
+As a convenience, you can define a non-static function `FVulField VulField() const` function on your
+types. By default, this will be used to handle de/serialization without needing to implement the
+above serializer.
 
-At the heart of this system is `FVulField`, which wraps pointers that will read from/written to.
-As we're generally defining types that include properties that themselves need to be serialized,
-a `FVulFieldSet` is used to conveniently describe how your objects should be serialized.
+There are definitions for common types already in [VulFieldCommonSerializers.h](./Source/VulRuntime/Public/Field/VulFieldCommonSerializers.h).
+Note this includes container types, such as `TArray`, `TMap`, `TOptional`, `TSharedPtr`, so you only
+need to define for your concrete types themselves; containerized versions will be inferred.
 
 Importantly, whilst the field system deals in `FJsonValue` and associated types, it is not explicitly 
 designed to be limited to JSON. `FJsonValue` is selected as a portable, standard data representation 
 target as it allows the implementation to reuse what UE already provides.
 
 TODO:
-* Move fieldset to a TVulFieldSerializer definition; create either interface or macro for shorthand
-  serializer definitions.
 * `UObject*` serialization - how to construct these in deserialization?
 * `TScriptInterface<>` serialization - should only be deserialized by ref?
 * `UENUM` serialization - built around `EnumToString()`?

@@ -249,7 +249,8 @@ bool TestField::RunTest(const FString& Parameters)
 
 		const auto Json = TEXT("{\"data\":[{\"int\":5,\"str\":\"foobar\"},\"foobar\"]}");
 
-		if (!TC.Equal(Set.DeserializeFromJson(Json), true, "deserialize"))
+		FVulFieldDeserializationContext Ctx;
+		if (!TC.Equal(Set.DeserializeFromJson(Json, Ctx), true, "deserialize"))
 		{
 			return;
 		}

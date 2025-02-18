@@ -158,31 +158,7 @@ struct FVulFieldTestSingleInstance
 	{
 		FVulFieldSet Set;
 		Set.Add(FVulField::Create(&Int), "int");
-		Set.Add(FVulField::Create(&Str), "str");
+		Set.Add(FVulField::Create(&Str), "str", true);
 		return Set;
-	}
-};
-
-template<>
-struct TVulFieldSerializer<FVulFieldTestSingleInstance>
-{
-	static bool Serialize(const FVulFieldTestSingleInstance& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
-	{
-		return Value.VulFieldSet().Serialize(Out, Ctx);
-	}
-	
-	static bool Deserialize(const TSharedPtr<FJsonValue>& Data, FVulFieldTestSingleInstance& Out, FVulFieldDeserializationContext& Ctx)
-	{
-		return Out.VulFieldSet().Deserialize(Data, Ctx);
-	}
-};
-
-template<>
-struct TVulFieldRefResolver<FVulFieldTestSingleInstance>
-{
-	static bool Resolve(const FVulFieldTestSingleInstance& Value, TSharedPtr<FJsonValue>& Out)
-	{
-		Out = MakeShared<FJsonValueString>(Value.Str);
-		return true;
 	}
 };
