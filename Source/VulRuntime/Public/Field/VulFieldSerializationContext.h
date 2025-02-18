@@ -105,6 +105,11 @@ struct FVulFieldDeserializationContext
 	FVulFieldSerializationErrors Errors;
 	FVulFieldSerializationMemory Memory;
 
+	/**
+	 * The outer object we use when deserialization requires creating UObjects.
+	 */
+	UObject* ObjectOuter;
+
 	template<typename T>
 	bool Deserialize(const TSharedPtr<FJsonValue>& Data, T& Out)
 	{

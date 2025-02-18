@@ -282,6 +282,25 @@ bool TestField::RunTest(const FString& Parameters)
 		TC.Equal(Instance1.Int, Instance2.Int, "int same");
 		TC.Equal(Instance1.Str, Instance2.Str, "str same");
 	});
+
+	VulTest::Case(this, "UObject", [](VulTest::TC TC)
+	{
+		UObject* Outer = NewObject<AActor>();
+		
+		UVulFieldTestUObject1* TestObj1 = nullptr;
+
+		FVulFieldDeserializationContext Ctx;
+		Ctx.ObjectOuter = Outer;
+		if (!TC.Equal(FVulField::Create(&TestObj1).DeserializeFromJson("{\"str\":\"foobar\"}", Ctx), true, "deserialize obj1"))
+		{
+			return;
+		}
+
+		TC.Equal(TEXT("foobar"), *TestObj1->Str, "deserialize obj1: str correct");
+		TC.Equal(Outer, TestObj1->GetOuter(), "deserialize obj1: outer correct");
+
+		// TODO: Test nesting objects & shared references.
+	});
 	
 	return true;
 }

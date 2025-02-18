@@ -285,27 +285,27 @@ a `FVulFieldSet` is used to conveniently describe how your objects should be ser
 
 To plug your types in to the system, you will need to define serialization and deserialization 
 for those type based on `TVulFieldSerializer<T>`.
-```
-TODO
-```
 
-As a convenience, you can define a non-static function `FVulField VulField() const` function on your
+As a convenience, you can define a non-static function `FVulField VulField() const` on your
 types. By default, this will be used to handle de/serialization without needing to implement the
-above serializer.
+above serializer. The same is available for `UObject`, though due to UE's UObject system,
+you must explicitly implement `IVulFieldSetObject` for your `UCLASS`es to be automatically de/serialized,
+as well as providing a `FVulFieldDeserializationContext.OuterObject` ahead of any deserialization.
 
 There are definitions for common types already in [VulFieldCommonSerializers.h](./Source/VulRuntime/Public/Field/VulFieldCommonSerializers.h).
 Note this includes container types, such as `TArray`, `TMap`, `TOptional`, `TSharedPtr`, so you only
-need to define for your concrete types themselves; containerized versions will be inferred.
+need to define for your concrete types themselves; containerized & pointer versions will be inferred.
 
 Importantly, whilst the field system deals in `FJsonValue` and associated types, it is not explicitly 
 designed to be limited to JSON. `FJsonValue` is selected as a portable, standard data representation 
 target as it allows the implementation to reuse what UE already provides.
 
-TODO:
-* `UObject*` serialization - how to construct these in deserialization?
+Features that might be worth adding in the future:
+
 * `TScriptInterface<>` serialization - should only be deserialized by ref?
 * `UENUM` serialization - built around `EnumToString()`?
 * Add stack-based error tracking to produce precise error messages in complex object structures (with tests)
+* Integration with UE's reflection system to automatically de/serialize down UPROPERTY chains.
 
 #### Shared references
 

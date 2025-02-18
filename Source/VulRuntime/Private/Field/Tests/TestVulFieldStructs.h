@@ -4,6 +4,7 @@
 #include "Field/VulField.h"
 #include "Field/VulFieldSet.h"
 #include "UObject/Object.h"
+#include "Field/VulFieldSetObject.h"
 #include "TestVulFieldStructs.generated.h"
 
 USTRUCT()
@@ -159,6 +160,34 @@ struct FVulFieldTestSingleInstance
 		FVulFieldSet Set;
 		Set.Add(FVulField::Create(&Int), "int");
 		Set.Add(FVulField::Create(&Str), "str", true);
+		return Set;
+	}
+};
+
+UCLASS()
+class UVulFieldTestUObject2 : public UObject
+{
+	GENERATED_BODY()
+	
+public:
+	FString Str;
+};
+
+UCLASS()
+class UVulFieldTestUObject1 : public UObject, public IVulFieldSetObject
+{
+	GENERATED_BODY()
+
+public:
+	FString Str;
+
+	UPROPERTY()
+	UVulFieldTestUObject2* Obj;
+
+	virtual FVulFieldSet VulFieldSet() const override
+	{
+		FVulFieldSet Set;
+		Set.Add(FVulField::Create(&Str), "str");
 		return Set;
 	}
 };
