@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "UObject/Object.h"
 #include "Field/VulField.h"
+#include "VulFieldSet.generated.h"
 
 /**
  * A collection of FVulFields that can be de/serialized.
@@ -100,11 +101,29 @@ private:
 	TOptional<FString> RefField = {};
 };
 
+UINTERFACE()
+class VULRUNTIME_API UVulFieldSetAware : public UInterface
+{
+	GENERATED_BODY()
+};
+
+/**
+ * Implement this interface on your UObjects to make them compatible with the FVulField
+ * serialization & deserialization system.
+ *
+ * TODO: Should this interface be required 
+ */
+class VULRUNTIME_API IVulFieldSetAware
+{
+	GENERATED_BODY()
+
+public:
+	virtual FVulFieldSet VulFieldSet() const { return FVulFieldSet(); }
+};
+
 // TODO: concepts require C++20. This okay?
 template <typename T>
-concept HasVulFieldSet = requires(T t) {
-	{ t.VulFieldSet() } -> std::same_as<FVulFieldSet>;
-};
+concept HasVulFieldSet = std::is_base_of_v<IVulFieldSetAware, T>;
 
 template <HasVulFieldSet T>
 struct TVulFieldSerializer<T>
@@ -132,5 +151,49 @@ struct TVulFieldRefResolver<T>
 	{
 		Out = Value.VulFieldSet().GetRef();
 		return Out.IsValid();
+	}
+};
+
+// TODO: concepts require C++20. This okay?
+template <typename T>
+concept IsUObject = std::is_base_of_v<UObject, T>;
+
+template <IsUObject T>
+struct TVulFieldSerializer<T*>
+{
+	static bool Serialize(const T* const& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
+	{
+		if (auto FieldSetObj = Cast<IVulFieldSetAware>(Value); FieldSetObj != nullptr)
+		{
+			if (!FieldSetObj->VulFieldSet().Serialize(Out, Ctx))
+			{
+				return false;
+			}
+		}
+
+		// TODO: Just doing an empty object - not useful? Error?
+		Out = MakeShared<FJsonValueObject>(MakeShared<FJsonObject>());
+		return true;
+	}
+
+	static bool Deserialize(const TSharedPtr<FJsonValue>& Data, T*& Out, FVulFieldDeserializationContext& Ctx)
+	{
+		if (!IsValid(Ctx.ObjectOuter))
+		{
+			Ctx.Errors.Add(TEXT("Cannot deserialize UObject without a ObjectOuter set"));
+			return false;
+		}
+		
+		Out = NewObject<T>(Ctx.ObjectOuter, Out->StaticClass());
+
+		if (auto FieldSetObj = Cast<IVulFieldSetAware>(Out); FieldSetObj != nullptr)
+		{
+			if (!FieldSetObj->VulFieldSet().Deserialize(Data, Ctx))
+			{
+				return false;
+			}
+		}
+		
+		return true;
 	}
 };

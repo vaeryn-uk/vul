@@ -279,21 +279,22 @@ The field system is designed to support automatic serialization & deserializatio
 outside the Unreal reflection system. This template-driven feature allows serialization of your
 native CPP types & properties (non-`USTRUCT`/`UPROPERTY`/`UCLASS`) with minimal boilerplate code.
 
-At the heart of this system is `FVulField`, which wraps pointers that will read from/written to.
+At the heart of this system is `FVulField`, which wraps pointers that will be read from/written to.
 As we're generally defining types that include properties that themselves need to be serialized,
 a `FVulFieldSet` is used to conveniently describe how your objects should be serialized.
 
-To plug your types in to the system, you will need to define serialization and deserialization 
-for those type based on `TVulFieldSerializer<T>`.
+To plug your types in to the system, there will need to exist serialization and deserialization 
+template functions based on `TVulFieldSerializer<T>`. It's recommended to implement 
+`IVulFieldSetAware` in your typesas this will automatically tie your type to an existing 
+serializer and will be used to handle de/serialization without needing to implement a serializer 
+for each of your types.
 
-As a convenience, you can define a non-static function `FVulField VulField() const` on your
-types. By default, this will be used to handle de/serialization without needing to implement the
-above serializer. The same is available for `UObject`, though due to UE's UObject system,
-you must explicitly implement `IVulFieldSetObject` for your `UCLASS`es to be automatically de/serialized,
-as well as providing a `FVulFieldDeserializationContext.OuterObject` ahead of any deserialization.
+Note: whilst `IVulFieldSetAware` is a `UINTERFACE`, this can be used on both non-UObject and 
+UObject classes.
 
-There are definitions for common types already in [VulFieldCommonSerializers.h](./Source/VulRuntime/Public/Field/VulFieldCommonSerializers.h).
-Note this includes container types, such as `TArray`, `TMap`, `TOptional`, `TSharedPtr`, so you only
+If needed, you can forego this interface and implement your own serializers. There are definitions 
+for common types already in [VulFieldCommonSerializers.h](./Source/VulRuntime/Public/Field/VulFieldCommonSerializers.h).
+This includes container types, such as `TArray`, `TMap`, `TOptional`, `TSharedPtr`, so you only
 need to define for your concrete types themselves; containerized & pointer versions will be inferred.
 
 Importantly, whilst the field system deals in `FJsonValue` and associated types, it is not explicitly 

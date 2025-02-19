@@ -4,7 +4,7 @@
 #include "Field/VulField.h"
 #include "Field/VulFieldSet.h"
 #include "UObject/Object.h"
-#include "Field/VulFieldSetObject.h"
+#include "Field/VulFieldSet.h"
 #include "TestVulFieldStructs.generated.h"
 
 USTRUCT()
@@ -150,7 +150,7 @@ struct TVulFieldSerializer<TSharedPtr<FVulFieldTestTreeBase>>
 	}
 };
 
-struct FVulFieldTestSingleInstance
+struct FVulFieldTestSingleInstance : IVulFieldSetAware
 {
 	int Int;
 	FString Str;
@@ -174,7 +174,7 @@ public:
 };
 
 UCLASS()
-class UVulFieldTestUObject1 : public UObject, public IVulFieldSetObject
+class UVulFieldTestUObject1 : public UObject, public IVulFieldSetAware
 {
 	GENERATED_BODY()
 
