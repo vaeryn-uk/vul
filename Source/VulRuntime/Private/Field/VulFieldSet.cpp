@@ -88,7 +88,7 @@ bool FVulFieldSet::Deserialize(const TSharedPtr<FJsonValue>& Data, FVulFieldDese
 	{
 		return false;
 	}
-	
+
 	for (const auto Entry : (*Obj)->Values)
 	{
 		if (!Fields.Contains(Entry.Key) || Fields[Entry.Key].IsReadOnly())

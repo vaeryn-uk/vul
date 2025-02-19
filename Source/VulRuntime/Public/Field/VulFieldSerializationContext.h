@@ -74,16 +74,21 @@ struct FVulFieldSerializationContext
 	template <typename T>
 	bool Serialize(const T& Value, TSharedPtr<FJsonValue>& Out)
 	{
+		constexpr bool SupportsRef = TVulFieldRefResolver<T>::SupportsRef;
 		TSharedPtr<FJsonValue> Ref;
-		if (!Memory.ResolveRef(Value, Ref, Errors))
-		{
-			return false;
-		}
 
-		if (Ref.IsValid() && Memory.Store.Contains(Ref->AsString()))
+		if (SupportsRef)
 		{
-			Out = Ref;
-			return true;
+			if (!Memory.ResolveRef(Value, Ref, Errors))
+			{
+				return false;
+			}
+
+			if (Ref.IsValid() && Memory.Store.Contains(Ref->AsString()))
+			{
+				Out = Ref;
+				return true;
+			}
 		}
 		
 		if (!TVulFieldSerializer<T>::Serialize(Value, Out, *this))
@@ -113,11 +118,15 @@ struct FVulFieldDeserializationContext
 	template<typename T>
 	bool Deserialize(const TSharedPtr<FJsonValue>& Data, T& Out)
 	{
-		FString PossibleRef;
-		if (Data->TryGetString(PossibleRef) && Memory.Store.Contains(PossibleRef))
+		constexpr bool SupportsRef = TVulFieldRefResolver<T>::SupportsRef;
+		if (SupportsRef)
 		{
-			Out = *static_cast<T*>(Memory.Store[PossibleRef]);
-			return true;
+			FString PossibleRef;
+			if (Data->TryGetString(PossibleRef) && Memory.Store.Contains(PossibleRef))
+			{
+				Out = *static_cast<T*>(Memory.Store[PossibleRef]);
+				return true;
+			}
 		}
 		
 		if (!TVulFieldSerializer<T>::Deserialize(Data, Out, *this))
@@ -125,15 +134,18 @@ struct FVulFieldDeserializationContext
 			return false;
 		}
 
-		TSharedPtr<FJsonValue> Ref;
-		if (!Memory.ResolveRef(Out, Ref, Errors))
+		if (SupportsRef)
 		{
-			return false;
-		}
+			TSharedPtr<FJsonValue> Ref;
+			if (!Memory.ResolveRef(Out, Ref, Errors))
+			{
+				return false;
+			}
 
-		if (Ref.IsValid())
-		{
-			Memory.Store.Add(Ref->AsString(), &Out);
+			if (Ref.IsValid())
+			{
+				Memory.Store.Add(Ref->AsString(), &Out);
+			}
 		}
 
 		return true;

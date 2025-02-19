@@ -165,12 +165,19 @@ struct FVulFieldTestSingleInstance : IVulFieldSetAware
 };
 
 UCLASS()
-class UVulFieldTestUObject2 : public UObject
+class UVulFieldTestUObject2 : public UObject, public IVulFieldSetAware
 {
 	GENERATED_BODY()
 	
 public:
 	FString Str;
+
+	virtual FVulFieldSet VulFieldSet() const override
+	{
+		FVulFieldSet Set;
+		Set.Add(FVulField::Create(&Str), "str");
+		return Set;
+	}
 };
 
 UCLASS()
@@ -187,7 +194,8 @@ public:
 	virtual FVulFieldSet VulFieldSet() const override
 	{
 		FVulFieldSet Set;
-		Set.Add(FVulField::Create(&Str), "str");
+		Set.Add(FVulField::Create(&Str), "str", true);
+		Set.Add(FVulField::Create(&Obj), "obj");
 		return Set;
 	}
 };

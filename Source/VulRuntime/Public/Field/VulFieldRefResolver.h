@@ -18,6 +18,13 @@ template <typename T>
 struct TVulFieldRefResolver
 {
 	/**
+	 * This indicates to the FVulField system whether to use the referencing system at all.
+	 *
+	 * When defining resolvers for your types, this must be set as true.
+	 */
+	static constexpr bool SupportsRef = false;
+	
+	/**
 	 * Resolves a ref for the given value. This must set a string-like JSON value,
 	 * such as an FJsonValueString or FJsonValueNumber, and return true to indicate
 	 * support.
@@ -30,6 +37,8 @@ struct TVulFieldRefResolver
 template <typename T>
 struct TVulFieldRefResolver<TSharedPtr<T>>
 {
+	static constexpr bool SupportsRef = true;
+	
 	static bool Resolve(const TSharedPtr<T>& Value, TSharedPtr<FJsonValue>& Out)
 	{
 		if (!Value.IsValid())
@@ -44,6 +53,8 @@ struct TVulFieldRefResolver<TSharedPtr<T>>
 template <typename T>
 struct TVulFieldRefResolver<T*>
 {
+	static constexpr bool SupportsRef = true;
+	
 	static bool Resolve(const T* const& Value, TSharedPtr<FJsonValue>& Out)
 	{
 		if (Value == nullptr)

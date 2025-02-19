@@ -1,6 +1,14 @@
 ﻿#pragma once
 
 /**
+ * Helper macro to assert equality in a VulTest::TestCase, immediately stopping
+ * the test case if not.
+ *
+ * Assumes the current test case has variable name "TC".
+ */
+#define VTC_MUST_EQUAL(ACTUAL, EXPECTED, MESSAGE) if (!TC.Equal(ACTUAL, EXPECTED, MESSAGE)) { return; }
+
+/**
  * Tools for writing tests in UE.
  */
 namespace VulTest

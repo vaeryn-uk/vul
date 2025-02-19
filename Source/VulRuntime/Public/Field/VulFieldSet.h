@@ -101,6 +101,7 @@ private:
 	TOptional<FString> RefField = {};
 };
 
+
 UINTERFACE()
 class VULRUNTIME_API UVulFieldSetAware : public UInterface
 {
@@ -147,6 +148,8 @@ struct TVulFieldSerializer<T>
 template<HasVulFieldSet T>
 struct TVulFieldRefResolver<T>
 {
+	static constexpr bool SupportsRef = true;
+	
 	static bool Resolve(const T& Value, TSharedPtr<FJsonValue>& Out)
 	{
 		Out = Value.VulFieldSet().GetRef();
@@ -165,10 +168,7 @@ struct TVulFieldSerializer<T*>
 	{
 		if (auto FieldSetObj = Cast<IVulFieldSetAware>(Value); FieldSetObj != nullptr)
 		{
-			if (!FieldSetObj->VulFieldSet().Serialize(Out, Ctx))
-			{
-				return false;
-			}
+			return FieldSetObj->VulFieldSet().Serialize(Out, Ctx);
 		}
 
 		// TODO: Just doing an empty object - not useful? Error?
@@ -188,10 +188,7 @@ struct TVulFieldSerializer<T*>
 
 		if (auto FieldSetObj = Cast<IVulFieldSetAware>(Out); FieldSetObj != nullptr)
 		{
-			if (!FieldSetObj->VulFieldSet().Deserialize(Data, Ctx))
-			{
-				return false;
-			}
+			return FieldSetObj->VulFieldSet().Deserialize(Data, Ctx);
 		}
 		
 		return true;

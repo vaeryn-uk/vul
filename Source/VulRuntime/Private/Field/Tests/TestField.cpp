@@ -219,7 +219,7 @@ bool TestField::RunTest(const FString& Parameters)
 	
 		TC.Equal(*JsonStr2, *JsonStr, "serialize");
 	});
-
+	
 	VulTest::Case(this, "Deserialize references: TSharedPtr", [](VulTest::TC TC)
 	{
 		TSharedPtr<FVulFieldTestSingleInstance> Ptr1;
@@ -228,17 +228,17 @@ bool TestField::RunTest(const FString& Parameters)
 		FVulFieldSet Set;
 		Set.Add(FVulField::Create(&Ptr1), "instance1");
 		Set.Add(FVulField::Create(&Ptr2), "instance2");
-
+	
 		const auto Json = TEXT("{\"instance1\":{\"int\":5,\"str\":\"foobar\"},\"instance2\":\"foobar\"}");
-
+	
 		if (!TC.Equal(Set.DeserializeFromJson(Json), true, "deserialize"))
 		{
 			return;
 		}
-
+	
 		TC.Equal(Ptr1.Get(), Ptr2.Get(), "pointers same");
 	});
-
+	
 	VulTest::Case(this, "Deserialize references: raw pointers", [](VulTest::TC TC)
 	{
 		// Test with an array for more coverage of recursive TVulFieldSerializer interpretation.
@@ -246,15 +246,15 @@ bool TestField::RunTest(const FString& Parameters)
 		
 		FVulFieldSet Set;
 		Set.Add(FVulField::Create(&Arr), "data");
-
+	
 		const auto Json = TEXT("{\"data\":[{\"int\":5,\"str\":\"foobar\"},\"foobar\"]}");
-
+	
 		FVulFieldDeserializationContext Ctx;
 		if (!TC.Equal(Set.DeserializeFromJson(Json, Ctx), true, "deserialize"))
 		{
 			return;
 		}
-
+	
 		if (TC.Equal(Arr.Num(), 2, "pointer array length"))
 		{
 			TC.Equal(Arr[0], Arr[1], "pointers same");
@@ -274,10 +274,7 @@ bool TestField::RunTest(const FString& Parameters)
 
 		const auto Json = TEXT("{\"instance1\":{\"int\":5,\"str\":\"foobar\"},\"instance2\":\"foobar\"}");
 
-		if (!TC.Equal(Set.DeserializeFromJson(Json), true, "deserialize"))
-		{
-			return;
-		}
+		VTC_MUST_EQUAL(Set.DeserializeFromJson(Json), true, "deserialize")
 
 		TC.Equal(Instance1.Int, Instance2.Int, "int same");
 		TC.Equal(Instance1.Str, Instance2.Str, "str same");
@@ -289,17 +286,34 @@ bool TestField::RunTest(const FString& Parameters)
 		
 		UVulFieldTestUObject1* TestObj1 = nullptr;
 
+		FString JsonStr = "{\"str\":\"foobar\",\"obj\":{\"str\":\"qux\"}}";
+
 		FVulFieldDeserializationContext Ctx;
 		Ctx.ObjectOuter = Outer;
-		if (!TC.Equal(FVulField::Create(&TestObj1).DeserializeFromJson("{\"str\":\"foobar\"}", Ctx), true, "deserialize obj1"))
-		{
-			return;
-		}
+		VTC_MUST_EQUAL(FVulField::Create(&TestObj1).DeserializeFromJson(JsonStr, Ctx), true, "deserialize obj1")
 
-		TC.Equal(TEXT("foobar"), *TestObj1->Str, "deserialize obj1: str correct");
-		TC.Equal(Outer, TestObj1->GetOuter(), "deserialize obj1: outer correct");
+		TC.Equal(*TestObj1->Str, TEXT("foobar"), "deserialize obj1: str correct");
+		TC.Equal(TestObj1->GetOuter(), Outer, "deserialize obj1: outer correct");
+		TC.Equal(IsValid(TestObj1->Obj), true, "deserialize obj1: nested object is valid");
+		TC.Equal(*TestObj1->Obj->Str, TEXT("qux"), "deserialize obj1: nested object is correct");
+		TC.Equal(TestObj1->Obj->GetOuter(), Outer, "deserialize obj1: nested object outer correct");
 
-		// TODO: Test nesting objects & shared references.
+		FString SerializedJson;
+		VTC_MUST_EQUAL(FVulField::Create(&TestObj1).SerializeToJson(SerializedJson), true, "serialize obj1")
+		
+		TC.Equal(*SerializedJson, *JsonStr, "serialize obj1");
+
+		TMap<FString, UVulFieldTestUObject1*> Map;
+		FString MapJsonStr = TEXT("{\"obj1\":{\"str\":\"foobar\",\"obj\":{\"str\":\"qux\"}},\"obj2\":\"foobar\"}");
+		VTC_MUST_EQUAL(FVulField::Create(&Map).DeserializeFromJson(MapJsonStr, Ctx), true, "deserialize map")
+
+		VTC_MUST_EQUAL(Map.Num(), 2, "deserialize map: num correct")
+		VTC_MUST_EQUAL(Map.Contains("obj1"), true, "deserialize map: contains obj1")
+		VTC_MUST_EQUAL(Map.Contains("obj2"), true, "deserialize map: contains obj2")
+		VTC_MUST_EQUAL(Map["obj1"], Map["obj2"], "deserialize map: same object")
+
+		VTC_MUST_EQUAL(FVulField::Create(&Map).SerializeToJson(SerializedJson), true, "serialize map")
+		VTC_MUST_EQUAL(*SerializedJson, *MapJsonStr, "serialize map correctly")
 	});
 	
 	return true;
