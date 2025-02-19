@@ -164,8 +164,30 @@ struct FVulFieldTestSingleInstance : IVulFieldSetAware
 	}
 };
 
+UINTERFACE()
+class UVulFieldTestInterface1 : public UInterface
+{
+	GENERATED_BODY()
+};
+
+class IVulFieldTestInterface1
+{
+	GENERATED_BODY()
+};
+
+UINTERFACE()
+class UVulFieldTestInterface2 : public UInterface
+{
+	GENERATED_BODY()
+};
+
+class IVulFieldTestInterface2
+{
+	GENERATED_BODY()
+};
+
 UCLASS()
-class UVulFieldTestUObject2 : public UObject, public IVulFieldSetAware
+class UVulFieldTestUObject2 : public UObject, public IVulFieldSetAware, public IVulFieldTestInterface1
 {
 	GENERATED_BODY()
 	
@@ -175,7 +197,7 @@ public:
 	virtual FVulFieldSet VulFieldSet() const override
 	{
 		FVulFieldSet Set;
-		Set.Add(FVulField::Create(&Str), "str");
+		Set.Add(FVulField::Create(&Str), "str", true);
 		return Set;
 	}
 };

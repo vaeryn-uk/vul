@@ -60,7 +60,7 @@ struct FVulFieldSet
 	bool SerializeToJson(FString& Out, FVulFieldSerializationContext& Ctx) const
 	{
 		TSharedPtr<FJsonValue> Json;
-		if (!Serialize(Json))
+		if (!Serialize(Json, Ctx))
 		{
 			return false;
 		}
@@ -86,7 +86,7 @@ struct FVulFieldSet
 			return false;
 		}
 		
-		return Deserialize(ParsedJson);
+		return Deserialize(ParsedJson, Ctx);
 	}
 	
 	template <typename CharType = TCHAR>
@@ -191,6 +191,33 @@ struct TVulFieldSerializer<T*>
 			return FieldSetObj->VulFieldSet().Deserialize(Data, Ctx);
 		}
 		
+		return true;
+	}
+};
+
+template<typename T>
+struct TVulFieldSerializer<TScriptInterface<T>>
+{
+	static bool Serialize(const TScriptInterface<T>& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
+	{
+		return Ctx.Serialize(Value.GetObject(), Out);
+	}
+	
+	static bool Deserialize(const TSharedPtr<FJsonValue>& Data, TScriptInterface<T>& Out, FVulFieldDeserializationContext& Ctx)
+	{
+		UObject* Obj;
+		if (!Ctx.Deserialize(Data, Obj))
+		{
+			return false;
+		}
+
+		if (Cast<T>(Obj) == nullptr)
+		{
+			Ctx.Errors.Add(TEXT("deserialized object of class which does not implement the expected interface"));
+			return false;
+		}
+
+		Out = TScriptInterface<T>(Obj);
 		return true;
 	}
 };

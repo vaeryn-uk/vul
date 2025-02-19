@@ -118,6 +118,8 @@ namespace VulTest
 			return TestInstance->TestNearlyEqual(FormatTestTitle(Message), Actual, Expected);
 		}
 
+		void VULTEST_API Error(const FString& Message) const;
+
 		/**
 		 * Logs a message, as warning to ensure it's included in output.
 		 */

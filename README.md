@@ -285,7 +285,7 @@ a `FVulFieldSet` is used to conveniently describe how your objects should be ser
 
 To plug your types in to the system, there will need to exist serialization and deserialization 
 template functions based on `TVulFieldSerializer<T>`. It's recommended to implement 
-`IVulFieldSetAware` in your typesas this will automatically tie your type to an existing 
+`IVulFieldSetAware` in your types as this will automatically tie your type to an existing 
 serializer and will be used to handle de/serialization without needing to implement a serializer 
 for each of your types.
 
@@ -303,7 +303,6 @@ target as it allows the implementation to reuse what UE already provides.
 
 Features that might be worth adding in the future:
 
-* `TScriptInterface<>` serialization - should only be deserialized by ref?
 * `UENUM` serialization - built around `EnumToString()`?
 * Add stack-based error tracking to produce precise error messages in complex object structures (with tests)
 * Integration with UE's reflection system to automatically de/serialize down UPROPERTY chains.
@@ -315,3 +314,18 @@ TODO
 #### Polymorphic types
 
 TODO
+
+#### UObject
+
+Objects that are UCLASS can be serialized and deserialized by simply implementing `IVulFieldSetAware`.
+Unlike non-UObjects, it's not recommended to implement your own serializers as UObject construction is
+already handled and requires a bit of care.
+
+#### TScriptInterface<>
+
+Properties of this type are supported as long as used with UObjects. For deserialization, the input will 
+need to be a shared reference to a previously described `UObject` which we link to. Internally we do a 
+check to ensure that the resolved object does satisfy the specified interface. 
+
+For serialization, this is essentially the same as a `UObject*` on the underlying object pointer; they
+must implement `IVulFieldSetAware` for a useful serialized representation.

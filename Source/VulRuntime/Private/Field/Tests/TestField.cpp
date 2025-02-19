@@ -9,6 +9,24 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter
 )
 
+bool CtxContainsError(VulTest::TC TC, const FVulFieldSerializationErrors& Errors, const FString& Term)
+{
+	for (const auto Err : Errors.Errors)
+	{
+		if (Err.Contains(Term))
+		{
+			return true;
+		}
+	}
+
+	TC.Error(FString::Printf(
+		TEXT("Could not find error term \"%s\" in errors:\n%s"),
+		*Term,
+		*FString::Join(Errors.Errors, TEXT("\n"))
+	));
+	return false;
+}
+
 bool TestField::RunTest(const FString& Parameters)
 {
 	VulTest::Case(this, "Field access", [](VulTest::TC TC)
@@ -190,10 +208,7 @@ bool TestField::RunTest(const FString& Parameters)
 		Root->Children.Add(NodeA);
 	
 		FString JsonStr;
-		if (!TC.Equal(FVulField::Create(&Root).SerializeToJson(JsonStr), true, "serialize"))
-		{
-			return;
-		}
+		VTC_MUST_EQUAL(FVulField::Create(&Root).SerializeToJson(JsonStr), true, "serialize")
 		
 		TC.Equal(
 			*JsonStr,
@@ -205,17 +220,11 @@ bool TestField::RunTest(const FString& Parameters)
 		TSharedPtr<FVulFieldTestTreeBase> DeserializedRoot = MakeShared<FVulFieldTestTreeBase>();
 	
 		FVulFieldDeserializationContext Ctx;
-		if (!TC.Equal(FVulField::Create(&DeserializedRoot).DeserializeFromJson(JsonStr, Ctx), true, "deserialize"))
-		{
-			return;
-		}
+		VTC_MUST_EQUAL(FVulField::Create(&DeserializedRoot).DeserializeFromJson(JsonStr, Ctx), true, "deserialize")
 	
 		// Serialize it again as an easy way to assert the structure is correct.
 		FString JsonStr2;
-		if (!TC.Equal(FVulField::Create(&Root).SerializeToJson(JsonStr2), true, "serialize again"))
-		{
-			return;
-		}
+		VTC_MUST_EQUAL(FVulField::Create(&Root).SerializeToJson(JsonStr2), true, "serialize again")
 	
 		TC.Equal(*JsonStr2, *JsonStr, "serialize");
 	});
@@ -231,10 +240,7 @@ bool TestField::RunTest(const FString& Parameters)
 	
 		const auto Json = TEXT("{\"instance1\":{\"int\":5,\"str\":\"foobar\"},\"instance2\":\"foobar\"}");
 	
-		if (!TC.Equal(Set.DeserializeFromJson(Json), true, "deserialize"))
-		{
-			return;
-		}
+		VTC_MUST_EQUAL(Set.DeserializeFromJson(Json), true, "deserialize")
 	
 		TC.Equal(Ptr1.Get(), Ptr2.Get(), "pointers same");
 	});
@@ -250,17 +256,14 @@ bool TestField::RunTest(const FString& Parameters)
 		const auto Json = TEXT("{\"data\":[{\"int\":5,\"str\":\"foobar\"},\"foobar\"]}");
 	
 		FVulFieldDeserializationContext Ctx;
-		if (!TC.Equal(Set.DeserializeFromJson(Json, Ctx), true, "deserialize"))
-		{
-			return;
-		}
+		VTC_MUST_EQUAL(Set.DeserializeFromJson(Json, Ctx), true, "deserialize")
 	
 		if (TC.Equal(Arr.Num(), 2, "pointer array length"))
 		{
 			TC.Equal(Arr[0], Arr[1], "pointers same");
 		}
 	});
-
+	
 	VulTest::Case(this, "Deserialize references: instances", [](VulTest::TC TC)
 	{
 		// When using references in the serialized form to non-pointer variables, we
@@ -271,49 +274,89 @@ bool TestField::RunTest(const FString& Parameters)
 		FVulFieldSet Set;
 		Set.Add(FVulField::Create(&Instance1), "instance1");
 		Set.Add(FVulField::Create(&Instance2), "instance2");
-
+	
 		const auto Json = TEXT("{\"instance1\":{\"int\":5,\"str\":\"foobar\"},\"instance2\":\"foobar\"}");
-
+	
 		VTC_MUST_EQUAL(Set.DeserializeFromJson(Json), true, "deserialize")
-
+	
 		TC.Equal(Instance1.Int, Instance2.Int, "int same");
 		TC.Equal(Instance1.Str, Instance2.Str, "str same");
 	});
-
+	
 	VulTest::Case(this, "UObject", [](VulTest::TC TC)
 	{
 		UObject* Outer = NewObject<AActor>();
 		
 		UVulFieldTestUObject1* TestObj1 = nullptr;
-
+	
 		FString JsonStr = "{\"str\":\"foobar\",\"obj\":{\"str\":\"qux\"}}";
-
+	
 		FVulFieldDeserializationContext Ctx;
 		Ctx.ObjectOuter = Outer;
 		VTC_MUST_EQUAL(FVulField::Create(&TestObj1).DeserializeFromJson(JsonStr, Ctx), true, "deserialize obj1")
-
-		TC.Equal(*TestObj1->Str, TEXT("foobar"), "deserialize obj1: str correct");
-		TC.Equal(TestObj1->GetOuter(), Outer, "deserialize obj1: outer correct");
-		TC.Equal(IsValid(TestObj1->Obj), true, "deserialize obj1: nested object is valid");
-		TC.Equal(*TestObj1->Obj->Str, TEXT("qux"), "deserialize obj1: nested object is correct");
-		TC.Equal(TestObj1->Obj->GetOuter(), Outer, "deserialize obj1: nested object outer correct");
-
+	
+		VTC_MUST_EQUAL(*TestObj1->Str, TEXT("foobar"), "deserialize obj1: str correct")
+		VTC_MUST_EQUAL(TestObj1->GetOuter(), Outer, "deserialize obj1: outer correct")
+		VTC_MUST_EQUAL(IsValid(TestObj1->Obj), true, "deserialize obj1: nested object is valid")
+		VTC_MUST_EQUAL(*TestObj1->Obj->Str, TEXT("qux"), "deserialize obj1: nested object is correct")
+		VTC_MUST_EQUAL(TestObj1->Obj->GetOuter(), Outer, "deserialize obj1: nested object outer correct")
+	
 		FString SerializedJson;
 		VTC_MUST_EQUAL(FVulField::Create(&TestObj1).SerializeToJson(SerializedJson), true, "serialize obj1")
 		
-		TC.Equal(*SerializedJson, *JsonStr, "serialize obj1");
-
+		VTC_MUST_EQUAL(*SerializedJson, *JsonStr, "serialize obj1")
+	
 		TMap<FString, UVulFieldTestUObject1*> Map;
 		FString MapJsonStr = TEXT("{\"obj1\":{\"str\":\"foobar\",\"obj\":{\"str\":\"qux\"}},\"obj2\":\"foobar\"}");
 		VTC_MUST_EQUAL(FVulField::Create(&Map).DeserializeFromJson(MapJsonStr, Ctx), true, "deserialize map")
-
+	
 		VTC_MUST_EQUAL(Map.Num(), 2, "deserialize map: num correct")
 		VTC_MUST_EQUAL(Map.Contains("obj1"), true, "deserialize map: contains obj1")
 		VTC_MUST_EQUAL(Map.Contains("obj2"), true, "deserialize map: contains obj2")
 		VTC_MUST_EQUAL(Map["obj1"], Map["obj2"], "deserialize map: same object")
-
+	
 		VTC_MUST_EQUAL(FVulField::Create(&Map).SerializeToJson(SerializedJson), true, "serialize map")
 		VTC_MUST_EQUAL(*SerializedJson, *MapJsonStr, "serialize map correctly")
+	});
+
+	VulTest::Case(this, "TScriptInterface - valid interface", [](VulTest::TC TC)
+	{
+		FVulFieldDeserializationContext Ctx;
+		UObject* Outer = NewObject<AActor>();
+		Ctx.ObjectOuter = Outer;
+		
+		TArray<TScriptInterface<IVulFieldTestInterface1>> Interfaces;
+		
+		UVulFieldTestUObject2* TestObj = nullptr;
+		FVulFieldSet FieldSet;
+		FieldSet.Add(FVulField::Create(&TestObj), "obj");
+		FieldSet.Add(FVulField::Create(&Interfaces), "interfaces");
+
+		FString JsonStr = "{\"obj\":{\"str\":\"qux\"},\"interfaces\":[\"qux\",\"qux\",\"qux\"]}";
+		VTC_MUST_EQUAL(FieldSet.DeserializeFromJson(JsonStr, Ctx), true, "deserialize field set")
+		VTC_MUST_EQUAL(IsValid(TestObj), true, "object is valid")
+		VTC_MUST_EQUAL(static_cast<void*>(TestObj), static_cast<void*>(Interfaces[0].GetObject()), "interfaces[0] is same")
+		VTC_MUST_EQUAL(static_cast<void*>(TestObj), static_cast<void*>(Interfaces[1].GetObject()), "interfaces[1] is same")
+		VTC_MUST_EQUAL(static_cast<void*>(TestObj), static_cast<void*>(Interfaces[2].GetObject()), "interfaces[2] is same")
+	});
+
+	VulTest::Case(this, "TScriptInterface - invalid interface", [](VulTest::TC TC)
+	{
+		FVulFieldDeserializationContext Ctx;
+		UObject* Outer = NewObject<AActor>();
+		Ctx.ObjectOuter = Outer;
+		
+		TArray<TScriptInterface<UVulFieldTestInterface2>> Interfaces;
+		
+		UVulFieldTestUObject2* TestObj = nullptr;
+		FVulFieldSet FieldSet;
+		FieldSet.Add(FVulField::Create(&TestObj), "obj");
+		FieldSet.Add(FVulField::Create(&Interfaces), "interfaces");
+
+		FString JsonStr = "{\"obj\":{\"str\":\"qux\"},\"interfaces\":[\"qux\",\"qux\",\"qux\"]}";
+		VTC_MUST_EQUAL(FieldSet.DeserializeFromJson(JsonStr, Ctx), false, "deserialize failed")
+
+		CtxContainsError(TC, Ctx.Errors, "deserialized object of class which does not implement the expected interface");
 	});
 	
 	return true;
