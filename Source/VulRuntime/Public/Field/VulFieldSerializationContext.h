@@ -5,7 +5,7 @@
 #include "VulFieldSerializer.h"
 #include "UObject/Object.h"
 
-struct FVulFieldSerializationErrors
+struct VULRUNTIME_API FVulFieldSerializationErrors
 {
 	bool IsSuccess() const;
 	
@@ -48,9 +48,11 @@ private:
 	void Pop();
 	TArray<FString> Stack;
 	FString PathStr() const;
+
+	static FString JsonTypeToString(EJson Type);
 };
 
-struct FVulFieldSerializationMemory
+struct VULRUNTIME_API FVulFieldSerializationMemory
 {
 	template <typename T>
 	bool ResolveRef(const T& From, TSharedPtr<FJsonValue>& Ref, FVulFieldSerializationErrors& Errors)
@@ -74,7 +76,7 @@ struct FVulFieldSerializationMemory
 	TMap<FString, void*> Store;
 };
 
-struct FVulFieldSerializationContext
+struct VULRUNTIME_API FVulFieldSerializationContext
 {
 	FVulFieldSerializationErrors Errors;
 	FVulFieldSerializationMemory Memory;
@@ -116,7 +118,7 @@ struct FVulFieldSerializationContext
 	}
 };
 
-struct FVulFieldDeserializationContext
+struct VULRUNTIME_API FVulFieldDeserializationContext
 {
 	FVulFieldSerializationErrors Errors;
 	FVulFieldSerializationMemory Memory;
@@ -165,19 +167,4 @@ struct FVulFieldDeserializationContext
 		});
 	}
 };
-
-FString JsonTypeToString(EJson Type)
-{
-	switch (Type)
-	{
-	case EJson::None:     return TEXT("None");
-	case EJson::Null:     return TEXT("Null");
-	case EJson::String:   return TEXT("String");
-	case EJson::Number:   return TEXT("Number");
-	case EJson::Boolean:  return TEXT("Boolean");
-	case EJson::Array:    return TEXT("Array");
-	case EJson::Object:   return TEXT("Object");
-	default:              return TEXT("Unknown");
-	}
-}
 

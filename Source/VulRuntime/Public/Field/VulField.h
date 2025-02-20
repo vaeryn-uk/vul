@@ -19,7 +19,7 @@
  *
  * When describing your types' fields, you'll likely want a VulFieldSet.
  */
-struct FVulField
+struct VULRUNTIME_API FVulField
 {
 	/**
 	 * Define a field that can serialized and deserialized.

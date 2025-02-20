@@ -78,3 +78,18 @@ FString FVulFieldSerializationErrors::PathStr() const
 {
 	return "." + FString::Join(Stack, TEXT("."));
 }
+
+FString FVulFieldSerializationErrors::JsonTypeToString(EJson Type)
+{
+	switch (Type)
+	{
+	case EJson::None: return TEXT("None");
+	case EJson::Null: return TEXT("Null");
+	case EJson::String: return TEXT("String");
+	case EJson::Number: return TEXT("Number");
+	case EJson::Boolean: return TEXT("Boolean");
+	case EJson::Array: return TEXT("Array");
+	case EJson::Object: return TEXT("Object");
+	default: return TEXT("Unknown");
+	}
+}

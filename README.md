@@ -290,7 +290,7 @@ serializer and will be used to handle de/serialization without needing to implem
 for each of your types.
 
 Note: whilst `IVulFieldSetAware` is a `UINTERFACE`, this can be used on both non-UObject and 
-UObject classes.
+UObject classes (see note below about `USTRUCT` support too).
 
 If needed, you can forego this interface and implement your own serializers. There are definitions 
 for common types already in [VulFieldCommonSerializers.h](./Source/VulRuntime/Public/Field/VulFieldCommonSerializers.h).
@@ -336,3 +336,37 @@ must implement `IVulFieldSetAware` for a useful serialized representation.
 Enums are serialized and deserialized as their string form. Your enums will need to implement `EnumToString`
 to be picked up by the provided serializer. The `DECLARE_ENUM_TO_STRING` and `DEFINE_ENUM_TO_STRING` macros
 provided by UE should be used to make your enums compatible.
+
+#### Custom `USTRUCT`s
+
+Your `USTRUCT`s can implement `IVulFieldSetAware` like other types, but note that you many need to work
+around the Unreal Header Tool which expects a `USTRUCT`'s first parent to be a valid Unreal struct itself.
+You can work around by creating an empty base, as follows:
+
+```
+// UHT fails.
+USTRUCT()
+struct FMySerializableStruct : public IVulFieldSetAware
+{
+    GENERATED_BODY()
+   
+    FVulFieldSet VulFieldSet() const { ... }
+};
+
+// Workaround.
+USTRUCT()
+struct FMySerializableStructBase : { GENERATED_BODY() };
+
+// Note: you may need to add a virtual destructor to make this base polymorphic
+// if your real struct is.
+
+USTRUCT()
+struct FMySerializableStruct : public FMySerializableStructBase, IVulFieldSetAware
+{
+    GENERATED_BODY()
+   
+    FVulFieldSet VulFieldSet() const { ... }
+};
+```
+
+Alternatively, you can implement a `TVulFieldSerializer<FMySerializableStruct>`.

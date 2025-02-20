@@ -8,12 +8,12 @@
 /**
  * A collection of FVulFields that can be de/serialized.
  *
- * This is designed to allow your types to expose a field set that describes it,
- * then we can easily de/serialize instances of that type at all at once.
+ * This is designed to allow your types to expose a field set that describes its
+ * data, then we can easily de/serialize instances of that type at all at once.
  *
  * This is akin to an Object in JSON.
  */
-struct FVulFieldSet
+struct VULRUNTIME_API FVulFieldSet
 {
 	/**
 	 * Adds a field to the set. If read only, the field will only be
