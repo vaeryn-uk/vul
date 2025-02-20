@@ -426,7 +426,7 @@ bool TestField::RunTest(const FString& Parameters)
 				  },
 				  {
 				    "type": "node1",
-				    "int": 14,
+				    "int": "not an int",
 				    "children": []
 				  }
 				]
