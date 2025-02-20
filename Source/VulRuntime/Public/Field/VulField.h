@@ -29,14 +29,25 @@ struct FVulField
 	{
 		FVulField Out;
 		Out.Ptr = Ptr;
-		Out.Read = [](void* Ptr, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
-		{
-			return Ctx.Serialize<T>(*static_cast<T*>(Ptr), Out);
+		
+		Out.Read = [](
+			void* Ptr,
+			TSharedPtr<FJsonValue>& Out,
+			FVulFieldSerializationContext& Ctx,
+			const TOptional<FString>& IdentifierCtx
+		) {
+			return Ctx.Serialize<T>(*static_cast<T*>(Ptr), Out, IdentifierCtx);
 		};
-		Out.Write = [](const TSharedPtr<FJsonValue>& Value, void* Ptr, FVulFieldDeserializationContext& Ctx)
-		{
-			return Ctx.Deserialize<T>(Value, *static_cast<T*>(Ptr));
+		
+		Out.Write = [](
+			const TSharedPtr<FJsonValue>& Value,
+			void* Ptr,
+			FVulFieldDeserializationContext& Ctx,
+			const TOptional<FString>& IdentifierCtx
+		) {
+			return Ctx.Deserialize<T>(Value, *static_cast<T*>(Ptr), IdentifierCtx);
 		};
+		
 		return Out;
 	}
 	
@@ -50,15 +61,26 @@ struct FVulField
 		FVulField Out;
 		Out.bIsReadOnly = true;
 		Out.Ptr = const_cast<T*>(&Ptr); // const cast to satisfy Ptr. We won't ever write to this, however.
-		Out.Read = [](void* Ptr, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
-		{
-			return Ctx.Serialize<T>(*reinterpret_cast<T*>(Ptr), Out);
+		
+		Out.Read = [](
+			void* Ptr,
+			TSharedPtr<FJsonValue>& Out,
+			FVulFieldSerializationContext& Ctx,
+			const TOptional<FString>& IdentifierCtx
+		) {
+			return Ctx.Serialize<T>(*reinterpret_cast<T*>(Ptr), Out, IdentifierCtx);
 		};
-		Out.Write = [](const TSharedPtr<FJsonValue>& Value, void* Ptr, FVulFieldDeserializationContext& Ctx)
-		{
+		
+		Out.Write = [](
+			const TSharedPtr<FJsonValue>& Value,
+			void* Ptr,
+			FVulFieldDeserializationContext& Ctx,
+			const TOptional<FString>& IdentifierCtx
+		) {
 			Ctx.Errors.Add(TEXT("cannot write read-only field"));
 			return false;
 		};
+		
 		return Out;
 	}
 
@@ -74,9 +96,9 @@ struct FVulField
 	static FVulField Create(const T* Ptr) { return Create<T>(const_cast<T*>(Ptr)); }
 
 	bool Deserialize(const TSharedPtr<FJsonValue>& Value);
-	bool Deserialize(const TSharedPtr<FJsonValue>& Value, FVulFieldDeserializationContext& Ctx);
+	bool Deserialize(const TSharedPtr<FJsonValue>& Value, FVulFieldDeserializationContext& Ctx, const TOptional<FString>& IdentifierCtx = {});
 	bool Serialize(TSharedPtr<FJsonValue>& Out) const;
-	bool Serialize(TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx) const;
+	bool Serialize(TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx, const TOptional<FString>& IdentifierCtx = {}) const;
 
 	template <typename CharType = TCHAR>
 	bool DeserializeFromJson(const FString& JsonStr, FVulFieldDeserializationContext& Ctx)
@@ -130,6 +152,18 @@ struct FVulField
 private:
 	bool bIsReadOnly = false;
 	void* Ptr = nullptr;
-	TFunction<bool (void*, TSharedPtr<FJsonValue>&, FVulFieldSerializationContext& Ctx)> Read;
-	TFunction<bool (const TSharedPtr<FJsonValue>&, void*, FVulFieldDeserializationContext& Ctx)> Write;
+	
+	TFunction<bool (
+		void*,
+		TSharedPtr<FJsonValue>&,
+		FVulFieldSerializationContext& Ctx,
+		const TOptional<FString>& IdentifierCtx
+	)> Read;
+	
+	TFunction<bool (
+		const TSharedPtr<FJsonValue>&,
+		void*,
+		FVulFieldDeserializationContext& Ctx,
+		const TOptional<FString>& IdentifierCtx
+	)> Write;
 };

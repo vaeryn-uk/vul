@@ -38,15 +38,21 @@ struct FVulFieldSet
 	template <typename T>
 	void Add(TFunction<T ()> Fn, const FString& Identifier, const bool IsRef = false)
 	{
-		Fns.Add(Identifier, [Fn](TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
-		{
-			return Ctx.Serialize<T>(Fn(), Out);
-		});
+		Fns.Add(
+			Identifier,
+			[Fn](
+				TSharedPtr<FJsonValue>& Out,
+				FVulFieldSerializationContext& Ctx,
+				const TOptional<FString>& IdentifierCtx
+			) {
+				return Ctx.Serialize<T>(Fn(), Out, IdentifierCtx);
+			}
+		);
 		
 		if (IsRef)
 		{
 			RefField = Identifier;
-		} 
+		}
 	}
 
 	TSharedPtr<FJsonValue> GetRef() const;
@@ -97,8 +103,13 @@ struct FVulFieldSet
 	}
 private:
 	TMap<FString, FVulField> Fields;
-	TMap<FString, TFunction<bool (TSharedPtr<FJsonValue>&, FVulFieldSerializationContext&)>> Fns;
 	TOptional<FString> RefField = {};
+	
+	TMap<FString, TFunction<bool (
+			TSharedPtr<FJsonValue>&,
+			FVulFieldSerializationContext&,
+			const TOptional<FString>& IdentifierCtx = {}
+		)>> Fns;
 };
 
 

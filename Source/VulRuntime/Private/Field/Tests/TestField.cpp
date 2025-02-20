@@ -335,6 +335,7 @@ bool TestField::RunTest(const FString& Parameters)
 		FString JsonStr = "{\"obj\":{\"str\":\"qux\"},\"interfaces\":[\"qux\",\"qux\",\"qux\"]}";
 		VTC_MUST_EQUAL(FieldSet.DeserializeFromJson(JsonStr, Ctx), true, "deserialize field set")
 		VTC_MUST_EQUAL(IsValid(TestObj), true, "object is valid")
+		VTC_MUST_EQUAL(Interfaces.Num(), 3, "interfaces num")
 		VTC_MUST_EQUAL(static_cast<void*>(TestObj), static_cast<void*>(Interfaces[0].GetObject()), "interfaces[0] is same")
 		VTC_MUST_EQUAL(static_cast<void*>(TestObj), static_cast<void*>(Interfaces[1].GetObject()), "interfaces[1] is same")
 		VTC_MUST_EQUAL(static_cast<void*>(TestObj), static_cast<void*>(Interfaces[2].GetObject()), "interfaces[2] is same")
@@ -357,6 +358,24 @@ bool TestField::RunTest(const FString& Parameters)
 		VTC_MUST_EQUAL(FieldSet.DeserializeFromJson(JsonStr, Ctx), false, "deserialize failed")
 
 		CtxContainsError(TC, Ctx.Errors, "deserialized object of class which does not implement the expected interface");
+	});
+
+	VulTest::Case(this, "Test enum", [](VulTest::TC TC)
+	{
+		// Note we have to use a container as UE JSON deserialization does not support scalar roots.
+		TArray<EVulFieldTestTreeNodeType> EnumValues;
+
+		FString JsonStr = "[\"node1\"]";
+		FVulFieldDeserializationContext Ctx;
+		
+		VTC_MUST_EQUAL(FVulField::Create(&EnumValues).DeserializeFromJson(JsonStr, Ctx), true, "deserialize")
+
+		VTC_MUST_EQUAL(EnumValues, {EVulFieldTestTreeNodeType::Node1}, "enum is correct")
+
+		FString SerializedStr;
+		VTC_MUST_EQUAL(FVulField::Create(&EnumValues).SerializeToJson(SerializedStr), true, "serialize")
+
+		VTC_MUST_EQUAL(*SerializedStr, *JsonStr, "serialized correctly")
 	});
 	
 	return true;

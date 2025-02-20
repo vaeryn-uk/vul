@@ -158,7 +158,7 @@ See `TVulRngManager` for more information.
 
 ### Actor Utility
 
-* See `FVulActorUtil` for a bunch of CPP helpers for writing actor-interacting code. This serves both as code that
+* See `FVulActorUtil` for a bunch of C++ helpers for writing actor-interacting code. This serves both as code that
   can be used, but also a form of documentation of how to work with actors.
 * `TVulComponentCollection` is a data type for conveniently working with zero or more components that share tag.
   `FVulNiagaraCollection` can be used for Niagara components, but also serves as example of our collection's use.
@@ -201,7 +201,7 @@ Contains content that is shown/hidden when a connected button is pushed. See `UV
 with the world/interface. This is implemented independently of Unreal's native tooltip support for now,
 but maybe integrated later if a need arises.
 
-To use this, create a widget class and implement `IVulTooltipWidget` in CPP, then create
+To use this, create a widget class and implement `IVulTooltipWidget` in C++, then create
 a widget UMG blueprint that extends it and select the UMG in Vul Runtime's project settings as the
 widget class to use.
 
@@ -238,7 +238,7 @@ See the code in `UVulRichTextBlock` for customization documentation, but as a qu
     - Use syntax `<vi i=\"<row-name>\"</>` to render icons
     - Optionally override `UVulRichTextIcon` to further customize appearance, then select your override 
       in Vul library settings. Note currently widget blueprints extensions of this icon widget do not work;
-      they must be in CPP.
+      they must be in C++.
     - These icons extend Rich Text Icons with support for color and background configuration.
   - You may define a rich text styles table as per CommonUI, although the Vul rich text support
     doesn't utilize or enhance this in any way.
@@ -273,11 +273,11 @@ now. These may be expanded as use-cases arise.
 
 ### `FVulField` Serialization
 
-This requires the Unreal `Json` module.
+This requires the Unreal `Json` module. C++ `concept` compiler support is also required (C++20).
 
-The field system is designed to support automatic serialization & deserialization of CPP classes
+The field system is designed to support automatic serialization & deserialization of C++ classes
 outside the Unreal reflection system. This template-driven feature allows serialization of your
-native CPP types & properties (non-`USTRUCT`/`UPROPERTY`/`UCLASS`) with minimal boilerplate code.
+native C++ types & properties (non-`USTRUCT`/`UPROPERTY`/`UCLASS`) with minimal boilerplate code.
 
 At the heart of this system is `FVulField`, which wraps pointers that will be read from/written to.
 As we're generally defining types that include properties that themselves need to be serialized,
@@ -296,6 +296,7 @@ If needed, you can forego this interface and implement your own serializers. The
 for common types already in [VulFieldCommonSerializers.h](./Source/VulRuntime/Public/Field/VulFieldCommonSerializers.h).
 This includes container types, such as `TArray`, `TMap`, `TOptional`, `TSharedPtr`, so you only
 need to define for your concrete types themselves; containerized & pointer versions will be inferred.
+Specifics on provided serializes for some types are discussed below.
 
 Importantly, whilst the field system deals in `FJsonValue` and associated types, it is not explicitly 
 designed to be limited to JSON. `FJsonValue` is selected as a portable, standard data representation 
@@ -303,9 +304,9 @@ target as it allows the implementation to reuse what UE already provides.
 
 Features that might be worth adding in the future:
 
-* `UENUM` serialization - built around `EnumToString()`?
 * Add stack-based error tracking to produce precise error messages in complex object structures (with tests)
 * Integration with UE's reflection system to automatically de/serialize down UPROPERTY chains.
+* Enum support: int representation - would be more efficient in serialized outputs.
 
 #### Shared references
 
@@ -329,3 +330,9 @@ check to ensure that the resolved object does satisfy the specified interface.
 
 For serialization, this is essentially the same as a `UObject*` on the underlying object pointer; they
 must implement `IVulFieldSetAware` for a useful serialized representation.
+
+#### UEnum
+
+Enums are serialized and deserialized as their string form. Your enums will need to implement `EnumToString`
+to be picked up by the provided serializer. The `DECLARE_ENUM_TO_STRING` and `DEFINE_ENUM_TO_STRING` macros
+provided by UE should be used to make your enums compatible.

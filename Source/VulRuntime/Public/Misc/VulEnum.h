@@ -42,4 +42,24 @@ namespace VulRuntime::Enum
 		
 		return Out;
 	}
+
+	/**
+	 * Finds the enum value corresponding to the given string.
+	 *
+	 * Returns false if it could not be found.
+	 */
+	template <typename EnumType>
+	bool FromString(const FString& Str, EnumType& Out, const ESearchCase::Type MatchType = ESearchCase::IgnoreCase)
+	{
+		for (const auto Val : Values<EnumType>())
+		{
+			if (EnumToString(Val).Equals(Str, MatchType))
+			{
+				Out = Val;
+				return true;
+			}
+		}
+		
+		return false;
+	}
 }

@@ -22,7 +22,7 @@ TSharedPtr<FJsonValue> FVulFieldSet::GetRef() const
 
 	if (Fields.Contains(RefField.GetValue()))
 	{
-		if (Fields[RefField.GetValue()].Serialize(Ref, Ctx))
+		if (Fields[RefField.GetValue()].Serialize(Ref, Ctx, {}))
 		{
 			return Ref;
 		} // TODO: What if we fail to serialize it?
@@ -30,7 +30,7 @@ TSharedPtr<FJsonValue> FVulFieldSet::GetRef() const
 
 	if (Fns.Contains(RefField.GetValue()))
 	{
-		if (Fns[RefField.GetValue()](Ref, Ctx))
+		if (Fns[RefField.GetValue()](Ref, Ctx, {}))
 		{
 			return Ref;
 		} // TODO: What if we fail to serialize it?
@@ -52,7 +52,7 @@ bool FVulFieldSet::Serialize(TSharedPtr<FJsonValue>& Out, FVulFieldSerialization
 	for (const auto Entry : Fields)
 	{
 		TSharedPtr<FJsonValue> JsonValue;
-		if (!Entry.Value.Serialize(JsonValue, Ctx))
+		if (!Entry.Value.Serialize(JsonValue, Ctx, Entry.Key))
 		{
 			return false;
 		}
@@ -63,7 +63,7 @@ bool FVulFieldSet::Serialize(TSharedPtr<FJsonValue>& Out, FVulFieldSerialization
 	for (const auto Entry : Fns)
 	{
 		TSharedPtr<FJsonValue> JsonValue;
-		if (!Entry.Value(JsonValue, Ctx))
+		if (!Entry.Value(JsonValue, Ctx, Entry.Key))
 		{
 			return false;
 		}
@@ -96,7 +96,7 @@ bool FVulFieldSet::Deserialize(const TSharedPtr<FJsonValue>& Data, FVulFieldDese
 			continue;
 		}
 
-		if (!Fields[Entry.Key].Deserialize(Entry.Value, Ctx))
+		if (!Fields[Entry.Key].Deserialize(Entry.Value, Ctx, Entry.Key))
 		{
 			return false;
 		}

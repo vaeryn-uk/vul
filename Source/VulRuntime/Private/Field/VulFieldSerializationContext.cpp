@@ -41,3 +41,40 @@ bool FVulFieldSerializationErrors::RequireJsonProperty(
 	Out = Value->AsObject()->Values[Property];
 	return true;
 }
+
+void FVulFieldSerializationErrors::Push(const TOptional<FString>& Identifier)
+{
+	Stack.Add(Identifier.GetValue());
+}
+
+void FVulFieldSerializationErrors::Pop()
+{
+	if (!Stack.IsEmpty())
+	{
+		Stack.RemoveAt(Stack.Num() - 1);
+	}
+}
+
+bool FVulFieldSerializationErrors::WithIdentifierCtx(
+	const TOptional<FString>& Identifier,
+	const TFunction<bool()>& Fn
+) {
+	if (Identifier.IsSet())
+	{
+		Push(Identifier);
+	}
+	
+	const auto Ret = Fn();
+	
+	if (Identifier.IsSet())
+	{
+		Pop();
+	}
+	
+	return Ret;
+}
+
+FString FVulFieldSerializationErrors::PathStr() const
+{
+	return "." + FString::Join(Stack, TEXT("."));
+}

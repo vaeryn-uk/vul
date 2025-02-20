@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "VulFieldSerializationContext.h"
+#include "Misc/VulEnum.h"
 
 template<>
 struct TVulFieldSerializer<bool>
@@ -68,10 +69,12 @@ struct TVulFieldSerializer<TArray<V>>
 	static bool Serialize(const TArray<V>& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
 	{
 		TArray<TSharedPtr<FJsonValue>> ArrayItems;
+		
+		int I = 0;
 		for (const auto Item : Value)
 		{
 			TSharedPtr<FJsonValue> ToAdd;
-			if (!Ctx.Serialize<V>(Item, ToAdd))
+			if (!Ctx.Serialize<V>(Item, ToAdd, FString::Printf(TEXT("[%d]"), I++)))
 			{
 				return false;
 			}
@@ -93,10 +96,11 @@ struct TVulFieldSerializer<TArray<V>>
 		
 		Out.Reset();
 
+		int I = 0;
 		for (const auto Entry : Data->AsArray())
 		{
 			V Value;
-			if (!Ctx.Deserialize<V>(Entry, Value))
+			if (!Ctx.Deserialize<V>(Entry, Value, FString::Printf(TEXT("[%d]"), I++)))
 			{
 				return false;
 			}
@@ -287,6 +291,38 @@ struct TVulFieldSerializer<TSharedRef<T>>
 
 		Out = Inner.ToSharedRef();
 
+		return true;
+	}
+};
+
+// TODO: concepts require C++20. This okay?
+template <typename T>
+concept HasEnumToString = requires(T value) {
+	{ EnumToString(value) } -> std::same_as<FString>;
+};
+
+template <HasEnumToString T>
+struct TVulFieldSerializer<T>
+{
+	static bool Serialize(const T& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
+	{
+		Out = MakeShared<FJsonValueString>(EnumToString(Value));
+		return true;
+	}
+
+	static bool Deserialize(const TSharedPtr<FJsonValue>& Data, T& Out, FVulFieldDeserializationContext& Ctx)
+	{
+		if (!Ctx.Errors.RequireJsonType(Data, EJson::String))
+		{
+			return false;
+		}
+
+		if (!VulRuntime::Enum::FromString(Data->AsString(), Out))
+		{
+			Ctx.Errors.Add(TEXT("cannot interpret enum value \"%s\""), *Data->AsString());
+			return false;
+		}
+		
 		return true;
 	}
 };
