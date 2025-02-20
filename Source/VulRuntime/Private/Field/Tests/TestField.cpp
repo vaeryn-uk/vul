@@ -377,6 +377,97 @@ bool TestField::RunTest(const FString& Parameters)
 
 		VTC_MUST_EQUAL(*SerializedStr, *JsonStr, "serialized correctly")
 	});
+
+	{
+		struct Data
+		{
+			FString Json;
+			mutable FVulField Field;
+			TArray<FString> ExpectedErrors;
+		};
+		
+		auto Ddt = VulTest::DDT<Data>(this, "error messages: deserialization", [](const VulTest::TestCase& TC, const Data& Data)
+		{
+			FVulFieldDeserializationContext Ctx;
+			
+			VTC_MUST_EQUAL(Data.Field.DeserializeFromJson(Data.Json, Ctx), false, "trees fails")
+			
+			for (const auto Err : Data.ExpectedErrors)
+			{
+				CtxContainsError(TC, Ctx.Errors, Err);
+			}
+		});
+		
+		TArray<TSharedPtr<FVulFieldTestTreeBase>> Trees;
+
+		Ddt.Run("trees 1", Data{
+			.Json = R"(
+				[
+				  {
+				    "type": "node1",
+				    "int": "not an int",
+				    "children": []
+				  }
+				]
+			)",
+			.Field = FVulField::Create(&Trees),
+			.ExpectedErrors = {
+				".[0].int: Required JSON type Number, but got String",
+			},
+		});
+
+		Ddt.Run("trees 2", Data{
+			.Json = R"(
+				[
+				  {
+				    "type": "node1",
+				    "int": 13,
+				    "children": []
+				  },
+				  {
+				    "type": "node1",
+				    "int": 14,
+				    "children": []
+				  }
+				]
+			)",
+			.Field = FVulField::Create(&Trees),
+			.ExpectedErrors = {
+				".[1].int: Required JSON type Number, but got String",
+			},
+		});
+
+		Ddt.Run("trees 3", Data{
+			.Json = R"(
+				[
+				  {
+				    "type": "node1",
+				    "int": 13,
+				    "children": []
+				  },
+				  {
+				    "type": "node1",
+				    "int": 14,
+				    "children": [
+				      {
+				        "type": "node2",
+				        "str": "a string",
+				        "children": [
+				          {
+				            
+				          }
+				        ]
+				      }
+				    ]
+				  }
+				]
+			)",
+			.Field = FVulField::Create(&Trees),
+			.ExpectedErrors = {
+				".[1].children.[0].children.[0]: Required JSON property `type` is not defined",
+			},
+		});
+	}
 	
 	return true;
 }
