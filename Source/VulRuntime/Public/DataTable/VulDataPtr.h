@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "Field/VulFieldSet.h"
 #include "VulDataPtr.generated.h"
 
 
@@ -37,6 +38,8 @@ struct VULRUNTIME_API FVulDataPtr
 	 * Returns true if this is a null/non-set ptr.
 	 */
 	bool IsSet() const;
+
+	FVulFieldSet VulFieldSet() const;
 
 	/**
 	 * Gets the underlying data as a read-only raw pointer.
@@ -150,6 +153,11 @@ struct TVulDataPtr
 	TVulDataPtr(const TVulDataPtr<OtherRowType>& Other)
 	{
 		DataPtr = Other.Data();
+	}
+
+	FVulFieldSet VulFieldSet() const
+	{
+		return DataPtr.VulFieldSet();
 	}
 
 	/**

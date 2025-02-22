@@ -318,6 +318,35 @@ bool TestField::RunTest(const FString& Parameters)
 		VTC_MUST_EQUAL(FVulField::Create(&Map).SerializeToJson(SerializedJson), true, "serialize map")
 		VTC_MUST_EQUAL(*SerializedJson, *MapJsonStr, "serialize map correctly")
 	});
+	
+	VulTest::Case(this, "UObject - assets", [](VulTest::TC TC)
+	{
+		// This test requires an asset, assuming this texture exists in engine content.
+		UTexture2D* Texture = LoadObject<UTexture2D>(
+			nullptr,
+			TEXT("Texture2D'/Engine/EngineSky/T_Sky_Blue.T_Sky_Blue'")
+		);
+
+		VTC_MUST_EQUAL(IsValid(Texture), true, "loaded engine content")
+
+		// Need a container as UE JSON doesn't do scalar roots.
+		TArray Textures = {Texture};
+
+		FString SerializedJson;
+		
+		{
+			FVulFieldSerializationContext Ctx;
+			VTC_MUST_EQUAL(FVulField::Create(&Textures).SerializeToJson(SerializedJson, Ctx), true, "serialize")
+			VTC_MUST_EQUAL(*SerializedJson, TEXT("[\"/Engine/EngineSky/T_Sky_Blue.T_Sky_Blue\"]"), "serialize correctly");
+		}
+
+		{
+			TArray<UTexture2D*> DeserializedTextures = {};
+			FVulFieldDeserializationContext Ctx;
+			VTC_MUST_EQUAL(FVulField::Create(&DeserializedTextures).DeserializeFromJson(SerializedJson, Ctx), true, "deserialize")
+			VTC_MUST_EQUAL(DeserializedTextures, Textures, "deserialize correctly");
+		}
+	});
 
 	VulTest::Case(this, "TScriptInterface - valid interface", [](VulTest::TC TC)
 	{

@@ -1,9 +1,21 @@
 ﻿#include "DataTable/VulDataPtr.h"
 #include "DataTable/VulDataRepository.h"
+#include "Field/VulFieldSet.h"
 
 bool FVulDataPtr::IsSet() const
 {
 	return !RowName.IsNone();
+}
+
+FVulFieldSet FVulDataPtr::VulFieldSet() const
+{
+	FVulFieldSet Set;
+	
+	Set.Add(FVulField::Create(&RowName), "row");
+	Set.Add(FVulField::Create(&TableName), "table");
+	Set.Add(FVulField::Create(&Repository), "repository");
+	
+	return Set;
 }
 
 FString FVulDataPtr::ToString() const

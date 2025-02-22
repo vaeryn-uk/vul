@@ -122,8 +122,6 @@ class VULRUNTIME_API UVulFieldSetAware : public UInterface
 /**
  * Implement this interface on your UObjects to make them compatible with the FVulField
  * serialization & deserialization system.
- *
- * TODO: Should this interface be required 
  */
 class VULRUNTIME_API IVulFieldSetAware
 {
@@ -135,7 +133,10 @@ public:
 
 // TODO: concepts require C++20. This okay?
 template <typename T>
-concept HasVulFieldSet = std::is_base_of_v<IVulFieldSetAware, T>;
+concept HasVulFieldSet = std::is_base_of_v<IVulFieldSetAware, T> || 
+	requires(const T& Obj) {
+		{ Obj.VulFieldSet() } -> std::same_as<FVulFieldSet>;
+	};
 
 template <HasVulFieldSet T>
 struct TVulFieldSerializer<T>
@@ -181,6 +182,13 @@ struct TVulFieldSerializer<T*>
 		{
 			return FieldSetObj->VulFieldSet().Serialize(Out, Ctx);
 		}
+		
+		if (Ctx.Flags.IsEnabled(VulFieldSerializationFlag_AssetReferencing) && Value->IsAsset())
+		{
+			const auto Path = FSoftObjectPath(Value);
+			Out = MakeShared<FJsonValueString>(Path.ToString());
+			return true;
+		}
 
 		// TODO: Just doing an empty object - not useful? Error?
 		Out = MakeShared<FJsonValueObject>(MakeShared<FJsonObject>());
@@ -189,10 +197,14 @@ struct TVulFieldSerializer<T*>
 
 	static bool Deserialize(const TSharedPtr<FJsonValue>& Data, T*& Out, FVulFieldDeserializationContext& Ctx)
 	{
-		if (!IsValid(Ctx.ObjectOuter))
+		if (Ctx.Flags.IsEnabled(VulFieldSerializationFlag_AssetReferencing))
 		{
-			Ctx.Errors.Add(TEXT("Cannot deserialize UObject without a ObjectOuter set"));
-			return false;
+			FString AsStr;
+			if (Data->TryGetString(AsStr) && FSoftObjectPath(AsStr).IsValid())
+			{
+				Out = LoadObject<T>(Ctx.ObjectOuter, *AsStr);
+				return true;
+			}
 		}
 		
 		Out = NewObject<T>(Ctx.ObjectOuter, Out->StaticClass());

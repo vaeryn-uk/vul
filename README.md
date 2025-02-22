@@ -283,14 +283,18 @@ At the heart of this system is `FVulField`, which wraps pointers that will be re
 As we're generally defining types that include properties that themselves need to be serialized,
 a `FVulFieldSet` is used to conveniently describe how your objects should be serialized.
 
-To plug your types in to the system, there will need to exist serialization and deserialization 
-template functions based on `TVulFieldSerializer<T>`. It's recommended to implement 
-`IVulFieldSetAware` in your types as this will automatically tie your type to an existing 
-serializer and will be used to handle de/serialization without needing to implement a serializer 
+To plug your types in to the system, there will need to exist serialization and deserialization
+template specializations based on `TVulFieldSerializer<T>`. It's recommended to implement
+`IVulFieldSetAware` in your types as this will automatically tie your type to an existing
+serializer and will be used to handle de/serialization without needing to implement a serializer
 for each of your types.
 
-Note: whilst `IVulFieldSetAware` is a `UINTERFACE`, this can be used on both non-UObject and 
-UObject classes (see note below about `USTRUCT` support too).
+`IVulFieldSetAware` is reference interface, but sometimes optional. Provided template 
+specializations will look directly for the existence of a `FVulFieldSet VulFieldSet() const` 
+function, regardless whether the interface is actually implemented. This is helpful for 
+`USTRUCT`s, where UHT trips up if a `USTRUCT` inherits from a single, non-`USTRUCT` 
+class; `: IVulFieldSetAware` can simply be omitted. The exception here is `UObject` types:
+they must implement `IVulFieldSetAware` for their field sets to be serialized correctly.
 
 If needed, you can forego this interface and implement your own serializers. There are definitions 
 for common types already in [VulFieldCommonSerializers.h](./Source/VulRuntime/Public/Field/VulFieldCommonSerializers.h).
@@ -336,37 +340,3 @@ must implement `IVulFieldSetAware` for a useful serialized representation.
 Enums are serialized and deserialized as their string form. Your enums will need to implement `EnumToString`
 to be picked up by the provided serializer. The `DECLARE_ENUM_TO_STRING` and `DEFINE_ENUM_TO_STRING` macros
 provided by UE should be used to make your enums compatible.
-
-#### Custom `USTRUCT`s
-
-Your `USTRUCT`s can implement `IVulFieldSetAware` like other types, but note that you many need to work
-around the Unreal Header Tool which expects a `USTRUCT`'s first parent to be a valid Unreal struct itself.
-You can work around by creating an empty base, as follows:
-
-```
-// UHT fails.
-USTRUCT()
-struct FMySerializableStruct : public IVulFieldSetAware
-{
-    GENERATED_BODY()
-   
-    FVulFieldSet VulFieldSet() const { ... }
-};
-
-// Workaround.
-USTRUCT()
-struct FMySerializableStructBase : { GENERATED_BODY() };
-
-// Note: you may need to add a virtual destructor to make this base polymorphic
-// if your real struct is.
-
-USTRUCT()
-struct FMySerializableStruct : public FMySerializableStructBase, IVulFieldSetAware
-{
-    GENERATED_BODY()
-   
-    FVulFieldSet VulFieldSet() const { ... }
-};
-```
-
-Alternatively, you can implement a `TVulFieldSerializer<FMySerializableStruct>`.

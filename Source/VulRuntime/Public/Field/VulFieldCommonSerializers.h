@@ -63,6 +63,27 @@ struct TVulFieldSerializer<FString>
 	}
 };
 
+template<>
+struct TVulFieldSerializer<FName>
+{
+	static bool Serialize(const FName& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
+	{
+		Out = MakeShared<FJsonValueString>(Value.ToString());
+		return true;
+	}
+	
+	static bool Deserialize(const TSharedPtr<FJsonValue>& Data, FName& Out, FVulFieldDeserializationContext& Ctx)
+	{
+		if (!Ctx.Errors.RequireJsonType(Data, EJson::String))
+		{
+			return false;
+		}
+
+		Out = FName(Data->AsString());
+		return true;
+	}
+};
+
 template<typename V>
 struct TVulFieldSerializer<TArray<V>>
 {

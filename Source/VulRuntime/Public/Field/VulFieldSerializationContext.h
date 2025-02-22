@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "VulFieldRefResolver.h"
+#include "VulFieldSerializationOptions.h"
 #include "VulFieldSerializer.h"
 #include "UObject/Object.h"
 
@@ -80,13 +81,16 @@ struct VULRUNTIME_API FVulFieldSerializationContext
 {
 	FVulFieldSerializationErrors Errors;
 	FVulFieldSerializationMemory Memory;
+	FVulFieldSerializationFlags Flags;
 
 	template <typename T>
 	bool Serialize(const T& Value, TSharedPtr<FJsonValue>& Out, const TOptional<FString>& IdentifierCtx = {})
 	{
 		return Errors.WithIdentifierCtx(IdentifierCtx, [&]
 		{
-			constexpr bool SupportsRef = TVulFieldRefResolver<T>::SupportsRef;
+			constexpr bool TypeSupportsRef = TVulFieldRefResolver<T>::SupportsRef;
+			const bool SupportsRef = TypeSupportsRef && Flags.IsEnabled(VulFieldSerializationFlag_Referencing);
+			
 			TSharedPtr<FJsonValue> Ref;
 
 			if (SupportsRef)
@@ -122,18 +126,21 @@ struct VULRUNTIME_API FVulFieldDeserializationContext
 {
 	FVulFieldSerializationErrors Errors;
 	FVulFieldSerializationMemory Memory;
+	FVulFieldSerializationFlags Flags;
 
 	/**
 	 * The outer object we use when deserialization requires creating UObjects.
 	 */
-	UObject* ObjectOuter;
+	UObject* ObjectOuter = nullptr;
 
 	template<typename T>
 	bool Deserialize(const TSharedPtr<FJsonValue>& Data, T& Out, const TOptional<FString>& IdentifierCtx = {})
 	{
 		return Errors.WithIdentifierCtx(IdentifierCtx, [&]
 		{
-			constexpr bool SupportsRef = TVulFieldRefResolver<T>::SupportsRef;
+			constexpr bool TypeSupportsRef = TVulFieldRefResolver<T>::SupportsRef;
+			const bool SupportsRef = TypeSupportsRef && Flags.IsEnabled(VulFieldSerializationFlag_Referencing);
+			
 			if (SupportsRef)
 			{
 				FString PossibleRef;
