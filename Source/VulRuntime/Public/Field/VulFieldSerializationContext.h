@@ -24,7 +24,7 @@ struct VULRUNTIME_API FVulFieldSerializationErrors
 			Add(Fmt, Forward<Types>(Args)...);
 		}
 
-		return true;
+		return Condition;
 	}
 
 	/**
@@ -82,6 +82,11 @@ struct VULRUNTIME_API FVulFieldSerializationContext
 	FVulFieldSerializationErrors Errors;
 	FVulFieldSerializationMemory Memory;
 	FVulFieldSerializationFlags Flags;
+
+	/**
+	 * When serializing floating points, how many decimal places should we include?
+	 */
+	const int DefaultPrecision = 1;
 
 	template <typename T>
 	bool Serialize(const T& Value, TSharedPtr<FJsonValue>& Out, const TOptional<FString>& IdentifierCtx = {})

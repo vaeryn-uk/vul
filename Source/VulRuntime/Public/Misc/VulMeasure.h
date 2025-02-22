@@ -155,6 +155,14 @@ struct TVulMeasure
 		return static_cast<float>(CurrentValue()) / static_cast<float>(MaxValue());
 	}
 
+	FVulFieldSet VulFieldSet() const
+	{
+		FVulFieldSet Set;
+		Set.Add(FVulField::Create(&Current), "current");
+		Set.Add(FVulField::Create(&Max), "max");
+		return Set;
+	}
+
 	NumberType CurrentValue() const
 	{
 		return GetCurrent().Value();

@@ -96,6 +96,18 @@ struct TVulNumberModification
 		return *this;
 	}
 
+	FVulFieldSet VulFieldSet() const
+	{
+		FVulFieldSet FieldSet;
+		FieldSet.Add(FVulField::Create(&Clamp), "clamp");
+		// TODO: Encode this more efficiently? Only one of the values will be set.
+		FieldSet.Add(FVulField::Create(&Percent), "pct");
+		FieldSet.Add(FVulField::Create(&BasePercent), "basePct");
+		FieldSet.Add(FVulField::Create(&Flat), "flat");
+		FieldSet.Add(FVulField::Create(&Set), "set");
+		return FieldSet;
+	}
+
 	TOptional<TPair<NumberType, NumberType>> Clamp;
 	TOptional<float> Percent;
 	TOptional<float> BasePercent;
@@ -221,6 +233,16 @@ public:
 		Calculate(&Out);
 
 		return Out;
+	}
+
+	FVulFieldSet VulFieldSet() const
+	{
+		FVulFieldSet Set;
+		Set.Add(FVulField::Create(&Base), "base");
+		Set.Add(FVulField::Create(&Clamp), "clamp");
+		Set.Add(FVulField::Create(&Modifications), "modifications");
+		Set.Add<NumberType>([&] { return Value(); }, "value");
+		return Set;
 	}
 
 	/**

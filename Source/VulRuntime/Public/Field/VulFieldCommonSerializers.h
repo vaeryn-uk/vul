@@ -23,16 +23,26 @@ struct TVulFieldSerializer<bool>
 	}
 };
 
-template<>
-struct TVulFieldSerializer<int>
+template <typename T>
+concept IsNumeric = std::is_arithmetic_v<T>;
+
+template<IsNumeric T>
+struct TVulFieldSerializer<T>
 {
-	static bool Serialize(const int& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
+	static bool Serialize(const T& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
 	{
-		Out = MakeShared<FJsonValueNumber>(Value);
+		constexpr bool IsFP = std::is_floating_point_v<T>;
+		if (IsFP)
+		{
+			Out = MakeShared<FJsonValueNumberString>(FString::Printf(TEXT("%.*f"), Ctx.DefaultPrecision, Value));
+		} else
+		{
+			Out = MakeShared<FJsonValueNumber>(Value);
+		}
 		return true;
 	}
 	
-	static bool Deserialize(const TSharedPtr<FJsonValue>& Data, int& Out, FVulFieldDeserializationContext& Ctx)
+	static bool Deserialize(const TSharedPtr<FJsonValue>& Data, T& Out, FVulFieldDeserializationContext& Ctx)
 	{
 		if (!Ctx.Errors.RequireJsonType(Data, EJson::Number))
 		{
@@ -344,6 +354,60 @@ struct TVulFieldSerializer<T>
 			return false;
 		}
 		
+		return true;
+	}
+};
+
+
+template<typename T, typename S>
+struct TVulFieldSerializer<TPair<T,S>>
+{
+	static bool Serialize(const TPair<T,S>& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
+	{
+		TArray<TSharedPtr<FJsonValue>> Entries;
+
+		Entries.AddDefaulted(2);
+
+		if (!Ctx.Serialize(Value.Key, Entries[0], FString("[0]")))
+		{
+			return false;
+		}
+
+		TSharedPtr<FJsonValue> SerializedValue;
+		if (!Ctx.Serialize(Value.Value, Entries[1], FString("[1]")))
+		{
+			return false;
+		}
+
+		Out = MakeShared<FJsonValueArray>(Entries);
+		return true;
+	}
+	
+	static bool Deserialize(const TSharedPtr<FJsonValue>& Data, TPair<T,S>& Out, FVulFieldDeserializationContext& Ctx)
+	{
+		if (!Ctx.Errors.RequireJsonType(Data, EJson::Array))
+		{
+			return false;
+		}
+
+		if (Data->AsArray().Num() != 2)
+		{
+			Ctx.Errors.Add(TEXT("TPair expects an array of size 2, but was %d"), Data->AsArray().Num());
+			return false;
+		}
+		
+		Out = TPair<T,S>();
+
+		if (!Ctx.Deserialize(Data->AsArray()[0], Out.Key, FString("[0]")))
+		{
+			return false;
+		}
+
+		if (!Ctx.Deserialize(Data->AsArray()[1], Out.Value, FString("[1]")))
+		{
+			return false;
+		}
+
 		return true;
 	}
 };

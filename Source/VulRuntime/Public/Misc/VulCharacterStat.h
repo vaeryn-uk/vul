@@ -149,6 +149,17 @@ public:
 		return Value() == 0;
 	}
 
+	FVulFieldSet VulFieldSet() const
+	{
+		FVulFieldSet Set;
+		Set.Add(FVulField::Create(&Base), "base");
+		Set.Add(FVulField::Create(&Buckets), "buckets");
+		Set.Add(FVulField::Create(&ClampMin), "clampMin");
+		Set.Add(FVulField::Create(&ClampMax), "clampMax");
+		Set.Add<NumberType>([&] { return Value(); }, "value");
+		return Set;
+	}
+
 private:
 	bool bIsValid = false;
 
@@ -184,3 +195,4 @@ private:
 	 */
 	TMap<SourceType, FBucketConfig> BucketConfig;
 };
+

@@ -407,6 +407,42 @@ bool TestField::RunTest(const FString& Parameters)
 		VTC_MUST_EQUAL(*SerializedStr, *JsonStr, "serialized correctly")
 	});
 
+	VulTest::Case(this, "Test TPair", [](VulTest::TC TC)
+	{
+		TPair<FString, int> Pair = {"foo", 13};
+
+		FVulFieldDeserializationContext Ctx;
+
+		FString SerializedStr;
+		VTC_MUST_EQUAL(FVulField::Create(&Pair).SerializeToJson(SerializedStr), true, "serialize")
+		VTC_MUST_EQUAL(*SerializedStr, TEXT("[\"foo\",13]"), "serialized correctly");
+		
+		TPair<FString, int> DeserializedPair;
+		VTC_MUST_EQUAL(FVulField::Create(&DeserializedPair).DeserializeFromJson(SerializedStr, Ctx), true, "deserialize")
+		VTC_MUST_EQUAL(*DeserializedPair.Key, TEXT("foo"), "deserialized correctly: key")
+		VTC_MUST_EQUAL(DeserializedPair.Value, 13, "deserialized correctly: value")
+	});
+
+	VulTest::Case(this, "Test Float", [](VulTest::TC TC)
+	{
+		TArray<float> Floats = {1.2, 2.1, 3.5, 5.3};
+
+		FVulFieldDeserializationContext Ctx;
+
+		FString SerializedStr;
+		VTC_MUST_EQUAL(FVulField::Create(&Floats).SerializeToJson(SerializedStr), true, "serialize")
+		VTC_MUST_EQUAL(*SerializedStr, TEXT("[1.2,2.1,3.5,5.3]"), "serialized correctly");
+		
+		TArray<float> DeserializedFloats;
+		VTC_MUST_EQUAL(FVulField::Create(&DeserializedFloats).DeserializeFromJson(SerializedStr, Ctx), true, "deserialize")
+		VTC_MUST_EQUAL(DeserializedFloats, Floats, "deserialized correctly");
+		// VTC_MUST_EQUAL(DeserializedFloats.Num(), 4, "deserialized correctly: num");
+		// VTC_MUST_EQUAL(DeserializedFloats[0], 1.2f, "deserialized correctly: 0");
+		// VTC_MUST_EQUAL(DeserializedFloats[1], 2.1f, "deserialized correctly: 1");
+		// VTC_MUST_EQUAL(DeserializedFloats[2], 3.5f, "deserialized correctly: 2");
+		// VTC_MUST_EQUAL(DeserializedFloats[3], 5.3f, "deserialized correctly: 3");
+	});
+
 	{
 		struct Data
 		{
