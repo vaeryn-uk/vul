@@ -178,6 +178,12 @@ struct TVulFieldSerializer<T*>
 {
 	static bool Serialize(const T* const& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
 	{
+		if (!IsValid(Value))
+		{
+			Out = MakeShared<FJsonValueNull>();
+			return true;
+		}
+		
 		if (auto FieldSetObj = Cast<IVulFieldSetAware>(Value); FieldSetObj != nullptr)
 		{
 			return FieldSetObj->VulFieldSet().Serialize(Out, Ctx);
@@ -197,6 +203,12 @@ struct TVulFieldSerializer<T*>
 
 	static bool Deserialize(const TSharedPtr<FJsonValue>& Data, T*& Out, FVulFieldDeserializationContext& Ctx)
 	{
+		if (Data->Type == EJson::Null)
+		{
+			Out = nullptr;
+			return true;
+		}
+		
 		if (Ctx.Flags.IsEnabled(VulFieldSerializationFlag_AssetReferencing))
 		{
 			FString AsStr;

@@ -9,6 +9,16 @@ template <typename T>
 struct TVulFieldSerializer
 {
 	/**
+	 * A hook that will be called prior to any serialization or deserialization.
+	 *
+	 * Can be used to set up custom flags.
+	 */
+	static void Setup()
+	{
+		
+	}
+	
+	/**
 	 * Given the Value, turn it in to its serialized form, setting it to Out.
 	 *
 	 * Return true if the Serialization succeeds.

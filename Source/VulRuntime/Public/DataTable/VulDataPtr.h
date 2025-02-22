@@ -260,3 +260,35 @@ TVulDataPtr<T> FVulDataPtr::GetAsDataPtr() const
 {
 	return Cast<T>(*this);
 }
+
+const static FString VulDataPtr_SerializationFlag_Short = "vul.dataptr.short";
+
+template <typename T>
+struct TVulFieldSerializer<TVulDataPtr<T>>
+{
+	static void Setup()
+	{
+		FVulFieldSerializationFlags::RegisterDefault(VulDataPtr_SerializationFlag_Short, false);
+	}
+	
+	static bool Serialize(const TVulDataPtr<T>& Value, TSharedPtr<FJsonValue>& Out, struct FVulFieldSerializationContext& Ctx)
+	{
+		if (Ctx.Flags.IsEnabled(VulDataPtr_SerializationFlag_Short))
+		{
+			return Ctx.Serialize(Value.Data().GetRowName(), Out);
+		}
+		
+		return Value.VulFieldSet().Serialize(Out, Ctx);
+	}
+
+	static bool Deserialize(const TSharedPtr<FJsonValue>& Data, TVulDataPtr<T>& Out, struct FVulFieldDeserializationContext& Ctx)
+	{
+		if (Ctx.Flags.IsEnabled(VulDataPtr_SerializationFlag_Short))
+		{
+			Ctx.Errors.Add(TEXT("Cannot deserialize TVulDataPtr with SerializeShort enabled"));
+			return false;
+		}
+
+		return Out.VulFieldSet().Deserialize(Data, Ctx);
+	}
+};

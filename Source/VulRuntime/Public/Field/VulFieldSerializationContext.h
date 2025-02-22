@@ -77,6 +77,9 @@ struct VULRUNTIME_API FVulFieldSerializationMemory
 	TMap<FString, void*> Store;
 };
 
+template <typename T>
+concept SerializerHasSetup = requires { TVulFieldSerializer<T>::Setup(); };
+
 struct VULRUNTIME_API FVulFieldSerializationContext
 {
 	FVulFieldSerializationErrors Errors;
@@ -91,6 +94,11 @@ struct VULRUNTIME_API FVulFieldSerializationContext
 	template <typename T>
 	bool Serialize(const T& Value, TSharedPtr<FJsonValue>& Out, const TOptional<FString>& IdentifierCtx = {})
 	{
+		if constexpr (SerializerHasSetup<T>)
+		{
+			TVulFieldSerializer<T>::Setup();
+		}
+		
 		return Errors.WithIdentifierCtx(IdentifierCtx, [&]
 		{
 			constexpr bool TypeSupportsRef = TVulFieldRefResolver<T>::SupportsRef;
@@ -141,6 +149,11 @@ struct VULRUNTIME_API FVulFieldDeserializationContext
 	template<typename T>
 	bool Deserialize(const TSharedPtr<FJsonValue>& Data, T& Out, const TOptional<FString>& IdentifierCtx = {})
 	{
+		if constexpr (SerializerHasSetup<T>)
+		{
+			TVulFieldSerializer<T>::Setup();
+		}
+		
 		return Errors.WithIdentifierCtx(IdentifierCtx, [&]
 		{
 			constexpr bool TypeSupportsRef = TVulFieldRefResolver<T>::SupportsRef;
