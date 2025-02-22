@@ -436,11 +436,29 @@ bool TestField::RunTest(const FString& Parameters)
 		TArray<float> DeserializedFloats;
 		VTC_MUST_EQUAL(FVulField::Create(&DeserializedFloats).DeserializeFromJson(SerializedStr, Ctx), true, "deserialize")
 		VTC_MUST_EQUAL(DeserializedFloats, Floats, "deserialized correctly");
-		// VTC_MUST_EQUAL(DeserializedFloats.Num(), 4, "deserialized correctly: num");
-		// VTC_MUST_EQUAL(DeserializedFloats[0], 1.2f, "deserialized correctly: 0");
-		// VTC_MUST_EQUAL(DeserializedFloats[1], 2.1f, "deserialized correctly: 1");
-		// VTC_MUST_EQUAL(DeserializedFloats[2], 3.5f, "deserialized correctly: 2");
-		// VTC_MUST_EQUAL(DeserializedFloats[3], 5.3f, "deserialized correctly: 3");
+	});
+
+	VulTest::Case(this, "Test single field type", [](VulTest::TC TC)
+	{
+		TArray<FVulSingleFieldType> SingleFields;
+
+		SingleFields.AddDefaulted(3);
+		SingleFields[0].Value = 5;
+		SingleFields[1].Value = -5;
+		SingleFields[2].Value = -20;
+
+		FVulFieldDeserializationContext Ctx;
+
+		FString SerializedStr;
+		VTC_MUST_EQUAL(FVulField::Create(&SingleFields).SerializeToJson(SerializedStr), true, "serialize")
+		VTC_MUST_EQUAL(*SerializedStr, TEXT("[5,-5,-20]"), "serialized correctly");
+		
+		TArray<FVulSingleFieldType> DeserializedSingleFields;
+		VTC_MUST_EQUAL(FVulField::Create(&DeserializedSingleFields).DeserializeFromJson(SerializedStr, Ctx), true, "deserialize")
+		VTC_MUST_EQUAL(DeserializedSingleFields.Num(), 3, "deserialized correctly: num");
+		VTC_MUST_EQUAL(DeserializedSingleFields[0].Value, 5, "deserialized correctly: 0");
+		VTC_MUST_EQUAL(DeserializedSingleFields[1].Value, -5, "deserialized correctly: 1");
+		VTC_MUST_EQUAL(DeserializedSingleFields[2].Value, -20, "deserialized correctly: 2");
 	});
 
 	{

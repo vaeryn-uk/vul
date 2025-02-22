@@ -236,3 +236,13 @@ public:
 		return Set;
 	}
 };
+
+struct FVulSingleFieldType
+{
+	int Value = 0;
+	
+	FVulField VulField() const
+	{
+		return FVulField::Create(&Value);
+	}
+};

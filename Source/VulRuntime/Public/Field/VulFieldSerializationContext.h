@@ -42,6 +42,11 @@ struct VULRUNTIME_API FVulFieldSerializationErrors
 
 	bool WithIdentifierCtx(const TOptional<FString>& Identifier, const TFunction<bool ()>& Fn);
 
+	/**
+	 * Logs all errors via UE_LOG.
+	 */
+	void Log();
+
 	TArray<FString> Errors;
 
 private:

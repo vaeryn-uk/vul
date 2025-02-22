@@ -296,6 +296,10 @@ function, regardless whether the interface is actually implemented. This is help
 class; `: IVulFieldSetAware` can simply be omitted. The exception here is `UObject` types:
 they must implement `IVulFieldSetAware` for their field sets to be serialized correctly.
 
+Similarly, types that define `FVulField VulField() const` will automatically support serialization.
+This is useful when you have a type that can be serialized as a single value and is not a 
+collection of other fields.
+
 If needed, you can forego this interface and implement your own serializers. There are definitions 
 for common types already in [VulFieldCommonSerializers.h](./Source/VulRuntime/Public/Field/VulFieldCommonSerializers.h).
 This includes container types, such as `TArray`, `TMap`, `TOptional`, `TSharedPtr`, so you only

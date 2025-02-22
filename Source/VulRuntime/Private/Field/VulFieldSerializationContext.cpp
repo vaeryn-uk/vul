@@ -1,4 +1,5 @@
 ﻿#include "Field/VulFieldSerializationContext.h"
+#include "VulRuntime.h"
 
 bool FVulFieldSerializationErrors::IsSuccess() const
 {
@@ -72,6 +73,14 @@ bool FVulFieldSerializationErrors::WithIdentifierCtx(
 	}
 	
 	return Ret;
+}
+
+void FVulFieldSerializationErrors::Log()
+{
+	for (const auto Message : Errors)
+	{
+		UE_LOG(LogVul, Error, TEXT("FVulField de/serialization error: %s"), *Message);
+	}
 }
 
 FString FVulFieldSerializationErrors::PathStr() const

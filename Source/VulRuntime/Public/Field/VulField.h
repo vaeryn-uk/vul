@@ -167,3 +167,25 @@ private:
 		const TOptional<FString>& IdentifierCtx
 	)> Write;
 };
+
+template <typename T>
+concept HasVulField = requires(const T& Obj) {
+	{ Obj.VulField() } -> std::same_as<struct FVulField>;
+};
+
+/**
+ * Serialization support for types that define a `FVulField VulField() const` function.
+ */
+template<HasVulField T>
+struct TVulFieldSerializer<T>
+{
+	static bool Serialize(const T& Value, TSharedPtr<FJsonValue>& Out, struct FVulFieldSerializationContext& Ctx)
+	{
+		return Value.VulField().Serialize(Out, Ctx);
+	}
+
+	static bool Deserialize(const TSharedPtr<FJsonValue>& Data, T& Out, struct FVulFieldDeserializationContext& Ctx)
+	{
+		return Out.VulField().Deserialize(Data, Ctx);
+	}
+};
