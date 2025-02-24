@@ -40,7 +40,7 @@ struct VULRUNTIME_API FVulFieldSerializationFlags
 	}
 	
 private:
-	TMap<FString, int> Flags;
+	TMap<FString, bool> Flags;
 
 	bool Resolve(const FString& Option) const;
 

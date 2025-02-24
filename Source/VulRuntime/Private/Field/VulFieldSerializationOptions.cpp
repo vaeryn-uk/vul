@@ -14,7 +14,7 @@ bool FVulFieldSerializationFlags::Resolve(const FString& Option) const
 {
 	if (Flags.Contains(Option))
 	{
-		return true;
+		return Flags[Option];
 	}
 
 	if (GlobalDefaults.Contains(Option))
