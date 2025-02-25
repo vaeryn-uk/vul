@@ -16,6 +16,14 @@ struct VULRUNTIME_API FVulFieldSerializationErrors
 		Errors.Add(PathStr() + ": " + FString::Printf(Fmt, Forward<Types>(Args)...));
 	}
 	
+	void Add(const FVulFieldSerializationErrors& Other)
+	{
+		for (const auto Error : Other.Errors)
+		{
+			Errors.Add(Error);
+		}
+	}
+	
 	template <typename FmtType, typename... Types>
 	bool AddIfNot(const bool Condition, const FmtType& Fmt, Types&&... Args)
 	{
@@ -63,7 +71,7 @@ struct VULRUNTIME_API FVulFieldSerializationMemory
 	template <typename T>
 	bool ResolveRef(const T& From, TSharedPtr<FJsonValue>& Ref, FVulFieldSerializationErrors& Errors)
 	{
-		if (const auto HaveRef = TVulFieldRefResolver<T>::Resolve(From, Ref); !HaveRef)
+		if (const auto HaveRef = TVulFieldRefResolver<T>::Resolve(From, Ref, Errors); !HaveRef)
 		{
 			Ref = nullptr;
 			return true;

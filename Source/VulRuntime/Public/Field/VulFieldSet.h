@@ -15,6 +15,25 @@
  */
 struct VULRUNTIME_API FVulFieldSet
 {
+	struct FEntry
+	{
+		/**
+		 * When serializing, this property will be included even if its value is empty.
+		 *
+		 * The default behaviour is to omit empty values (checked via VulRuntime::Field::IsEmpty).
+		 */
+		FEntry& EvenIfEmpty(const bool IncludeIfEmpty = true);
+	private:
+		friend FVulFieldSet;
+		FVulField Field;
+		TFunction<bool (
+			TSharedPtr<FJsonValue>&,
+			FVulFieldSerializationContext&,
+			const TOptional<FString>& IdentifierCtx = {}
+		)> Fn = nullptr;
+		bool OmitIfEmpty = true;
+	};
+	
 	/**
 	 * Adds a field to the set. If read only, the field will only be
 	 * serialized, but ignored for deserialization.
@@ -22,7 +41,7 @@ struct VULRUNTIME_API FVulFieldSet
 	 * Set IsRef=true to have this field be the value used when using FVulField's
 	 * shared reference system.
 	 */
-	void Add(const FVulField& Field, const FString& Identifier, const bool IsRef = false);
+	FEntry& Add(const FVulField& Field, const FString& Identifier, const bool IsRef = false);
 
 	/**
 	 * Adds a virtual field - one whose value is derived from a function
@@ -36,26 +55,27 @@ struct VULRUNTIME_API FVulFieldSet
 	 * shared reference system.
 	 */
 	template <typename T>
-	void Add(TFunction<T ()> Fn, const FString& Identifier, const bool IsRef = false)
+	FEntry& Add(TFunction<T ()> Fn, const FString& Identifier, const bool IsRef = false)
 	{
-		Fns.Add(
-			Identifier,
-			[Fn](
-				TSharedPtr<FJsonValue>& Out,
-				FVulFieldSerializationContext& Ctx,
-				const TOptional<FString>& IdentifierCtx
-			) {
-				return Ctx.Serialize<T>(Fn(), Out, IdentifierCtx);
-			}
-		);
+		FEntry Created;
+		
+		Created.Fn = [Fn](
+			TSharedPtr<FJsonValue>& Out,
+			FVulFieldSerializationContext& Ctx,
+			const TOptional<FString>& IdentifierCtx
+		) {
+			return Ctx.Serialize<T>(Fn(), Out, IdentifierCtx);
+		};
 		
 		if (IsRef)
 		{
 			RefField = Identifier;
 		}
+
+		return Entries.Add(Identifier, Created);
 	}
 
-	TSharedPtr<FJsonValue> GetRef() const;
+	TSharedPtr<FJsonValue> GetRef(FVulFieldSerializationErrors& Errors) const;
 
 	bool Serialize(TSharedPtr<FJsonValue>& Out) const;
 	bool Serialize(TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx) const;
@@ -102,14 +122,8 @@ struct VULRUNTIME_API FVulFieldSet
 		return DeserializeFromJson<CharType>(JsonStr, Ctx);
 	}
 private:
-	TMap<FString, FVulField> Fields;
+	TMap<FString, FEntry> Entries;
 	TOptional<FString> RefField = {};
-	
-	TMap<FString, TFunction<bool (
-			TSharedPtr<FJsonValue>&,
-			FVulFieldSerializationContext&,
-			const TOptional<FString>& IdentifierCtx = {}
-		)>> Fns;
 };
 
 
@@ -162,9 +176,9 @@ struct TVulFieldRefResolver<T>
 {
 	static constexpr bool SupportsRef = true;
 	
-	static bool Resolve(const T& Value, TSharedPtr<FJsonValue>& Out)
+	static bool Resolve(const T& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationErrors& Errors)
 	{
-		Out = Value.VulFieldSet().GetRef();
+		Out = Value.VulFieldSet().GetRef(Errors);
 		return Out.IsValid();
 	}
 };

@@ -1,16 +1,28 @@
 ﻿#include "Field/VulFieldSet.h"
 
-void FVulFieldSet::Add(const FVulField& Field, const FString& Identifier, const bool IsRef)
+#include "Field/VulFieldUtil.h"
+
+FVulFieldSet::FEntry& FVulFieldSet::FEntry::EvenIfEmpty(const bool IncludeIfEmpty)
 {
-	Fields.Add(Identifier, Field);
-	
+	OmitIfEmpty = !IncludeIfEmpty;
+	return *this; 
+}
+
+FVulFieldSet::FEntry& FVulFieldSet::Add(const FVulField& Field, const FString& Identifier, const bool IsRef)
+{
+	FEntry Created;
+		
+	Created.Field = Field;
+		
 	if (IsRef)
 	{
 		RefField = Identifier;
-	} 
+	}
+
+	return Entries.Add(Identifier, Created);
 }
 
-TSharedPtr<FJsonValue> FVulFieldSet::GetRef() const
+TSharedPtr<FJsonValue> FVulFieldSet::GetRef(FVulFieldSerializationErrors& Errors) const
 {
 	if (!RefField.IsSet())
 	{
@@ -20,22 +32,28 @@ TSharedPtr<FJsonValue> FVulFieldSet::GetRef() const
 	FVulFieldSerializationContext Ctx;
 	TSharedPtr<FJsonValue> Ref;
 
-	if (Fields.Contains(RefField.GetValue()))
+	if (Entries.Contains(RefField.GetValue()))
 	{
-		if (Fields[RefField.GetValue()].Serialize(Ref, Ctx, {}))
+		if (Entries[RefField.GetValue()].Fn != nullptr)
 		{
-			return Ref;
-		} // TODO: What if we fail to serialize it?
+			Entries[RefField.GetValue()].Fn(Ref, Ctx, FString("__ref_resolution__"));
+		} else
+		{
+			Entries[RefField.GetValue()].Field.Serialize(Ref, Ctx, FString("__ref_resolution__"));
+		}
 	}
 
-	if (Fns.Contains(RefField.GetValue()))
-	{
-		if (Fns[RefField.GetValue()](Ref, Ctx, {}))
-		{
-			return Ref;
-		} // TODO: What if we fail to serialize it?
-	}
+	// Copy any errors so they can be picked up by outer serialization contexts.
+	Errors.Add(Ctx.Errors);
 
+	if (!Ref.IsValid())
+	{
+		Errors.Add(TEXT("could not serialize value for ref `%s`"), *RefField.GetValue());
+	} else
+	{
+		return Ref;
+	}
+	
 	return nullptr;
 }
 
@@ -49,23 +67,26 @@ bool FVulFieldSet::Serialize(TSharedPtr<FJsonValue>& Out, FVulFieldSerialization
 {
 	auto Obj = MakeShared<FJsonObject>();
 	
-	for (const auto Entry : Fields)
+	for (const auto Entry : Entries)
 	{
 		TSharedPtr<FJsonValue> JsonValue;
-		if (!Entry.Value.Serialize(JsonValue, Ctx, Entry.Key))
+		if (Entry.Value.Fn != nullptr)
 		{
-			return false;
+			if (!Entry.Value.Fn(JsonValue, Ctx, Entry.Key))
+			{
+				return false;
+			}
+		} else
+		{
+			if (!Entry.Value.Field.Serialize(JsonValue, Ctx, Entry.Key))
+			{
+				return false;
+			}
 		}
-		
-		Obj->Values.Add(Entry.Key, JsonValue);
-	}
-	
-	for (const auto Entry : Fns)
-	{
-		TSharedPtr<FJsonValue> JsonValue;
-		if (!Entry.Value(JsonValue, Ctx, Entry.Key))
+
+		if (Entry.Value.OmitIfEmpty && VulRuntime::Field::IsEmpty(JsonValue))
 		{
-			return false;
+			continue;
 		}
 		
 		Obj->Values.Add(Entry.Key, JsonValue);
@@ -91,12 +112,12 @@ bool FVulFieldSet::Deserialize(const TSharedPtr<FJsonValue>& Data, FVulFieldDese
 
 	for (const auto Entry : (*Obj)->Values)
 	{
-		if (!Fields.Contains(Entry.Key) || Fields[Entry.Key].IsReadOnly())
+		if (!Entries.Contains(Entry.Key) || Entries[Entry.Key].Fn != nullptr || Entries[Entry.Key].Field.IsReadOnly())
 		{
 			continue;
 		}
 
-		if (!Fields[Entry.Key].Deserialize(Entry.Value, Ctx, Entry.Key))
+		if (!Entries[Entry.Key].Field.Deserialize(Entry.Value, Ctx, Entry.Key))
 		{
 			return false;
 		}

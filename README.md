@@ -283,24 +283,47 @@ At the heart of this system is `FVulField`, which wraps pointers that will be re
 As we're generally defining types that include properties that themselves need to be serialized,
 a `FVulFieldSet` is used to conveniently describe how your objects should be serialized.
 
+```c++
+int I = 13;
+FString Str = "hello world";
+
+// Define a field set; this yields a serialized object.
+FVulFieldSet Set;
+Set.Add(FVul::Create(&I), "int");
+Set.Add(FVul::Create(&Str), "str");
+
+// Ctx can be used to configured options and report detailed errors that may
+// occur.
+FVulFieldSerializationContext Ctx;
+TSharedPtr<FJsonValue> Result;
+bool Ok = Set.Deserialize(Result, Ctx);
+```
+
+Result (as a JSON string for demonstration):
+```json
+{ "int": 13, "str": "hello world" }
+```
+
+[See the tests for more examples](./Source/VulRuntime/Private/Field/Tests/TestField.cpp).
+
 To plug your types in to the system, there will need to exist serialization and deserialization
 template specializations based on `TVulFieldSerializer<T>`. It's recommended to implement
 `IVulFieldSetAware` in your types as this will automatically tie your type to an existing
 serializer and will be used to handle de/serialization without needing to implement a serializer
 for each of your types.
 
-`IVulFieldSetAware` is reference interface, but sometimes optional. Provided template 
+`IVulFieldSetAware` is reference interface and sometimes optional. Provided template 
 specializations will look directly for the existence of a `FVulFieldSet VulFieldSet() const` 
 function, regardless whether the interface is actually implemented. This is helpful for 
 `USTRUCT`s, where UHT trips up if a `USTRUCT` inherits from a single, non-`USTRUCT` 
 class; `: IVulFieldSetAware` can simply be omitted. The exception here is `UObject` types:
-they must implement `IVulFieldSetAware` for their field sets to be serialized correctly.
+they must explicitly extend `IVulFieldSetAware` for their field sets to be serialized correctly.
 
 Similarly, types that define `FVulField VulField() const` will automatically support serialization.
 This is useful when you have a type that can be serialized as a single value and is not a 
 collection of other fields.
 
-If needed, you can forego this interface and implement your own serializers. There are definitions 
+If needed, you can forego these standard functions and implement your own serializers. There are definitions 
 for common types already in [VulFieldCommonSerializers.h](./Source/VulRuntime/Public/Field/VulFieldCommonSerializers.h).
 This includes container types, such as `TArray`, `TMap`, `TOptional`, `TSharedPtr`, so you only
 need to define for your concrete types themselves; containerized & pointer versions will be inferred.

@@ -212,9 +212,10 @@ bool TestField::RunTest(const FString& Parameters)
 		
 		TC.Equal(
 			*JsonStr,
-			TEXT("{\"children\":[{\"children\":[{\"children\":[],\"int\":-5,\"type\":\"node1\"}],\"str\":\"foo\",\"type\":\"node2\"},{\"children\":[],\"int\":13,\"type\":\"node1\"}],\"type\":\"base\"}"),
+			TEXT("{\"type\":\"Base\",\"children\":[{\"type\":\"Node2\",\"children\":[{\"type\":\"Node1\",\"int\":-5}],\"str\":\"foo\"},{\"type\":\"Node1\",\"int\":13}]}"),
 			"Json is equal"
 		);
+		
 	
 		// Deserialize it back in to an empty tree struct.
 		TSharedPtr<FVulFieldTestTreeBase> DeserializedRoot = MakeShared<FVulFieldTestTreeBase>();
@@ -460,6 +461,65 @@ bool TestField::RunTest(const FString& Parameters)
 		VTC_MUST_EQUAL(DeserializedSingleFields[1].Value, -5, "deserialized correctly: 1");
 		VTC_MUST_EQUAL(DeserializedSingleFields[2].Value, -20, "deserialized correctly: 2");
 	});
+
+	{
+		struct Data
+		{
+			TArray<FString> Array;
+			TMap<FString, TArray<FString>> Map;
+			TSharedPtr<FString> Ptr;
+			TOptional<FString> Optional;
+			FString Str;
+			FString ExpectedJson;
+			bool EvenIfEmpty = false;
+		};
+		
+		auto Ddt = VulTest::DDT<Data>(this, "omit empty serialization", [](const VulTest::TestCase& TC, const Data& Data)
+		{
+			FVulFieldSet Set;
+			Set.Add(FVulField::Create(&Data.Array), "array").EvenIfEmpty(Data.EvenIfEmpty);
+			Set.Add(FVulField::Create(&Data.Map), "map").EvenIfEmpty(Data.EvenIfEmpty);
+			Set.Add(FVulField::Create(&Data.Ptr), "ptr").EvenIfEmpty(Data.EvenIfEmpty);
+			Set.Add(FVulField::Create(&Data.Str), "str").EvenIfEmpty(Data.EvenIfEmpty);
+			Set.Add(FVulField::Create(&Data.Optional), "optional").EvenIfEmpty(Data.EvenIfEmpty);
+
+			FString ActualJson;
+			FVulFieldSerializationContext Ctx;
+			
+			VTC_MUST_EQUAL(Set.SerializeToJson(ActualJson, Ctx), true, "serialization succeeds")
+			VTC_MUST_EQUAL(*ActualJson, *Data.ExpectedJson, "json equal");
+		});
+
+		Ddt.Run("all empty - include", {
+			.Array = {},
+			.Map = {},
+			.Ptr = nullptr,
+			.Optional = {},
+			.Str = "",
+			.ExpectedJson = "{\"array\":[],\"map\":{},\"ptr\":null,\"str\":\"\",\"optional\":null}",
+			.EvenIfEmpty = true,
+		});
+
+		Ddt.Run("all empty - omit", {
+			.Array = {},
+			.Map = {},
+			.Ptr = nullptr,
+			.Optional = {},
+			.Str = "",
+			.ExpectedJson = "{}",
+			.EvenIfEmpty = false,
+		});
+
+		Ddt.Run("complex empty - omit", {
+			.Array = {"", "", ""},
+			.Map = {{"foo", {}}, {"bar", {""}}},
+			.Ptr = MakeShared<FString>(""),
+			.Optional = FString(""),
+			.Str = "",
+			.ExpectedJson = "{}",
+			.EvenIfEmpty = false,
+		});
+	}
 
 	{
 		struct Data

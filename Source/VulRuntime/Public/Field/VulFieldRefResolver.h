@@ -31,7 +31,10 @@ struct TVulFieldRefResolver
 	 *
 	 * This default implementation returns false; i.e. no support for shared references.
 	 */
-	static bool Resolve(const T& Value, TSharedPtr<FJsonValue>& Out) { return false; }
+	static bool Resolve(const T& Value, TSharedPtr<FJsonValue>& Out, struct FVulFieldSerializationErrors& Errors)
+	{
+		return false;
+	}
 };
 
 template <typename T>
@@ -39,14 +42,14 @@ struct TVulFieldRefResolver<TSharedPtr<T>>
 {
 	static constexpr bool SupportsRef = true;
 	
-	static bool Resolve(const TSharedPtr<T>& Value, TSharedPtr<FJsonValue>& Out)
+	static bool Resolve(const TSharedPtr<T>& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationErrors& Errors)
 	{
 		if (!Value.IsValid())
 		{
 			return false;
 		}
 		
-		return TVulFieldRefResolver<T>::Resolve(*Value.Get(), Out);
+		return TVulFieldRefResolver<T>::Resolve(*Value.Get(), Out, Errors);
 	}
 };
 
@@ -55,13 +58,13 @@ struct TVulFieldRefResolver<T*>
 {
 	static constexpr bool SupportsRef = true;
 	
-	static bool Resolve(const T* const& Value, TSharedPtr<FJsonValue>& Out)
+	static bool Resolve(const T* const& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationErrors& Errors)
 	{
 		if (Value == nullptr)
 		{
 			return false;
 		}
 		
-		return TVulFieldRefResolver<T>::Resolve(*Value, Out);
+		return TVulFieldRefResolver<T>::Resolve(*Value, Out, Errors);
 	}
 };
