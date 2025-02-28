@@ -611,6 +611,18 @@ bool TestField::RunTest(const FString& Parameters)
 			},
 		});
 	}
+
+	VulTest::Case(this, "FGuid", [](VulTest::TC TC)
+	{
+		TArray<FGuid> Guids;
+		FVulField Field = FVulField::Create(&Guids);
+
+		FVulFieldDeserializationContext Ctx;
+		VTC_MUST_EQUAL(Field.DeserializeFromJson("[\"e60d0997-9689-4926-b0a1-4d18c339d78f\"]", Ctx), true, "deserialize");
+		FString SerializedJson;
+		VTC_MUST_EQUAL(Field.SerializeToJson(SerializedJson), true, "serialize");
+		VTC_MUST_EQUAL(*SerializedJson, TEXT("[\"E60D099796894926B0A14D18C339D78F\"]"), "serialize");
+	});
 	
 	return true;
 }

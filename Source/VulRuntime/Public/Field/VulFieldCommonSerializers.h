@@ -411,3 +411,43 @@ struct TVulFieldSerializer<TPair<T,S>>
 		return true;
 	}
 };
+
+template <>
+struct TVulFieldSerializer<FGuid>
+{
+	static bool Serialize(const FGuid& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
+	{
+		if (!Value.IsValid())
+		{
+			Out = MakeShared<FJsonValueNull>();
+			return true;
+		}
+
+		Out = MakeShared<FJsonValueString>(Value.ToString());
+		return true;
+	}
+	
+	static bool Deserialize(const TSharedPtr<FJsonValue>& Data, FGuid& Out, FVulFieldDeserializationContext& Ctx)
+	{
+		Out = FGuid();
+		
+		if (Data->Type == EJson::Null)
+		{
+			return true;
+		}
+
+		if (!Ctx.Errors.RequireJsonType(Data, EJson::String))
+		{
+			return false;
+		}
+
+		if (!FGuid::Parse(Data->AsString(), Out))
+		{
+			Ctx.Errors.Add(TEXT("Cannot parse invalid FGuid string `%s`"), *Data->AsString());
+			return false;
+		}
+
+		return true;
+	}
+};
+
