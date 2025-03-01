@@ -341,11 +341,34 @@ Features that might be worth adding in the future:
 
 #### Shared references
 
-TODO
+Shared references provide two main features:
+
+1) When serializing, subsequent appearances of the same object are replaced with a string reference, reducing
+   duplication.
+2) When deserializing, references are deserialized to the same object instances.
+
+This behaviour is enabled by default, but can be toggled off via the `VulFieldSerializationFlag_Referencing` flag
+the `FVulFieldSerializationFlags` set in a serialization/deserialization context.
+
+Here's what serialized data might look like for an array of characters, where we have the same character twice.
+
+```
+[
+  { name: "Thor", health: 13, strength: 5, weapon: "hammer" }
+  "Thor" // referenced.
+]
+```
+
+References are resolved via `TVulFieldRefResolver`, which can be specialized for your types.
 
 #### Polymorphic types
 
-TODO
+Polymorphic classes are supported for serialization & deserialization by providing a custom
+`TVulFieldSerializer`. There is an example of this in the included tests:
+`TVulFieldSerializer<TSharedPtr<FVulFieldTestTreeBase>>`, where we de/serialize a recursive
+tree structure, where each node is a different child class of the node base class. This requires
+`TSharedPtr` instances, and a custom `type`-based discriminator in the serialized data so the
+deserializer knows which instances to create.
 
 #### UObject
 
