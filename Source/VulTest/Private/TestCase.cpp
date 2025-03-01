@@ -1,5 +1,10 @@
 ﻿#include "TestCase.h"
 
+void VulTest::TestCase::Error(const FString& Message) const
+{
+	TestInstance->AddError(Message);
+}
+
 void VulTest::TestCase::Log(const FString& Message) const
 {
 	TestInstance->AddEvent(FAutomationEvent(

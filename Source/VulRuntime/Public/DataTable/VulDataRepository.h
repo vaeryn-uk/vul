@@ -260,3 +260,36 @@ TVulDataPtr<RowType> UVulDataRepository::Get(
 		Found
 	);
 }
+
+
+template<typename T>
+struct TVulFieldSerializer<TSoftObjectPtr<T>>
+{
+	static bool Serialize(const TSoftObjectPtr<T>& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
+	{
+		if (Value.IsNull())
+		{
+			Out = MakeShared<FJsonValueNull>();
+		}
+		
+		Out = MakeShared<FJsonValueString>(Value.GetAssetName());
+		return true;
+	}
+	
+	static bool Deserialize(const TSharedPtr<FJsonValue>& Data, TSoftObjectPtr<T>& Out, FVulFieldDeserializationContext& Ctx)
+	{
+		if (Data->IsNull())
+		{
+			Out = TSoftObjectPtr<T>();
+			return true;
+		}
+		
+		if (!Ctx.Errors.RequireJsonType(Data, EJson::String))
+		{
+			return false;
+		}
+
+		Out = TSoftObjectPtr<T>(Data->AsString());
+		return true;
+	}
+};

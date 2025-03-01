@@ -1,6 +1,14 @@
 ﻿#pragma once
 
 /**
+ * Helper macro to assert equality in a VulTest::TestCase, immediately stopping
+ * the test case if not.
+ *
+ * Assumes the current test case has variable name "TC".
+ */
+#define VTC_MUST_EQUAL(ACTUAL, EXPECTED, MESSAGE) if (!TC.Equal(ACTUAL, EXPECTED, MESSAGE)) { return; }
+
+/**
  * Tools for writing tests in UE.
  */
 namespace VulTest
@@ -53,14 +61,14 @@ namespace VulTest
 			TArray<KeyType> ActualKeys;
 			Actual.GetKeys(ActualKeys);
 
-			if (!Equal(ActualKeys, ExpectedKeys, Message + "TMap Keys"))
+			if (!Equal(ActualKeys, ExpectedKeys, Message + " TMap Keys"))
 			{
 				return false;
 			}
 
 			for (const auto& Entry : Expected)
 			{
-				if (!Equal(Actual[Entry.Key], Entry.Value, Message + "TMap entry"))
+				if (!Equal(Actual[Entry.Key], Entry.Value, Message + " TMap entry"))
 				{
 					return false;
 				}
@@ -90,6 +98,9 @@ namespace VulTest
 						Ok = false;
 					}
 				}
+			} else
+			{
+				Ok = false;
 			}
 
 			return Ok;
@@ -106,6 +117,8 @@ namespace VulTest
 		{
 			return TestInstance->TestNearlyEqual(FormatTestTitle(Message), Actual, Expected);
 		}
+
+		void VULTEST_API Error(const FString& Message) const;
 
 		/**
 		 * Logs a message, as warning to ensure it's included in output.
