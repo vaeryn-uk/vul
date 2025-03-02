@@ -99,12 +99,14 @@ struct TVulNumberModification
 	FVulFieldSet VulFieldSet() const
 	{
 		FVulFieldSet FieldSet;
+		
 		FieldSet.Add(FVulField::Create(&Clamp), "clamp");
-		// TODO: Encode this more efficiently? Only one of the values will be set.
 		FieldSet.Add(FVulField::Create(&Percent), "pct");
 		FieldSet.Add(FVulField::Create(&BasePercent), "basePct");
 		FieldSet.Add(FVulField::Create(&Flat), "flat");
 		FieldSet.Add(FVulField::Create(&Set), "set");
+		FieldSet.Add(FVulField::Create(&Id), "id");
+		
 		return FieldSet;
 	}
 
