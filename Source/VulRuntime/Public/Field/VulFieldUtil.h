@@ -40,6 +40,8 @@ namespace VulRuntime::Field
 	 * E.g. Path=".foo.arr[1]" matches Match=".foo.arr[*]".
 	 *
 	 * This requires a full match along the whole path and does not support sub-tree matching.
+	 * Wildcards are supported for non-numeric properties, but will only match a single property.
+	 * E.g. ".foo.*" will match ".foo.bar", but not ".foo.bar.baz".
 	 *
 	 * This match ignores case.
 	 */

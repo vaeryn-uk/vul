@@ -77,6 +77,16 @@ bool TestVulFieldUtil::RunTest(const FString& Parameters)
 			.ExpectedMatch = true,
 		});
 
+		Ddt.Run("partial-match", Data{
+			.Path = {
+				VulRuntime::Field::FPathItem(TInPlaceType<FString>(), "foo"),
+				VulRuntime::Field::FPathItem(TInPlaceType<FString>(), "bar"),
+				VulRuntime::Field::FPathItem(TInPlaceType<FString>(), "qux"),
+			},
+			.Match = ".foo.*",
+			.ExpectedMatch = false,
+		});
+
 		Ddt.Run("no-match-1", Data{
 			.Path = {
 				VulRuntime::Field::FPathItem(TInPlaceType<FString>(), "foo"),

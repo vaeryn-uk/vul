@@ -75,6 +75,12 @@ bool VulRuntime::Field::PathMatch(const FPath& Path, const FString& Match)
 	
 	for (const auto Item : Path)
 	{
+		if (Match.Len() - 1 < StrIndex)
+		{
+			// More items that the path. Cannot match.
+			return false;
+		}
+		
 		if (Item.IsType<FString>() && Match[StrIndex] == '.')
 		{
 			StrIndex++;
