@@ -15,7 +15,7 @@
  */
 struct VULRUNTIME_API FVulFieldSet
 {
-	struct FEntry
+	struct VULRUNTIME_API FEntry
 	{
 		/**
 		 * When serializing, this property will be included even if its value is empty.
@@ -29,7 +29,7 @@ struct VULRUNTIME_API FVulFieldSet
 		TFunction<bool (
 			TSharedPtr<FJsonValue>&,
 			FVulFieldSerializationContext&,
-			const TOptional<FString>& IdentifierCtx = {}
+			const TOptional<VulRuntime::Field::FPathItem>& IdentifierCtx = {}
 		)> Fn = nullptr;
 		bool OmitIfEmpty = true;
 	};
@@ -62,7 +62,7 @@ struct VULRUNTIME_API FVulFieldSet
 		Created.Fn = [Fn](
 			TSharedPtr<FJsonValue>& Out,
 			FVulFieldSerializationContext& Ctx,
-			const TOptional<FString>& IdentifierCtx
+			const TOptional<VulRuntime::Field::FPathItem>& IdentifierCtx
 		) {
 			return Ctx.Serialize<T>(Fn(), Out, IdentifierCtx);
 		};
@@ -75,7 +75,7 @@ struct VULRUNTIME_API FVulFieldSet
 		return Entries.Add(Identifier, Created);
 	}
 
-	TSharedPtr<FJsonValue> GetRef(FVulFieldSerializationErrors& Errors) const;
+	TSharedPtr<FJsonValue> GetRef(FVulFieldSerializationState& State) const;
 
 	bool Serialize(TSharedPtr<FJsonValue>& Out) const;
 	bool Serialize(TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx) const;
@@ -145,12 +145,11 @@ public:
 	virtual FVulFieldSet VulFieldSet() const { return FVulFieldSet(); }
 };
 
-// TODO: concepts require C++20. This okay?
 template <typename T>
 concept HasVulFieldSet = std::is_base_of_v<IVulFieldSetAware, T> || 
 	requires(const T& Obj) {
-		{ Obj.VulFieldSet() } -> std::same_as<FVulFieldSet>;
-	};
+	{ Obj.VulFieldSet() } -> std::same_as<FVulFieldSet>;
+};
 
 template <HasVulFieldSet T>
 struct TVulFieldSerializer<T>
@@ -176,14 +175,16 @@ struct TVulFieldRefResolver<T>
 {
 	static constexpr bool SupportsRef = true;
 	
-	static bool Resolve(const T& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationErrors& Errors)
-	{
-		Out = Value.VulFieldSet().GetRef(Errors);
+	static bool Resolve(
+		const T& Value,
+		TSharedPtr<FJsonValue>& Out,
+		FVulFieldSerializationState& State
+	) {
+		Out = Value.VulFieldSet().GetRef(State);
 		return Out.IsValid();
 	}
 };
 
-// TODO: concepts require C++20. This okay?
 template <typename T>
 concept IsUObject = std::is_base_of_v<UObject, T>;
 
@@ -203,7 +204,7 @@ struct TVulFieldSerializer<T*>
 			return FieldSetObj->VulFieldSet().Serialize(Out, Ctx);
 		}
 		
-		if (Ctx.Flags.IsEnabled(VulFieldSerializationFlag_AssetReferencing) && Value->IsAsset())
+		if (Ctx.Flags.IsEnabled(VulFieldSerializationFlag_AssetReferencing, Ctx.State.Errors.GetPath()) && Value->IsAsset())
 		{
 			const auto Path = FSoftObjectPath(Value);
 			Out = MakeShared<FJsonValueString>(Path.ToString());
@@ -223,7 +224,7 @@ struct TVulFieldSerializer<T*>
 			return true;
 		}
 		
-		if (Ctx.Flags.IsEnabled(VulFieldSerializationFlag_AssetReferencing))
+		if (Ctx.Flags.IsEnabled(VulFieldSerializationFlag_AssetReferencing, Ctx.State.Errors.GetPath()))
 		{
 			FString AsStr;
 			if (Data->TryGetString(AsStr) && FSoftObjectPath(AsStr).IsValid())
@@ -262,7 +263,7 @@ struct TVulFieldSerializer<TScriptInterface<T>>
 
 		if (Cast<T>(Obj) == nullptr)
 		{
-			Ctx.Errors.Add(TEXT("deserialized object of class which does not implement the expected interface"));
+			Ctx.State.Errors.Add(TEXT("deserialized object of class which does not implement the expected interface"));
 			return false;
 		}
 

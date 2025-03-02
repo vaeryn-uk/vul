@@ -4,6 +4,7 @@
 #include "VulFieldRefResolver.h"
 #include "VulFieldSerializationOptions.h"
 #include "VulFieldSerializer.h"
+#include "VulFieldUtil.h"
 #include "UObject/Object.h"
 
 struct VULRUNTIME_API FVulFieldSerializationErrors
@@ -55,7 +56,7 @@ struct VULRUNTIME_API FVulFieldSerializationErrors
 		const TOptional<EJson> Type = {}
 	);
 
-	bool WithIdentifierCtx(const TOptional<FString>& Identifier, const TFunction<bool ()>& Fn);
+	bool WithIdentifierCtx(const TOptional<VulRuntime::Field::FPathItem>& Identifier, const TFunction<bool ()>& Fn);
 
 	/**
 	 * Logs all errors via UE_LOG.
@@ -64,10 +65,12 @@ struct VULRUNTIME_API FVulFieldSerializationErrors
 
 	TArray<FString> Errors;
 
+	VulRuntime::Field::FPath GetPath() const;
+
 private:
-	void Push(const TOptional<FString>& Identifier);
+	void Push(const VulRuntime::Field::FPathItem& Identifier);
 	void Pop();
-	TArray<FString> Stack;
+	VulRuntime::Field::FPath Stack;
 	FString PathStr() const;
 
 	static FString JsonTypeToString(EJson Type);
@@ -77,10 +80,21 @@ private:
 
 struct VULRUNTIME_API FVulFieldSerializationMemory
 {
+	TMap<FString, void*> Store;
+};
+
+/**
+ * Common state for serialization and deserialization operations.
+ */
+struct VULRUNTIME_API FVulFieldSerializationState
+{
+	FVulFieldSerializationMemory Memory;
+	FVulFieldSerializationErrors Errors;
+	
 	template <typename T>
-	bool ResolveRef(const T& From, TSharedPtr<FJsonValue>& Ref, FVulFieldSerializationErrors& Errors)
+	bool ResolveRef(const T& From, TSharedPtr<FJsonValue>& Ref)
 	{
-		if (const auto HaveRef = TVulFieldRefResolver<T>::Resolve(From, Ref, Errors); !HaveRef)
+		if (const auto HaveRef = TVulFieldRefResolver<T>::Resolve(From, Ref, *this); !HaveRef)
 		{
 			Ref = nullptr;
 			return true;
@@ -95,8 +109,6 @@ struct VULRUNTIME_API FVulFieldSerializationMemory
 
 		return true;
 	}
-	
-	TMap<FString, void*> Store;
 };
 
 template <typename T>
@@ -104,8 +116,7 @@ concept SerializerHasSetup = requires { TVulFieldSerializer<T>::Setup(); };
 
 struct VULRUNTIME_API FVulFieldSerializationContext
 {
-	FVulFieldSerializationErrors Errors;
-	FVulFieldSerializationMemory Memory;
+	FVulFieldSerializationState State;
 	FVulFieldSerializationFlags Flags;
 
 	/**
@@ -114,28 +125,31 @@ struct VULRUNTIME_API FVulFieldSerializationContext
 	const int DefaultPrecision = 1;
 
 	template <typename T>
-	bool Serialize(const T& Value, TSharedPtr<FJsonValue>& Out, const TOptional<FString>& IdentifierCtx = {})
-	{
+	bool Serialize(
+		const T& Value,
+		TSharedPtr<FJsonValue>& Out,
+		const TOptional<VulRuntime::Field::FPathItem>& IdentifierCtx = {}
+	) {
 		if constexpr (SerializerHasSetup<T>)
 		{
 			TVulFieldSerializer<T>::Setup();
 		}
 		
-		return Errors.WithIdentifierCtx(IdentifierCtx, [&]
+		return State.Errors.WithIdentifierCtx(IdentifierCtx, [&]
 		{
 			constexpr bool TypeSupportsRef = TVulFieldRefResolver<T>::SupportsRef;
-			const bool SupportsRef = TypeSupportsRef && Flags.IsEnabled(VulFieldSerializationFlag_Referencing);
+			const bool SupportsRef = TypeSupportsRef && Flags.IsEnabled(VulFieldSerializationFlag_Referencing, State.Errors.GetPath());
 			
 			TSharedPtr<FJsonValue> Ref;
 
 			if (SupportsRef)
 			{
-				if (!Memory.ResolveRef(Value, Ref, Errors))
+				if (!State.ResolveRef(Value, Ref))
 				{
 					return false;
 				}
 
-				if (Ref.IsValid() && Memory.Store.Contains(Ref->AsString()))
+				if (Ref.IsValid() && State.Memory.Store.Contains(Ref->AsString()))
 				{
 					Out = Ref;
 					return true;
@@ -149,7 +163,7 @@ struct VULRUNTIME_API FVulFieldSerializationContext
 
 			if (Ref.IsValid())
 			{
-				Memory.Store.Add(Ref->AsString(), &Out);
+				State.Memory.Store.Add(Ref->AsString(), &Out);
 			}
 			
 			return true;
@@ -159,8 +173,7 @@ struct VULRUNTIME_API FVulFieldSerializationContext
 
 struct VULRUNTIME_API FVulFieldDeserializationContext
 {
-	FVulFieldSerializationErrors Errors;
-	FVulFieldSerializationMemory Memory;
+	FVulFieldSerializationState State;
 	FVulFieldSerializationFlags Flags;
 
 	/**
@@ -169,24 +182,24 @@ struct VULRUNTIME_API FVulFieldDeserializationContext
 	UObject* ObjectOuter = nullptr;
 
 	template<typename T>
-	bool Deserialize(const TSharedPtr<FJsonValue>& Data, T& Out, const TOptional<FString>& IdentifierCtx = {})
+	bool Deserialize(const TSharedPtr<FJsonValue>& Data, T& Out, const TOptional<VulRuntime::Field::FPathItem>& IdentifierCtx = {})
 	{
 		if constexpr (SerializerHasSetup<T>)
 		{
 			TVulFieldSerializer<T>::Setup();
 		}
 		
-		return Errors.WithIdentifierCtx(IdentifierCtx, [&]
+		return State.Errors.WithIdentifierCtx(IdentifierCtx, [&]
 		{
 			constexpr bool TypeSupportsRef = TVulFieldRefResolver<T>::SupportsRef;
-			const bool SupportsRef = TypeSupportsRef && Flags.IsEnabled(VulFieldSerializationFlag_Referencing);
+			const bool SupportsRef = TypeSupportsRef && Flags.IsEnabled(VulFieldSerializationFlag_Referencing, State.Errors.GetPath());
 			
 			if (SupportsRef)
 			{
 				FString PossibleRef;
-				if (Data->TryGetString(PossibleRef) && Memory.Store.Contains(PossibleRef))
+				if (Data->TryGetString(PossibleRef) && State.Memory.Store.Contains(PossibleRef))
 				{
-					Out = *static_cast<T*>(Memory.Store[PossibleRef]);
+					Out = *static_cast<T*>(State.Memory.Store[PossibleRef]);
 					return true;
 				}
 			}
@@ -199,14 +212,14 @@ struct VULRUNTIME_API FVulFieldDeserializationContext
 			if (SupportsRef)
 			{
 				TSharedPtr<FJsonValue> Ref;
-				if (!Memory.ResolveRef(Out, Ref, Errors))
+				if (!State.ResolveRef(Out, Ref))
 				{
 					return false;
 				}
 
 				if (Ref.IsValid())
 				{
-					Memory.Store.Add(Ref->AsString(), &Out);
+					State.Memory.Store.Add(Ref->AsString(), &Out);
 				}
 			}
 

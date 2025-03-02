@@ -1,6 +1,8 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "VulFieldUtil.h"
+#include "VulRuntimeSettings.h"
 #include "UObject/Object.h"
 
 /**
@@ -27,12 +29,16 @@ const static FString VulFieldSerializationFlag_AssetReferencing = "vul.asset-ref
 
 struct VULRUNTIME_API FVulFieldSerializationFlags
 {
-	void Set(const FString& Option, const bool Value = true)
-	{
-		Flags.Add(Option, Value);
-	}
+	/**
+	 * Sets a new value, returning the effective old value.
+	 * 
+	 * Optionally set Path to only apply at that point in the de/serialization tree.
+	 *
+	 * The path expects dot-separated with numeric and property wildcards, e.g. ".foo.*.arr[*].baz".
+	 */
+	void Set(const FString& Option, const bool Value = true, const FString& Path = "");
 
-	bool IsEnabled(const FString& Option) const;
+	bool IsEnabled(const FString& Option, const VulRuntime::Field::FPath& Path) const;
 
 	static void RegisterDefault(const FString& Option, const bool Default)
 	{
@@ -40,9 +46,9 @@ struct VULRUNTIME_API FVulFieldSerializationFlags
 	}
 	
 private:
-	TMap<FString, bool> Flags;
-
-	bool Resolve(const FString& Option) const;
+	TMap<FString, TMap<FString, bool>> PathFlags;
+	
+	bool Resolve(const FString& Option, const VulRuntime::Field::FPath& Path) const;
 
 	static TMap<FString, bool> GlobalDefaults;
 };

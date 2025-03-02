@@ -141,7 +141,7 @@ struct TVulFieldSerializer<TSharedPtr<FVulFieldTestTreeBase>>
 	static bool Deserialize(const TSharedPtr<FJsonValue>& Data, TSharedPtr<FVulFieldTestTreeBase>& Out, FVulFieldDeserializationContext& Ctx)
 	{
 		TSharedPtr<FJsonValue> TypeStr;
-		if (!Ctx.Errors.RequireJsonProperty(Data, "type", TypeStr))
+		if (!Ctx.State.Errors.RequireJsonProperty(Data, "type", TypeStr))
 		{
 			return false;
 		}
@@ -157,7 +157,7 @@ struct TVulFieldSerializer<TSharedPtr<FVulFieldTestTreeBase>>
 			Out = MakeShared<FVulFieldTestTreeNode2>();
 		} else
 		{
-			Ctx.Errors.Add(TEXT("invalid type string `%s` for FVulFieldTestTreeBase deserialization"), *TypeStr->AsString());
+			Ctx.State.Errors.Add(TEXT("invalid type string `%s` for FVulFieldTestTreeBase deserialization"), *TypeStr->AsString());
 			return false;
 		}
 

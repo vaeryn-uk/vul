@@ -22,33 +22,37 @@ FVulFieldSet::FEntry& FVulFieldSet::Add(const FVulField& Field, const FString& I
 	return Entries.Add(Identifier, Created);
 }
 
-TSharedPtr<FJsonValue> FVulFieldSet::GetRef(FVulFieldSerializationErrors& Errors) const
+TSharedPtr<FJsonValue> FVulFieldSet::GetRef(FVulFieldSerializationState& State) const
 {
 	if (!RefField.IsSet())
 	{
 		return nullptr;
 	}
-	
+
+	// Need a context that shares state for recursive ref resolution & error stacks.
+	// This is copied in read-only, but we'll write errors back out to main ctx later.
 	FVulFieldSerializationContext Ctx;
+	Ctx.State = State;
+	
 	TSharedPtr<FJsonValue> Ref;
 
 	if (Entries.Contains(RefField.GetValue()))
 	{
 		if (Entries[RefField.GetValue()].Fn != nullptr)
 		{
-			Entries[RefField.GetValue()].Fn(Ref, Ctx, FString("__ref_resolution__"));
+			Entries[RefField.GetValue()].Fn(Ref, Ctx, VulRuntime::Field::FPathItem(TInPlaceType<FString>(), "__ref_resolution__"));
 		} else
 		{
-			Entries[RefField.GetValue()].Field.Serialize(Ref, Ctx, FString("__ref_resolution__"));
+			Entries[RefField.GetValue()].Field.Serialize(Ref, Ctx, VulRuntime::Field::FPathItem(TInPlaceType<FString>(), "__ref_resolution__"));
 		}
 	}
 
-	// Copy any errors so they can be picked up by outer serialization contexts.
-	Errors.Add(Ctx.Errors);
+	// Copy errors back.
+	State.Errors = Ctx.State.Errors;
 
 	if (!Ref.IsValid())
 	{
-		Errors.Add(TEXT("could not serialize value for ref `%s`"), *RefField.GetValue());
+		State.Errors.Add(TEXT("could not serialize value for ref `%s`"), *RefField.GetValue());
 	} else
 	{
 		return Ref;
@@ -70,15 +74,16 @@ bool FVulFieldSet::Serialize(TSharedPtr<FJsonValue>& Out, FVulFieldSerialization
 	for (const auto Entry : Entries)
 	{
 		TSharedPtr<FJsonValue> JsonValue;
+		
 		if (Entry.Value.Fn != nullptr)
 		{
-			if (!Entry.Value.Fn(JsonValue, Ctx, Entry.Key))
+			if (!Entry.Value.Fn(JsonValue, Ctx, VulRuntime::Field::FPathItem(TInPlaceType<FString>(), Entry.Key)))
 			{
 				return false;
 			}
 		} else
 		{
-			if (!Entry.Value.Field.Serialize(JsonValue, Ctx, Entry.Key))
+			if (!Entry.Value.Field.Serialize(JsonValue, Ctx, VulRuntime::Field::FPathItem(TInPlaceType<FString>(), Entry.Key)))
 			{
 				return false;
 			}
@@ -117,7 +122,7 @@ bool FVulFieldSet::Deserialize(const TSharedPtr<FJsonValue>& Data, FVulFieldDese
 			continue;
 		}
 
-		if (!Entries[Entry.Key].Field.Deserialize(Entry.Value, Ctx, Entry.Key))
+		if (!Entries[Entry.Key].Field.Deserialize(Entry.Value, Ctx, VulRuntime::Field::FPathItem(TInPlaceType<FString>(), Entry.Key)))
 		{
 			return false;
 		}

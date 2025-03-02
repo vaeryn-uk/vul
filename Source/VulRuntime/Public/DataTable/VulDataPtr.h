@@ -273,7 +273,7 @@ struct TVulFieldSerializer<TVulDataPtr<T>>
 	
 	static bool Serialize(const TVulDataPtr<T>& Value, TSharedPtr<FJsonValue>& Out, struct FVulFieldSerializationContext& Ctx)
 	{
-		if (Ctx.Flags.IsEnabled(VulDataPtr_SerializationFlag_Short))
+		if (Ctx.Flags.IsEnabled(VulDataPtr_SerializationFlag_Short, Ctx.State.Errors.GetPath()))
 		{
 			return Ctx.Serialize(Value.Data().GetRowName(), Out);
 		}
@@ -283,9 +283,9 @@ struct TVulFieldSerializer<TVulDataPtr<T>>
 
 	static bool Deserialize(const TSharedPtr<FJsonValue>& Data, TVulDataPtr<T>& Out, struct FVulFieldDeserializationContext& Ctx)
 	{
-		if (Ctx.Flags.IsEnabled(VulDataPtr_SerializationFlag_Short))
+		if (Ctx.Flags.IsEnabled(VulDataPtr_SerializationFlag_Short, Ctx.State.Errors.GetPath()))
 		{
-			Ctx.Errors.Add(TEXT("Cannot deserialize TVulDataPtr with SerializeShort enabled"));
+			Ctx.State.Errors.Add(TEXT("Cannot deserialize TVulDataPtr with SerializeShort enabled"));
 			return false;
 		}
 

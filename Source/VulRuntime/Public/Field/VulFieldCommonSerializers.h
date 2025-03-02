@@ -14,12 +14,12 @@ struct TVulFieldSerializer<bool>
 	
 	static bool Deserialize(const TSharedPtr<FJsonValue>& Data, bool& Out, FVulFieldDeserializationContext& Ctx)
 	{
-		if (!Ctx.Errors.RequireJsonType(Data, EJson::Boolean))
+		if (!Ctx.State.Errors.RequireJsonType(Data, EJson::Boolean))
 		{
 			return false;
 		}
 
-		return Ctx.Errors.AddIfNot(Data->TryGetBool(Out), TEXT("serialized data is not a bool"));
+		return Ctx.State.Errors.AddIfNot(Data->TryGetBool(Out), TEXT("serialized data is not a bool"));
 	}
 };
 
@@ -44,12 +44,12 @@ struct TVulFieldSerializer<T>
 	
 	static bool Deserialize(const TSharedPtr<FJsonValue>& Data, T& Out, FVulFieldDeserializationContext& Ctx)
 	{
-		if (!Ctx.Errors.RequireJsonType(Data, EJson::Number))
+		if (!Ctx.State.Errors.RequireJsonType(Data, EJson::Number))
 		{
 			return false;
 		}
 
-		return Ctx.Errors.AddIfNot(Data->TryGetNumber(Out), TEXT("serialized data is not a number"));
+		return Ctx.State.Errors.AddIfNot(Data->TryGetNumber(Out), TEXT("serialized data is not a number"));
 	}
 };
 
@@ -64,12 +64,12 @@ struct TVulFieldSerializer<FString>
 	
 	static bool Deserialize(const TSharedPtr<FJsonValue>& Data, FString& Out, FVulFieldDeserializationContext& Ctx)
 	{
-		if (!Ctx.Errors.RequireJsonType(Data, EJson::String))
+		if (!Ctx.State.Errors.RequireJsonType(Data, EJson::String))
 		{
 			return false;
 		}
 
-		return Ctx.Errors.AddIfNot(Data->TryGetString(Out), TEXT("serialized data is not a string"));
+		return Ctx.State.Errors.AddIfNot(Data->TryGetString(Out), TEXT("serialized data is not a string"));
 	}
 };
 
@@ -84,7 +84,7 @@ struct TVulFieldSerializer<FName>
 	
 	static bool Deserialize(const TSharedPtr<FJsonValue>& Data, FName& Out, FVulFieldDeserializationContext& Ctx)
 	{
-		if (!Ctx.Errors.RequireJsonType(Data, EJson::String))
+		if (!Ctx.State.Errors.RequireJsonType(Data, EJson::String))
 		{
 			return false;
 		}
@@ -105,7 +105,7 @@ struct TVulFieldSerializer<TArray<V>>
 		for (const auto Item : Value)
 		{
 			TSharedPtr<FJsonValue> ToAdd;
-			if (!Ctx.Serialize<V>(Item, ToAdd, FString::Printf(TEXT("[%d]"), I++)))
+			if (!Ctx.Serialize<V>(Item, ToAdd, VulRuntime::Field::FPathItem(TInPlaceType<int>(), I++)))
 			{
 				return false;
 			}
@@ -120,7 +120,7 @@ struct TVulFieldSerializer<TArray<V>>
 	
 	static bool Deserialize(const TSharedPtr<FJsonValue>& Data, TArray<V>& Out, FVulFieldDeserializationContext& Ctx)
 	{
-		if (!Ctx.Errors.RequireJsonType(Data, EJson::Array))
+		if (!Ctx.State.Errors.RequireJsonType(Data, EJson::Array))
 		{
 			return false;
 		}
@@ -131,7 +131,7 @@ struct TVulFieldSerializer<TArray<V>>
 		for (const auto Entry : Data->AsArray())
 		{
 			V Value;
-			if (!Ctx.Deserialize<V>(Entry, Value, FString::Printf(TEXT("[%d]"), I++)))
+			if (!Ctx.Deserialize<V>(Entry, Value, VulRuntime::Field::FPathItem(TInPlaceType<int>(), I++)))
 			{
 				return false;
 			}
@@ -158,7 +158,7 @@ struct TVulFieldSerializer<TMap<K, V>>
 				return false;
 			}
 
-			if (!Ctx.Errors.RequireJsonType(ItemKey, EJson::String))
+			if (!Ctx.State.Errors.RequireJsonType(ItemKey, EJson::String))
 			{
 				return false;
 			}
@@ -179,7 +179,7 @@ struct TVulFieldSerializer<TMap<K, V>>
 	
 	static bool Deserialize(const TSharedPtr<FJsonValue>& Data, TMap<K, V>& Out, FVulFieldDeserializationContext& Ctx)
 	{
-		if (!Ctx.Errors.RequireJsonType(Data, EJson::Object))
+		if (!Ctx.State.Errors.RequireJsonType(Data, EJson::Object))
 		{
 			return false;
 		}
@@ -374,14 +374,14 @@ struct TVulFieldSerializer<T>
 
 	static bool Deserialize(const TSharedPtr<FJsonValue>& Data, T& Out, FVulFieldDeserializationContext& Ctx)
 	{
-		if (!Ctx.Errors.RequireJsonType(Data, EJson::String))
+		if (!Ctx.State.Errors.RequireJsonType(Data, EJson::String))
 		{
 			return false;
 		}
 
 		if (!VulRuntime::Enum::FromString(Data->AsString(), Out))
 		{
-			Ctx.Errors.Add(TEXT("cannot interpret enum value \"%s\""), *Data->AsString());
+			Ctx.State.Errors.Add(TEXT("cannot interpret enum value \"%s\""), *Data->AsString());
 			return false;
 		}
 		
@@ -399,13 +399,13 @@ struct TVulFieldSerializer<TPair<T,S>>
 
 		Entries.AddDefaulted(2);
 
-		if (!Ctx.Serialize(Value.Key, Entries[0], FString("[0]")))
+		if (!Ctx.Serialize(Value.Key, Entries[0], VulRuntime::Field::FPathItem(TInPlaceType<int>(), 0)))
 		{
 			return false;
 		}
 
 		TSharedPtr<FJsonValue> SerializedValue;
-		if (!Ctx.Serialize(Value.Value, Entries[1], FString("[1]")))
+		if (!Ctx.Serialize(Value.Value, Entries[1], VulRuntime::Field::FPathItem(TInPlaceType<int>(), 1)))
 		{
 			return false;
 		}
@@ -416,25 +416,25 @@ struct TVulFieldSerializer<TPair<T,S>>
 	
 	static bool Deserialize(const TSharedPtr<FJsonValue>& Data, TPair<T,S>& Out, FVulFieldDeserializationContext& Ctx)
 	{
-		if (!Ctx.Errors.RequireJsonType(Data, EJson::Array))
+		if (!Ctx.State.Errors.RequireJsonType(Data, EJson::Array))
 		{
 			return false;
 		}
 
 		if (Data->AsArray().Num() != 2)
 		{
-			Ctx.Errors.Add(TEXT("TPair expects an array of size 2, but was %d"), Data->AsArray().Num());
+			Ctx.State.Errors.Add(TEXT("TPair expects an array of size 2, but was %d"), Data->AsArray().Num());
 			return false;
 		}
 		
 		Out = TPair<T,S>();
 
-		if (!Ctx.Deserialize(Data->AsArray()[0], Out.Key, FString("[0]")))
+		if (!Ctx.Deserialize(Data->AsArray()[0], Out.Key, VulRuntime::Field::FPathItem(TInPlaceType<int>(), 0)))
 		{
 			return false;
 		}
 
-		if (!Ctx.Deserialize(Data->AsArray()[1], Out.Value, FString("[1]")))
+		if (!Ctx.Deserialize(Data->AsArray()[1], Out.Value, VulRuntime::Field::FPathItem(TInPlaceType<int>(), 1)))
 		{
 			return false;
 		}
@@ -467,14 +467,14 @@ struct TVulFieldSerializer<FGuid>
 			return true;
 		}
 
-		if (!Ctx.Errors.RequireJsonType(Data, EJson::String))
+		if (!Ctx.State.Errors.RequireJsonType(Data, EJson::String))
 		{
 			return false;
 		}
 
 		if (!FGuid::Parse(Data->AsString(), Out))
 		{
-			Ctx.Errors.Add(TEXT("Cannot parse invalid FGuid string `%s`"), *Data->AsString());
+			Ctx.State.Errors.Add(TEXT("Cannot parse invalid FGuid string `%s`"), *Data->AsString());
 			return false;
 		}
 

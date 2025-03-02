@@ -1,5 +1,7 @@
 ﻿#include "Field/VulFieldSerializationContext.h"
 #include "VulRuntime.h"
+#include "VulRuntimeSettings.h"
+#include "Field/VulFieldUtil.h"
 
 bool FVulFieldSerializationErrors::IsSuccess() const
 {
@@ -48,9 +50,14 @@ bool FVulFieldSerializationErrors::RequireJsonProperty(
 	return true;
 }
 
-void FVulFieldSerializationErrors::Push(const TOptional<FString>& Identifier)
+VulRuntime::Field::FPath FVulFieldSerializationErrors::GetPath() const
 {
-	Stack.Add(Identifier.GetValue());
+	return Stack;
+}
+
+void FVulFieldSerializationErrors::Push(const VulRuntime::Field::FPathItem& Identifier)
+{
+	Stack.Add(Identifier);
 }
 
 void FVulFieldSerializationErrors::Pop()
@@ -62,12 +69,12 @@ void FVulFieldSerializationErrors::Pop()
 }
 
 bool FVulFieldSerializationErrors::WithIdentifierCtx(
-	const TOptional<FString>& Identifier,
+	const TOptional<VulRuntime::Field::FPathItem>& Identifier,
 	const TFunction<bool()>& Fn
 ) {
 	if (Identifier.IsSet())
 	{
-		Push(Identifier);
+		Push(Identifier.GetValue());
 	}
 	
 	if (Stack.Num() > MaxStackSize)
@@ -96,7 +103,7 @@ void FVulFieldSerializationErrors::Log()
 
 FString FVulFieldSerializationErrors::PathStr() const
 {
-	return "." + FString::Join(Stack, TEXT("."));
+	return VulRuntime::Field::PathStr(Stack);
 }
 
 FString FVulFieldSerializationErrors::JsonTypeToString(EJson Type)

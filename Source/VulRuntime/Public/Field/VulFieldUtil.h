@@ -6,6 +6,18 @@
 namespace VulRuntime::Field
 {
 	/**
+	 * A single entry in a FPath, either a string (for objects) or numeric (for arrays) index.
+	 */
+	using FPathItem = TVariant<FString, int>;
+	
+	/**
+	 * How we represent serialization paths, akin to JSON path.
+	 *
+	 * This keeps track of where we are in deserialization/serialization operations.
+	 */
+	using FPath = TArray<FPathItem>;
+	
+	/**
 	 * Returns true if we consider the given value empty.
 	 *
 	 * Empty if any of the following are true.
@@ -16,4 +28,20 @@ namespace VulRuntime::Field
 	 *   - is an empty object, or all values in the object are empty (checked recursively).
 	 */
 	VULRUNTIME_API bool IsEmpty(const TSharedPtr<FJsonValue>& Value);
+
+	/**
+	 * Converts a Path to its string form, e.g. ".foo.bar.arr[2].baz".
+	 */
+	VULRUNTIME_API FString PathStr(const FPath& Path);
+
+	/**
+	 * Returns true if Match satisfies path. This supports wildcard indices in place of numerics.
+	 *
+	 * E.g. Path=".foo.arr[1]" matches Match=".foo.arr[*]".
+	 *
+	 * This requires a full match along the whole path and does not support sub-tree matching.
+	 *
+	 * This match ignores case.
+	 */
+	VULRUNTIME_API bool PathMatch(const FPath& Path, const FString& Match);
 }

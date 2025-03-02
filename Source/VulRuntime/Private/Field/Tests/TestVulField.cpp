@@ -4,8 +4,8 @@
 #include "Misc/AutomationTest.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-	TestField,
-	"VulRuntime.Field.TestField",
+	TestVulField,
+	"VulRuntime.Field.TestVulField",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter
 )
 
@@ -27,7 +27,7 @@ bool CtxContainsError(VulTest::TC TC, const FVulFieldSerializationErrors& Errors
 	return false;
 }
 
-bool TestField::RunTest(const FString& Parameters)
+bool TestVulField::RunTest(const FString& Parameters)
 {
 	VulTest::Case(this, "Field access", [](VulTest::TC TC)
 	{
@@ -284,6 +284,37 @@ bool TestField::RunTest(const FString& Parameters)
 		TC.Equal(Instance1.Str, Instance2.Str, "str same");
 	});
 	
+	VulTest::Case(this, "path-based disable referencing", [](VulTest::TC TC)
+	{
+		FVulFieldTestSingleInstance Instance1;
+		Instance1.Int = 5;
+		Instance1.Str = "foobar";
+		
+		FVulFieldTestSingleInstance Instance2 = Instance1;
+		
+		TArray InstanceArray = {Instance1, Instance2};
+		
+		TMap<FString, FVulFieldTestSingleInstance> InstanceMap;
+		InstanceMap.Add("foo", Instance1);
+		InstanceMap.Add("bar", Instance1);
+
+		FVulFieldSet Set;
+		Set.Add(FVulField::Create(Instance1), "instance1");
+		Set.Add(FVulField::Create(Instance2), "instance2");
+		Set.Add(FVulField::Create(InstanceArray), "instanceArray");
+		Set.Add(FVulField::Create(InstanceMap), "instanceMap");
+
+		FString Actual;
+		FVulFieldSerializationContext Ctx;
+		Ctx.Flags.Set(VulFieldSerializationFlag_Referencing, false, ".instanceArray[*]");
+		Ctx.Flags.Set(VulFieldSerializationFlag_Referencing, false, ".instanceMap.*");
+		VTC_MUST_EQUAL(Set.SerializeToJson(Actual, Ctx), true, "serialize")
+		
+		const auto Expected = TEXT("{\"instance1\":{\"int\":5,\"str\":\"foobar\"},\"instance2\":\"foobar\",\"instanceArray\":[{\"int\":5,\"str\":\"foobar\"},{\"int\":5,\"str\":\"foobar\"}],\"instanceMap\":{\"foo\":{\"int\":5,\"str\":\"foobar\"},\"bar\":{\"int\":5,\"str\":\"foobar\"}}}");
+
+		VTC_MUST_EQUAL(*Actual, Expected, "serialize correctly")
+	});
+	
 	VulTest::Case(this, "UObject", [](VulTest::TC TC)
 	{
 		UObject* Outer = NewObject<AActor>();
@@ -387,7 +418,7 @@ bool TestField::RunTest(const FString& Parameters)
 		FString JsonStr = "{\"obj\":{\"str\":\"qux\"},\"interfaces\":[\"qux\",\"qux\",\"qux\"]}";
 		VTC_MUST_EQUAL(FieldSet.DeserializeFromJson(JsonStr, Ctx), false, "deserialize failed")
 
-		CtxContainsError(TC, Ctx.Errors, "deserialized object of class which does not implement the expected interface");
+		CtxContainsError(TC, Ctx.State.Errors, "deserialized object of class which does not implement the expected interface");
 	});
 
 	VulTest::Case(this, "Test enum", [](VulTest::TC TC)
@@ -537,7 +568,7 @@ bool TestField::RunTest(const FString& Parameters)
 			
 			for (const auto Err : Data.ExpectedErrors)
 			{
-				CtxContainsError(TC, Ctx.Errors, Err);
+				CtxContainsError(TC, Ctx.State.Errors, Err);
 			}
 		});
 		
@@ -555,7 +586,7 @@ bool TestField::RunTest(const FString& Parameters)
 			)",
 			.Field = FVulField::Create(&Trees),
 			.ExpectedErrors = {
-				".[0].int: Required JSON type Number, but got String",
+				"[0].int: Required JSON type Number, but got String",
 			},
 		});
 
@@ -576,7 +607,7 @@ bool TestField::RunTest(const FString& Parameters)
 			)",
 			.Field = FVulField::Create(&Trees),
 			.ExpectedErrors = {
-				".[1].int: Required JSON type Number, but got String",
+				"[1].int: Required JSON type Number, but got String",
 			},
 		});
 
@@ -607,7 +638,7 @@ bool TestField::RunTest(const FString& Parameters)
 			)",
 			.Field = FVulField::Create(&Trees),
 			.ExpectedErrors = {
-				".[1].children.[0].children.[0]: Required JSON property `type` is not defined",
+				"[1].children[0].children[0]: Required JSON property `type` is not defined",
 			},
 		});
 	}

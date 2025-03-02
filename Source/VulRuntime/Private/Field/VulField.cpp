@@ -9,7 +9,7 @@ bool FVulField::Deserialize(const TSharedPtr<FJsonValue>& Value)
 bool FVulField::Deserialize(
 	const TSharedPtr<FJsonValue>& Value,
 	FVulFieldDeserializationContext& Ctx,
-	const TOptional<FString>& IdentifierCtx
+	const TOptional<VulRuntime::Field::FPathItem>& IdentifierCtx
 ) {
 	return Write(Value, Ptr, Ctx, IdentifierCtx);
 }
@@ -23,7 +23,7 @@ bool FVulField::Serialize(TSharedPtr<FJsonValue>& Out) const
 bool FVulField::Serialize(
 	TSharedPtr<FJsonValue>& Out,
 	FVulFieldSerializationContext& Ctx,
-	const TOptional<FString>& IdentifierCtx
+	const TOptional<VulRuntime::Field::FPathItem>& IdentifierCtx
 ) const {
 	return Read(Ptr, Out, Ctx, IdentifierCtx);
 }

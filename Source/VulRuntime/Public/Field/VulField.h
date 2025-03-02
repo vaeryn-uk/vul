@@ -34,7 +34,7 @@ struct VULRUNTIME_API FVulField
 			void* Ptr,
 			TSharedPtr<FJsonValue>& Out,
 			FVulFieldSerializationContext& Ctx,
-			const TOptional<FString>& IdentifierCtx
+			const TOptional<VulRuntime::Field::FPathItem>& IdentifierCtx
 		) {
 			return Ctx.Serialize<T>(*static_cast<T*>(Ptr), Out, IdentifierCtx);
 		};
@@ -43,7 +43,7 @@ struct VULRUNTIME_API FVulField
 			const TSharedPtr<FJsonValue>& Value,
 			void* Ptr,
 			FVulFieldDeserializationContext& Ctx,
-			const TOptional<FString>& IdentifierCtx
+			const TOptional<VulRuntime::Field::FPathItem>& IdentifierCtx
 		) {
 			return Ctx.Deserialize<T>(Value, *static_cast<T*>(Ptr), IdentifierCtx);
 		};
@@ -66,7 +66,7 @@ struct VULRUNTIME_API FVulField
 			void* Ptr,
 			TSharedPtr<FJsonValue>& Out,
 			FVulFieldSerializationContext& Ctx,
-			const TOptional<FString>& IdentifierCtx
+			const TOptional<VulRuntime::Field::FPathItem>& IdentifierCtx
 		) {
 			return Ctx.Serialize<T>(*reinterpret_cast<T*>(Ptr), Out, IdentifierCtx);
 		};
@@ -75,9 +75,9 @@ struct VULRUNTIME_API FVulField
 			const TSharedPtr<FJsonValue>& Value,
 			void* Ptr,
 			FVulFieldDeserializationContext& Ctx,
-			const TOptional<FString>& IdentifierCtx
+			const TOptional<VulRuntime::Field::FPathItem>& IdentifierCtx
 		) {
-			Ctx.Errors.Add(TEXT("cannot write read-only field"));
+			Ctx.State.Errors.Add(TEXT("cannot write read-only field"));
 			return false;
 		};
 		
@@ -96,9 +96,18 @@ struct VULRUNTIME_API FVulField
 	static FVulField Create(const T* Ptr) { return Create<T>(const_cast<T*>(Ptr)); }
 
 	bool Deserialize(const TSharedPtr<FJsonValue>& Value);
-	bool Deserialize(const TSharedPtr<FJsonValue>& Value, FVulFieldDeserializationContext& Ctx, const TOptional<FString>& IdentifierCtx = {});
+	bool Deserialize(
+		const TSharedPtr<FJsonValue>& Value,
+		FVulFieldDeserializationContext& Ctx,
+		const TOptional<VulRuntime::Field::FPathItem>& IdentifierCtx = {}
+	);
+	
 	bool Serialize(TSharedPtr<FJsonValue>& Out) const;
-	bool Serialize(TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx, const TOptional<FString>& IdentifierCtx = {}) const;
+	bool Serialize(
+		TSharedPtr<FJsonValue>& Out,
+		FVulFieldSerializationContext& Ctx,
+		const TOptional<VulRuntime::Field::FPathItem>& IdentifierCtx = {}
+	) const;
 
 	template <typename CharType = TCHAR>
 	bool DeserializeFromJson(const FString& JsonStr, FVulFieldDeserializationContext& Ctx)
@@ -107,7 +116,7 @@ struct VULRUNTIME_API FVulField
 		auto Reader = TJsonReaderFactory<CharType>::Create(JsonStr);
 		if (!FJsonSerializer::Deserialize(Reader, ParsedJson) || !ParsedJson.IsValid())
 		{
-			Ctx.Errors.Add(TEXT("cannot parse invalid JSON string"));
+			Ctx.State.Errors.Add(TEXT("cannot parse invalid JSON string"));
 			return false;
 		}
 
@@ -133,7 +142,7 @@ struct VULRUNTIME_API FVulField
 		auto Writer = TJsonWriterFactory<CharType, PrintPolicy>::Create(&Out);
 		if (!FJsonSerializer::Serialize(Obj, "", Writer))
 		{
-			Ctx.Errors.Add(TEXT("serialization of JSON string failed"));
+			Ctx.State.Errors.Add(TEXT("serialization of JSON string failed"));
 			return false;
 		}
 
@@ -157,14 +166,14 @@ private:
 		void*,
 		TSharedPtr<FJsonValue>&,
 		FVulFieldSerializationContext& Ctx,
-		const TOptional<FString>& IdentifierCtx
+		const TOptional<VulRuntime::Field::FPathItem>& IdentifierCtx
 	)> Read;
 	
 	TFunction<bool (
 		const TSharedPtr<FJsonValue>&,
 		void*,
 		FVulFieldDeserializationContext& Ctx,
-		const TOptional<FString>& IdentifierCtx
+		const TOptional<VulRuntime::Field::FPathItem>& IdentifierCtx
 	)> Write;
 };
 

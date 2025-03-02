@@ -31,8 +31,11 @@ struct TVulFieldRefResolver
 	 *
 	 * This default implementation returns false; i.e. no support for shared references.
 	 */
-	static bool Resolve(const T& Value, TSharedPtr<FJsonValue>& Out, struct FVulFieldSerializationErrors& Errors)
-	{
+	static bool Resolve(
+		const T& Value,
+		TSharedPtr<FJsonValue>& Out,
+		struct FVulFieldSerializationState& SerializationState
+	) {
 		return false;
 	}
 };
@@ -42,14 +45,17 @@ struct TVulFieldRefResolver<TSharedPtr<T>>
 {
 	static constexpr bool SupportsRef = true;
 	
-	static bool Resolve(const TSharedPtr<T>& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationErrors& Errors)
-	{
+	static bool Resolve(
+		const TSharedPtr<T>& Value,
+		TSharedPtr<FJsonValue>& Out,
+		FVulFieldSerializationState& SerializationState
+	) {
 		if (!Value.IsValid())
 		{
 			return false;
 		}
 		
-		return TVulFieldRefResolver<T>::Resolve(*Value.Get(), Out, Errors);
+		return TVulFieldRefResolver<T>::Resolve(*Value.Get(), Out, SerializationState);
 	}
 };
 
@@ -58,13 +64,35 @@ struct TVulFieldRefResolver<T*>
 {
 	static constexpr bool SupportsRef = true;
 	
-	static bool Resolve(const T* const& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationErrors& Errors)
-	{
+	static bool Resolve(
+		const T* const& Value,
+		TSharedPtr<FJsonValue>& Out,
+		FVulFieldSerializationState& SerializationState
+	) {
 		if (Value == nullptr)
 		{
 			return false;
 		}
 		
-		return TVulFieldRefResolver<T>::Resolve(*Value, Out, Errors);
+		return TVulFieldRefResolver<T>::Resolve(*Value, Out, SerializationState);
+	}
+};
+
+template <typename T>
+struct TVulFieldRefResolver<TWeakObjectPtr<T>>
+{
+	static constexpr bool SupportsRef = true;
+	
+	static bool Resolve(
+		const TWeakObjectPtr<T>& Value,
+		TSharedPtr<FJsonValue>& Out,
+		FVulFieldSerializationState& SerializationState
+	) {
+		if (!Value.IsValid())
+		{
+			return false;
+		}
+		
+		return TVulFieldRefResolver<T>::Resolve(*Value.Get(), Out, SerializationState);
 	}
 };

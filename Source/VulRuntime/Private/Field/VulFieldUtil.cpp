@@ -40,3 +40,90 @@ bool VulRuntime::Field::IsEmpty(const TSharedPtr<FJsonValue>& Value)
 
 	return false;
 }
+
+FString VulRuntime::Field::PathStr(const TArray<FPathItem>& Path)
+{
+	if (Path.IsEmpty())
+	{
+		return ".";
+	}
+	
+	FString Out;
+
+	for (const auto Item : Path)
+	{
+		if (Item.IsType<FString>())
+		{
+			Out += "." + Item.Get<FString>();
+		} else if (Item.IsType<int>())
+		{
+			Out += FString::Printf(TEXT("[%d]"), Item.Get<int>());
+		}
+	}
+
+	return Out;
+}
+
+bool VulRuntime::Field::PathMatch(const FPath& Path, const FString& Match)
+{
+	if (Match.IsEmpty())
+	{
+		return false;
+	}
+	
+	int StrIndex = 0;
+	
+	for (const auto Item : Path)
+	{
+		if (Item.IsType<FString>() && Match[StrIndex] == '.')
+		{
+			StrIndex++;
+			
+			if (Match[StrIndex] == TEXT('*'))
+			{
+				StrIndex++;
+				continue;
+			}
+
+			const auto Part = Item.Get<FString>();
+
+			if (Match.Mid(StrIndex, Part.Len()) == Part)
+			{
+				StrIndex += Part.Len();
+				continue;
+			}
+		} else if (Item.IsType<int>())
+		{
+			if (Match[StrIndex] == TEXT('['))
+			{
+				StrIndex++;
+				if (Match[StrIndex] == TEXT('*') && Match[StrIndex + 1] == TEXT(']'))
+				{
+					StrIndex += 2;
+					continue;
+				}
+
+				FString NumericCharacters;
+
+				while (FChar::IsDigit(Match[StrIndex]))
+				{
+					NumericCharacters += Match[StrIndex];
+					StrIndex++;
+				}
+
+				if (Match[StrIndex] == TEXT(']'))
+				{
+					StrIndex++;
+					if (FString::FromInt(Item.Get<int>()) == NumericCharacters)
+					{
+						continue;
+					}
+				}
+			}
+		}
+
+		return false;
+	}
+
+	return true;
+}
