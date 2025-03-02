@@ -153,7 +153,7 @@ struct TVulFieldSerializer<TMap<K, V>>
 		for (const auto Entry : Value)
 		{
 			TSharedPtr<FJsonValue> ItemKey;
-			if (!Ctx.Serialize<K>(Entry.Key, ItemKey))
+			if (!Ctx.Serialize<K>(Entry.Key, ItemKey, VulRuntime::Field::FPathItem(TInPlaceType<FString>(), "__key__")))
 			{
 				return false;
 			}
@@ -164,7 +164,7 @@ struct TVulFieldSerializer<TMap<K, V>>
 			}
 			
 			TSharedPtr<FJsonValue> ItemValue;
-			if (!Ctx.Serialize<V>(Entry.Value, ItemValue))
+			if (!Ctx.Serialize<V>(Entry.Value, ItemValue, VulRuntime::Field::FPathItem(TInPlaceType<FString>(), ItemKey->AsString())))
 			{
 				return false;
 			}
