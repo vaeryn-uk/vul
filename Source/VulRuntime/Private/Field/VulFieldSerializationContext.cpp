@@ -6,6 +6,11 @@ bool FVulFieldSerializationErrors::IsSuccess() const
 	return Errors.IsEmpty();
 }
 
+void FVulFieldSerializationErrors::SetMaxStack(int N)
+{
+	MaxStackSize = N;
+}
+
 bool FVulFieldSerializationErrors::RequireJsonType(const TSharedPtr<FJsonValue>& Value, const EJson Type)
 {
 	if (Value->Type != Type)
@@ -63,6 +68,12 @@ bool FVulFieldSerializationErrors::WithIdentifierCtx(
 	if (Identifier.IsSet())
 	{
 		Push(Identifier);
+	}
+	
+	if (Stack.Num() > MaxStackSize)
+	{
+		Add(TEXT("Maximum stack size %d. Infinite recursion?"), MaxStackSize);
+		return false;
 	}
 	
 	const auto Ret = Fn();

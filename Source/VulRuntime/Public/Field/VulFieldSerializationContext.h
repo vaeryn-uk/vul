@@ -9,6 +9,13 @@
 struct VULRUNTIME_API FVulFieldSerializationErrors
 {
 	bool IsSuccess() const;
+
+	/**
+	 * Sets the maximum depth de/serialization will traverse before an error and stopping.
+	 *
+	 * Avoids infinite loops. Default value = 100.
+	 */
+	void SetMaxStack(int N);
 	
 	template <typename FmtType, typename... Types>
 	void Add(const FmtType& Fmt, Types&&... Args)
@@ -64,6 +71,8 @@ private:
 	FString PathStr() const;
 
 	static FString JsonTypeToString(EJson Type);
+
+	int MaxStackSize = 100;
 };
 
 struct VULRUNTIME_API FVulFieldSerializationMemory

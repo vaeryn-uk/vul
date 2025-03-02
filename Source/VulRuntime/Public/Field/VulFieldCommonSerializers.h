@@ -273,6 +273,38 @@ struct TVulFieldSerializer<TSharedPtr<T>>
 };
 
 template <typename T>
+struct TVulFieldSerializer<TWeakObjectPtr<T>>
+{
+	static bool Serialize(const TWeakObjectPtr<T>& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
+	{
+		if (!Value.IsValid())
+		{
+			Out = MakeShared<FJsonValueNull>();
+			return true;
+		}
+		
+		return Ctx.Serialize<T>(*Value.Get(), Out);
+	}
+
+	static bool Deserialize(const TSharedPtr<FJsonValue>& Data, TWeakObjectPtr<T>& Out, FVulFieldDeserializationContext& Ctx)
+	{
+		if (Data->Type == EJson::Null)
+		{
+			Out = nullptr;
+			return true;
+		}
+
+		Out = MakeShared<T>();
+		if (!Ctx.Deserialize<T>(Data, *Out.Get()))
+		{
+			return false;
+		}
+
+		return true;
+	}
+};
+
+template <typename T>
 struct TVulFieldSerializer<T*>
 {
 	static bool Serialize(const T* const& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
@@ -326,7 +358,6 @@ struct TVulFieldSerializer<TSharedRef<T>>
 	}
 };
 
-// TODO: concepts require C++20. This okay?
 template <typename T>
 concept HasEnumToString = requires(T value) {
 	{ EnumToString(value) } -> std::same_as<FString>;
