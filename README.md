@@ -390,3 +390,8 @@ must implement `IVulFieldSetAware` for a useful serialized representation.
 Enums are serialized and deserialized as their string form. Your enums will need to implement `EnumToString`
 to be picked up by the provided serializer. The `DECLARE_ENUM_TO_STRING` and `DEFINE_ENUM_TO_STRING` macros
 provided by UE should be used to make your enums compatible.
+
+### Copy on write pointer
+
+`TVulCopyOnWritePtr` is useful to avoid unnecessary copying of data in scenarios where you are often reading
+but sometimes copying.
