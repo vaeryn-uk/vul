@@ -97,8 +97,6 @@ features over & above native UE data table functionality:
 * Test operation to verify what will happen before performing a real import.
 * Specify `meta="VulRowName"` in a `UPROPERTY` to have the import automatically populate the row name
   in to the struct directly. Useful for identity/equality checks on row structs.
-* [TODO] Automated triggering of imports on project start/preview start/cook etc.
-* [TODO] Automatic population of row name references (below)
 
 ### Data repositories
 
@@ -108,6 +106,8 @@ features over & above native UE data table functionality:
   to go back through the repository.
   * `FVulDataPtr` and its typed version, `TVulDataPtr`, provides a bunch of features as a general-use
     pointer type for rows, so we use this as the only type returned from the repository.
+* See `MyProject.ps1`, which contains the `ImportGameData` action demonstrating how repositories can be
+  synchronized from a Python script to save booting the editor & needing to manually reimport.
 
 ### Number functionality
 

@@ -1,5 +1,6 @@
 ﻿#include "AssetIntegration/VulEditorAssetActions.h"
 #include "EditorUtilityLibrary.h"
+#include "VulEditorBlueprintLibrary.h"
 #include "AssetIntegration/VulEditorCommands.h"
 #include "DataTable/VulDataRepository.h"
 #include "DataTable/VulDataTableSource.h"
@@ -53,41 +54,11 @@ void FVulDataRepositoryAssetTypeActions::ImportAllConnectedSources()
 
 	for (auto RepoAsset : Repositories)
 	{
-		auto Repo = Cast<UVulDataRepository>(RepoAsset);
-
-		FString Directory;
-		FString Name;
-		FString Ext;
-		FPaths::Split(Repo->GetPathName(), Directory, Name, Ext);
-
-		auto UAS = GEditor->GetEditorSubsystem<UEditorAssetSubsystem>();
-		for (auto Asset : UAS->ListAssets(Directory))
-		{
-			auto Loaded = Cast<UVulDataTableSource>(UAS->LoadAsset(Asset));
-			if (!IsValid(Loaded))
-			{
-				continue;
-			}
-
-			// Always rebuild before import incase during dev it's become corrupted.
-			Repo->RebuildReferenceCache();
-
-			for (const auto Entry : Repo->DataTables)
-			{
-				if (Entry.Value == Loaded->DataTable)
-				{
-					// This data source is linked to the repository.
-					if (!Loaded->Import(false)->AllFilesOk())
-					{
-						Failed.Add(Loaded->GetPathName());
-					} else
-					{
-						Succeeded.Add(Loaded->GetPathName());
-					}
-					Total++;
-				}
-			}
-		}
+		Total += UVulEditorBlueprintLibrary::DoConnectedDataSourceImport(
+			Cast<UVulDataRepository>(RepoAsset),
+			Succeeded,
+			Failed
+		);
 	}
 
 	const auto Title = INVTEXT("Vul data source import");

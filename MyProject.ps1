@@ -18,11 +18,12 @@ In powershell, run the following for help on usage syntax:
 .PARAMETER Action
 Which operation to perform.
 
-Cook          - Cook project content. Required to run the game outside the editor.
-CookAndBuild  - Cook and build the project and write the game files into `Builds` for a standalone version.
-Zip           - Takes the latest build project and zips it up as the given `-Version`.
-Profile       - Starts Unreal Insights for profiling
-PythonScript  - Executes a python script in this project via UE's python environment (requires `-Script`).
+Cook           - Cook project content. Required to run the game outside the editor.
+CookAndBuild   - Cook and build the project and write the game files into `Builds` for a standalone version.
+Zip            - Takes the latest build project and zips it up as the given `-Version`.
+Profile        - Starts Unreal Insights for profiling
+PythonScript   - Executes a python script in this project via UE's python environment (requires `-Script`).
+ImportGameData - Updates the main data repository from YAML files in config.
 #>
 
 param (
@@ -140,11 +141,25 @@ elseif ($Action -eq "PythonScript") {
     Start-Process `
         -FilePath "$EditorCmd" `
         -ArgumentList (
-    "$ProjectDir\$ProjectName.uproject",
-    "-unattended",
-    "-run=pythonscript",
-    "-script=$Script"
-    )`
+            "$ProjectDir\$ProjectName.uproject",
+            "-unattended",
+            "-run=pythonscript",
+            "-script=$Script"
+        )`
+        -NoNewWindow -Wait
+}
+elseif ($Action -eq "ImportGameData") {
+    # Update this value to reference your main data repository.
+    $env:UE_VUL_DATA_REPO = "/Game/MyProject/Data/DTR_MyMainRepo.DTR_MyMainRepo"
+
+    Start-Process `
+        -FilePath "$EditorCmd" `
+        -ArgumentList (
+            "$ProjectDir\$ProjectName.uproject",
+            "-unattended",
+            "-run=pythonscript",
+            "-script=$ProjectDir\Plugins\Vul\Content\Python\import_data_repository.py"
+        )`
         -NoNewWindow -Wait
 }
 else
