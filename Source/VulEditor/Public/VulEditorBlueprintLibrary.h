@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "DataTable/VulDataRepository.h"
+#include "DataTable/VulDataTableSource.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "VulEditorBlueprintLibrary.generated.h"
 

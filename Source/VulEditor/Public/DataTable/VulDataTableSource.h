@@ -179,5 +179,7 @@ public:
 	UPROPERTY(VisibleAnywhere)
 	FString Error;
 
+	void LogErrors();
+
 	bool AllFilesOk() const;
 };

@@ -60,13 +60,15 @@ int UVulEditorBlueprintLibrary::DoConnectedDataSourceImport(
 			if (Entry.Value == Loaded->DataTable)
 			{
 				// This data source is linked to the repository.
-				if (!Loaded->Import(false)->AllFilesOk())
+				if (const auto ImportResult = Loaded->Import(false); !ImportResult->AllFilesOk())
 				{
+					ImportResult->LogErrors();
 					Failed.Add(Loaded->GetPathName());
 				} else
 				{
 					Succeeded.Add(Loaded->GetPathName());
 				}
+				
 				Total++;
 			}
 		}

@@ -1,5 +1,6 @@
 ﻿#include "DataTable/VulDataTableSource.h"
 #include "EditorAssetLibrary.h"
+#include "VulEditor.h"
 #include "VulEditorUtil.h"
 #include "DataTable/VulDataRepository.h"
 #include "UnrealYAML/Public/Parsing.h"
@@ -289,6 +290,22 @@ bool UVulDataTableSource::BuildStructRows(
 	}
 
 	return Ok;
+}
+
+void UVulDataTableSourceImportResult::LogErrors()
+{
+	if (!Error.IsEmpty())
+	{
+		UE_LOG(LogVulEditor, Error, TEXT("import error: %s"), *Error);
+	}
+
+	for (const auto Entry : Files)
+	{
+		for (const auto FileError : Entry.Value.Errors)
+		{
+			UE_LOG(LogVulEditor, Error, TEXT("import error [%s]: %s"), *Entry.Key, *FileError);
+		}
+	}
 }
 
 bool UVulDataTableSourceImportResult::AllFilesOk() const
