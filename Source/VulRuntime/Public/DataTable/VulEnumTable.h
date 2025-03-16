@@ -127,7 +127,25 @@ protected:
 		return Table.Get();
 	}
 
+	/**
+	 * For concrete implementations: implement a function which returns a subset of rows
+	 * and have it cached indefinitely.
+	 */
+	template <typename PredicateType>
+	const TArray<RowType*>& Filter(const FString& Key, PredicateType Predicate) const
+	{
+		if (FilteredCache.Contains(Key))
+		{
+			return FilteredCache[Key];
+		}
+
+		FilteredCache.Add(Key, LoadAll().FilterByPredicate(Predicate));
+
+		return FilteredCache[Key];
+	}
+
 private:
+	mutable TMap<FString, TArray<RowType*>> FilteredCache;
 	
 	void LoadRows() const
 	{
