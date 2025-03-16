@@ -41,6 +41,27 @@ public:
 		return ByRow.Find(RowName);
 	}
 
+	/**
+	 * Fetches all contained rows, optionally filtering by a predicate.
+	 */
+	template <typename FilterPredicate>
+	TArray<RowType*> LoadAll(FilterPredicate Predicate = nullptr) const
+	{
+		LoadRows();
+		
+		TArray<RowType*> Out;
+		
+		for (auto& Entry : ByRow)
+		{
+			if (Predicate == nullptr || Predicate(&Entry.Value))
+			{
+				Out.Add(&Entry.Value);
+			}
+		}
+		
+		return Out;
+	}
+
 	RowType LoadChecked(const EnumType Effect) const
 	{
 		const auto Found = Load(Effect);
