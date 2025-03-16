@@ -41,19 +41,21 @@ public:
 		return ByRow.Find(RowName);
 	}
 
-	/**
-	 * Fetches all contained rows, optionally filtering by a predicate.
-	 */
-	template <typename FilterPredicate>
-	TArray<RowType*> LoadAll(FilterPredicate Predicate = nullptr) const
+	TArray<RowType*> LoadAll() const
+	{
+		return LoadAll([](RowType* Row) { return true; });
+	}
+
+	template <typename PredicateType>
+	TArray<RowType*> LoadAll(PredicateType Predicate) const
 	{
 		LoadRows();
 		
 		TArray<RowType*> Out;
-		
+
 		for (auto& Entry : ByRow)
 		{
-			if (Predicate == nullptr || Predicate(&Entry.Value))
+			if (Predicate(&Entry.Value))
 			{
 				Out.Add(&Entry.Value);
 			}
