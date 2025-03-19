@@ -146,8 +146,11 @@ struct TVulDataPtr
 	TVulDataPtr() = default;
 	TVulDataPtr(const FVulDataPtr& Other)
 	{
-		checkf(Other.StructType()->IsChildOf(RowType::StaticStruct()), TEXT("Invalid FVulDataPtr conversion"));
-		DataPtr = Other;
+		if (Other.IsSet())
+		{
+			checkf(Other.StructType()->IsChildOf(RowType::StaticStruct()), TEXT("Invalid FVulDataPtr conversion"));
+			DataPtr = Other;
+		}
 	}
 	template <typename OtherRowType, typename = TEnableIf<TIsDerivedFrom<OtherRowType, RowType>::Value>>
 	TVulDataPtr(const TVulDataPtr<OtherRowType>& Other)
