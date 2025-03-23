@@ -124,8 +124,6 @@ private:
 	template <typename RowType>
 	const RowType* FindRawChecked(const FName& TableName, const FName& RowName);
 
-	FVulDataPtr FindPtrChecked(const FName& TableName, const FName& RowName);
-
 	void InitStruct(const FName& TableName, const UDataTable* Table, UScriptStruct* Struct, void* Data);
 
 	bool IsPtrType(const FProperty* Property) const;
@@ -193,7 +191,7 @@ const RowType* UVulDataRepository::FindRawChecked(const FName& TableName, const 
 template <typename RowType>
 TVulDataPtr<RowType> UVulDataRepository::FindChecked(const FName& TableName, const FName& RowName)
 {
-	auto Ptr = FindPtrChecked(TableName, RowName);
+	const RowType* Ptr = FindRawChecked<RowType>(TableName, RowName);
 
 	// This assumes TVulDataPtr is the same size as FVulDataPtr.
 	static_assert(sizeof(TVulDataPtr<FTableRowBase>) == sizeof(FVulDataPtr), "FVulDataPtr and TVulDataPtr must be the same size");

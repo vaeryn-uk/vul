@@ -74,16 +74,6 @@ void UVulDataRepository::RebuildReferenceCache(UScriptStruct* Struct)
 }
 #endif
 
-FVulDataPtr UVulDataRepository::FindPtrChecked(const FName& TableName, const FName& RowName)
-{
-	return FVulDataPtr(
-		this,
-		TableName,
-		RowName,
-		FindRawChecked<FTableRowBase>(TableName, RowName)
-	);
-}
-
 bool UVulDataRepository::IsPtrType(const FProperty* Property) const
 {
 	return Property->GetCPPType() == FVulDataPtr::StaticStruct()->GetStructCPPName();

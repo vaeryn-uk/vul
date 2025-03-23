@@ -1,7 +1,6 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
-#include "VulRuntimeSettings.h"
 #include "Misc/VulEnum.h"
 #include "UObject/Object.h"
 
@@ -18,70 +17,67 @@
  * You can then create an enum in your code to access these rows and implement your specific
  * functionality if the row is for your given spell. The enum yields an explicit, concrete
  * binding between your config and its uses in code.
- *
- * To use, extend this class with concrete types and implement the required functions.
- * You will need to define your row type which includes the appropriate enum property.
  */
-template <typename RowType, typename EnumType>
+template <typename RowType, typename EnumType, typename RowPtrType = RowType*, typename ConstRowPtrType = const RowType*>
 class TVulEnumTable
 {
 public:
 	TVulEnumTable() = default;
 	virtual ~TVulEnumTable() = default;
 
-	RowType* Load(const EnumType Value) const
+	ConstRowPtrType Load(const EnumType Value) const
 	{
 		LoadRows();
-		return Definitions.Find(Value);
+		return Definitions.Contains(Value) ? Definitions[Value] : nullptr;
 	}
 
-	RowType* Load(const FName& RowName) const
+	ConstRowPtrType Load(const FName& RowName) const
 	{
 		LoadRows();
-		return ByRow.Find(RowName);
+		return ByRow.Contains(RowName) ? ByRow[RowName] : nullptr;
 	}
 
-	TArray<RowType*> LoadAll() const
+	TArray<ConstRowPtrType> LoadAll() const
 	{
-		return LoadAll([](RowType* Row) { return true; });
+		return LoadAll([](ConstRowPtrType Row) { return true; });
 	}
 
 	template <typename PredicateType>
-	TArray<RowType*> LoadAll(PredicateType Predicate) const
+	TArray<ConstRowPtrType> LoadAll(PredicateType Predicate) const
 	{
 		LoadRows();
 		
-		TArray<RowType*> Out;
+		TArray<ConstRowPtrType> Out;
 
-		for (auto& Entry : ByRow)
+		for (const auto& Entry : ByRow)
 		{
-			if (Predicate(&Entry.Value))
+			if (Predicate(Entry.Value))
 			{
-				Out.Add(&Entry.Value);
+				Out.Add(Entry.Value);
 			}
 		}
 		
 		return Out;
 	}
 
-	RowType LoadChecked(const EnumType Effect) const
-	{
-		const auto Found = Load(Effect);
-		checkf(Found != nullptr, TEXT("Unknown enum value"));
-		return *Found;
-	}
-
 	/**
 	 * Ensures this table contains a row for each expected enum value, returning an empty array if ok.
 	 *
 	 * Returns a list of enum values that we cannot find rows for.
+	 *
+	 * Optionally exclude some enum values from the validation. Useful for a "none" enum type.
 	 */
-	TArray<EnumType> ValidateEnums() const
+	TArray<EnumType> ValidateEnums(const TArray<EnumType>& Exclude = {}) const
 	{
 		TArray<EnumType> Missing;
 
 		for (const auto Val : VulRuntime::Enum::Values<EnumType>())
 		{
+			if (Exclude.Contains(Val))
+			{
+				continue;
+			}
+			
 			if (Load(Val) == nullptr)
 			{
 				Missing.Add(Val);
@@ -107,7 +103,7 @@ protected:
 	 *
 	 * Commonly this is a known property on the row.
 	 */
-	virtual EnumType GetEnumValue(const RowType* Row) const = 0;
+	virtual EnumType GetEnumValue(ConstRowPtrType Row) const = 0;
 
 	/**
 	 * Given a data table row, return the RowName value.
@@ -115,7 +111,7 @@ protected:
 	 * All data table rows in UE have a RowName; using UVulDataTableSource::RowNameMetaSpecifier will
 	 * automatically copy a RowName to a property within the row.
 	 */
-	virtual FName GetRowName(const RowType* Row) const = 0;
+	virtual FName GetRowName(ConstRowPtrType Row) const = 0;
 
 	UDataTable* GetTable() const
 	{
@@ -132,7 +128,7 @@ protected:
 	 * and have it cached indefinitely.
 	 */
 	template <typename PredicateType>
-	const TArray<RowType*>& Filter(const FString& Key, PredicateType Predicate) const
+	TArray<ConstRowPtrType>& Filter(const FString& Key, PredicateType Predicate) const
 	{
 		if (FilteredCache.Contains(Key))
 		{
@@ -144,38 +140,29 @@ protected:
 		return FilteredCache[Key];
 	}
 
+	/**
+	 * Actually loads all rows.
+	 *
+	 * Must use StoreRow() for each row that is loaded.
+	 */
+	virtual void DoLoadRows() const = 0;
+	
+	mutable TMap<EnumType, RowPtrType> Definitions;
+	mutable TMap<FName, RowPtrType> ByRow;
 private:
-	mutable TMap<FString, TArray<RowType*>> FilteredCache;
+	mutable TMap<FString, TArray<ConstRowPtrType>> FilteredCache;
 	
 	void LoadRows() const
 	{
 		if (!Loaded)
 		{
-			const auto Dt = GetTable();
-			if (!ensureAlwaysMsgf(IsValid(Dt), TEXT("TVulEnumTable: must provide a data table")))
-			{
-				return;
-			}
-
-			TArray<RowType*> Rows;
-			Dt->GetAllRows("TVulEnumTable", Rows);
-
-			Definitions = TMap<EnumType, RowType>();
-
-			for (const auto& Row : Rows)
-			{
-				Definitions.Add(GetEnumValue(Row), *Row);
-				ByRow.Add(GetRowName(Row), *Row);
-			}
-
+			DoLoadRows();
 			Loaded = true;
 		}
 	}
 
 	mutable TWeakObjectPtr<UDataTable> Table;
 	mutable bool Loaded = false;
-	mutable TMap<EnumType, RowType> Definitions;
-	mutable TMap<FName, RowType> ByRow;
 };
 
 /**
@@ -185,10 +172,10 @@ private:
  * a TWeakObjectPtr and surface an IsValid function to ensure that the table can be used safely.
  */
 template <typename RowType, typename EnumType>
-class TVulEnumTableWrapped : public TVulEnumTable<RowType, EnumType>
+class TVulEnumDataTable : public TVulEnumTable<RowType, EnumType>
 {
 public:
-	TVulEnumTableWrapped() = default;
+	TVulEnumDataTable() = default;
 	
 	void SetDataTable(const TWeakObjectPtr<UDataTable>& InDataTable)
 	{
@@ -200,6 +187,23 @@ protected:
 	virtual UDataTable* LoadTable() const override { return DataTable.Get(); }
 	virtual EnumType GetEnumValue(const RowType* Row) const override { return GetRowNameAndEnum(Row).Value; }
 	virtual FName GetRowName(const RowType* Row) const override { return GetRowNameAndEnum(Row).Key; }
+
+	virtual void DoLoadRows() const override
+	{
+		if (!ensureAlwaysMsgf(DataTable.IsValid(), TEXT("TVulEnumTable: must provide a data table")))
+		{
+			return;
+		}
+
+		TArray<RowType*> Rows;
+		DataTable->GetAllRows("TVulEnumTable", Rows);
+
+		for (const auto Row : Rows)
+		{
+			this->Definitions.Add(this->GetEnumValue(Row), Row);
+			this->ByRow.Add(this->GetRowName(Row), Row);
+		}
+	}
 
 	/**
 	 * Returns a row's RowName (FName) and enum Value (EnumType) in a single method.

@@ -28,6 +28,7 @@ struct VULRUNTIME_API FVulDataPtr
 	 * Creates a null/not-set pointer.
 	 */
 	FVulDataPtr() = default;
+	FVulDataPtr(nullptr_t) : FVulDataPtr() {}
 
 	/**
 	 * A non-null pointer to some row in a table. Do not construct these manually; get one via a UVulDataRepository.
@@ -103,10 +104,8 @@ private:
 		UVulDataRepository* InRepository,
 		const FName& InTableName,
 		const FName& InRowName,
-		const void* Data = nullptr) : Repository(InRepository),
-								TableName(InTableName), RowName(InRowName), Ptr(Data)
-	{
-	}
+		const void* Data = nullptr
+	) : Repository(InRepository), TableName(InTableName), RowName(InRowName), Ptr(Data) {}
 
 	/**
 	 * Should this pointer be initialized by a data repository?
@@ -144,6 +143,7 @@ struct TVulDataPtr
 	static_assert(TIsDerivedFrom<RowType, FTableRowBase>::Value, "TVulDataPtr RowType must be a FTableRowBase");
 
 	TVulDataPtr() = default;
+	TVulDataPtr(nullptr_t) {}
 	TVulDataPtr(const FVulDataPtr& Other)
 	{
 		if (Other.IsSet())
@@ -152,10 +152,21 @@ struct TVulDataPtr
 			DataPtr = Other;
 		}
 	}
+
 	template <typename OtherRowType, typename = TEnableIf<TIsDerivedFrom<OtherRowType, RowType>::Value>>
 	TVulDataPtr(const TVulDataPtr<OtherRowType>& Other)
 	{
 		DataPtr = Other.Data();
+	}
+
+	friend bool operator==(const TVulDataPtr& Lhs, const nullptr_t)
+	{
+		return !Lhs.DataPtr.IsSet();
+	}
+
+	friend bool operator!=(const TVulDataPtr& Lhs, const nullptr_t)
+	{
+		return Lhs.DataPtr.IsSet();
 	}
 
 	FVulFieldSet VulFieldSet() const
@@ -223,7 +234,7 @@ private:
 	// Must only have this property as we reinterpret_cast between this templated type and the USTRUCT version.
 	// I.e. This struct must be the same size as FVulDataPtr.
 
-	FVulDataPtr DataPtr;
+	FVulDataPtr DataPtr = nullptr;
 };
 
 template <typename RowType>

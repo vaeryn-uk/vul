@@ -126,6 +126,11 @@ code.
 enum definitions in your code to yield benefits of generic config-driven functionality with the 
 freedom to safely hard-code functionality to well-known enum values.
 
+There are two implementations available:
+* `TVulDataPtrEnumTable` (recommended) which integrates with `UVulDataRepository` functionality which supports
+  references to other tables in your enum rows.
+* `TVulEnumDataTable` is simpler and integrates with `UDataTable`s directly.
+
 ### Level management
 
 A `UVulLevelManager` can be configured from Vul's project settings, see `UVulRuntimeSettings::LevelSettings`.

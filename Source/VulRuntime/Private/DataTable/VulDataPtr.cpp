@@ -40,7 +40,7 @@ const FName& FVulDataPtr::GetTableName() const
 
 TObjectPtr<UScriptStruct> FVulDataPtr::StructType() const
 {
-	checkf(IsValid(), TEXT("attempt to resolve struct type for invalid FVulDataPtr"))
+	checkf(::IsValid(Repository) && !TableName.IsNone(), TEXT("attempt to resolve struct type for invalid FVulDataPtr"))
 	return Repository->StructType(TableName);
 }
 
