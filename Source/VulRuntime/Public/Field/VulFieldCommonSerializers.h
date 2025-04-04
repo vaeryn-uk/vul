@@ -273,6 +273,40 @@ struct TVulFieldSerializer<TSharedPtr<T>>
 };
 
 template <typename T>
+struct TVulFieldSerializer<TUniquePtr<T>>
+{
+	static bool Serialize(const TUniquePtr<T>& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
+	{
+		if (!Value.IsValid())
+		{
+			Out = MakeShared<FJsonValueNull>();
+			return true;
+		}
+		
+		return Ctx.Serialize<T>(*Value.Get(), Out);
+	}
+
+	static bool Deserialize(const TSharedPtr<FJsonValue>& Data, TUniquePtr<T>& Out, FVulFieldDeserializationContext& Ctx)
+	{
+		static_assert(std::is_move_constructible<T>::value, "T must be move-constructible for TUniquePtr Vul field deserialization");
+		
+		if (Data->Type == EJson::Null)
+		{
+			Out = nullptr;
+			return true;
+		}
+
+		Out = MakeUnique<T>();
+		if (!Ctx.Deserialize<T>(Data, *Out.Get()))
+		{
+			return false;
+		}
+
+		return true;
+	}
+};
+
+template <typename T>
 struct TVulFieldSerializer<TWeakObjectPtr<T>>
 {
 	static bool Serialize(const TWeakObjectPtr<T>& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)

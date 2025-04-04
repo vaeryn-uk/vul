@@ -196,11 +196,14 @@ struct VULRUNTIME_API FVulFieldDeserializationContext
 			
 			if (SupportsRef)
 			{
-				FString PossibleRef;
-				if (Data->TryGetString(PossibleRef) && State.Memory.Store.Contains(PossibleRef))
+				if constexpr (std::is_copy_assignable_v<T>)
 				{
-					Out = *static_cast<T*>(State.Memory.Store[PossibleRef]);
-					return true;
+					FString PossibleRef;
+					if (Data->TryGetString(PossibleRef) && State.Memory.Store.Contains(PossibleRef))
+					{
+						Out = *static_cast<T*>(State.Memory.Store[PossibleRef]);
+						return true;
+					}
 				}
 			}
 			

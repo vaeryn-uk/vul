@@ -21,6 +21,10 @@ struct TVulFieldRefResolver
 	 * This indicates to the FVulField system whether to use the referencing system at all.
 	 *
 	 * When defining resolvers for your types, this must be set as true.
+	 *
+	 * TODO: For deserialization, note your type must support copy assignment for now.
+	 *       I.e. std::is_copy_assignable_v<T>, which precludes TUniquePtr. Fix this
+	 *       in the future to support customized copying.
 	 */
 	static constexpr bool SupportsRef = false;
 	
