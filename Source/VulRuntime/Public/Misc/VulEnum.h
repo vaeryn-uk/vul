@@ -62,4 +62,26 @@ namespace VulRuntime::Enum
 		
 		return false;
 	}
+
+	/**
+	 * An alternative to UE's EnumToString DECLARE macros with improved performance via a simple cache.
+	 *
+	 * Not thread safe.
+	 */
+	template <typename EnumType>
+	FString EnumToString(const EnumType Value)
+	{
+		static TMap<EnumType, FString> Cache;
+		if (const FString* Cached = Cache.Find(Value))
+		{
+			return *Cached;
+		}
+		
+		const UEnum* EnumPtr = StaticEnum<EnumType>();
+		
+		FString Name = EnumPtr ? EnumPtr->GetNameStringByValue(static_cast<int64>(Value)) : TEXT("Invalid");
+		Cache.Add(Value, Name);
+		
+		return Name;
+	}
 }

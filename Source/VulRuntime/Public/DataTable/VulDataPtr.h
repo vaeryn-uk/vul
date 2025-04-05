@@ -92,6 +92,19 @@ struct VULRUNTIME_API FVulDataPtr
 		return IsSet() ? Get<T>() : nullptr;
 	}
 
+	/**
+	 * Ensures ptr data is loaded & ready for use, if valid. See TVulDataPtr::EnsureLoaded.
+	 */
+	const FVulDataPtr& EnsureLoaded() const
+	{
+		if (IsValid())
+		{
+			EnsurePtr();
+		}
+
+		return *this;
+	}
+
 	const FName& GetRowName() const;
 	const FName& GetTableName() const;
 
@@ -167,6 +180,29 @@ struct TVulDataPtr
 	friend bool operator!=(const TVulDataPtr& Lhs, const nullptr_t)
 	{
 		return Lhs.DataPtr.IsSet();
+	}
+
+	/**
+	 * Ensures that the underlying pointer is loaded in to memory. Does nothing for an invalid data ptr.
+	 *
+	 * This is mostly a performance helper. When storing pointers, it can be useful to ensure they're
+	 * loaded up front to save callers getting a copy of the pointer having to trigger internal repository
+	 * lookups.
+	 *
+	 * E.g. in your constructor, you may accept a pointer:
+	 *
+	 * MyClass(const TVulDataPtr<RowData>& InRowData) : MyRowData(InRowData.EnsureLoaded()) {}
+	 *
+	 * Now later, when we call:
+	 * 
+	 * TVulDataPtr<RowData> MyClass::GetRowData() const
+	 * 
+	 * We know we're getting a pre-loaded pointer, saving repeated lookups.
+	 */
+	const TVulDataPtr& EnsureLoaded() const
+	{
+		DataPtr.EnsureLoaded();
+		return *this;
 	}
 
 	FVulFieldSet VulFieldSet() const

@@ -42,6 +42,10 @@ protected:
 	{
 		for (const auto Row : Repo->LoadAllPtrs<RowType>(TableName))
 		{
+			// Ensure the row is actually loaded to avoid all consumers having
+			// to immediately load the ptr data each time they fetch it.
+			Row.EnsureLoaded();
+			
 			this->Definitions.Add(this->GetEnumValue(Row), Row);
 			this->ByRow.Add(this->GetRowName(Row), Row);
 		}
