@@ -400,3 +400,9 @@ provided by UE should be used to make your enums compatible.
 
 `TVulCopyOnWritePtr` is useful to avoid unnecessary copying of data in scenarios where you are often reading
 but sometimes copying.
+
+### Loot model
+
+`TVulAdaptiveLootModel` provides an implementation of rolling random rewards. The implementation provides
+information allowing you to easily implement loot systems that tend towards coherent builds. I.e. as a player
+acquires loot of a particular build or strategy, complimentary loot to that style is more likely to come.
