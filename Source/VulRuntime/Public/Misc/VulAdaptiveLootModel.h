@@ -120,6 +120,25 @@ public:
 		InsertContext(Item);
 		RecalculateAll();
 	}
+
+	/**
+	 * Removes an item to the model's context. I.e. the player has lost this item.
+	 */
+	void RemoveFromContext(const FLootData& Item)
+	{
+		if (Context.Contains(Item.Data))
+		{
+			if (Context[Item.Data].Amount <= 1)
+			{
+				Context.Remove(Item.Data);
+			} else
+			{
+				Context[Item.Data].Amount -= 1;
+			}
+		}
+		
+		RecalculateAll();
+	}
 	
 	void AddToContext(const TArray<FLootData>& Items)
 	{
