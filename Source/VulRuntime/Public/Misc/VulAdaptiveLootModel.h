@@ -213,15 +213,16 @@ public:
 	/**
 	 * Picks a number of items from the provided weights calculation.
 	 *
-	 * Weights is an r-value to indicate that we mutate the map for performance reasons,
-	 * and that it should not be used afterward. This usually comes straight out of a
-	 * Weight function call. These functions are separated to provide flexibility about
-	 * how weight are calculated, and inspection of the calculated probabilities,
-	 * e.g. for logging.
+	 * Weights is by value to as we mutate the map for performance reasons.
+	 * This usually comes straight out of a Weight function call, where the
+	 * compiler will optimize this r-value to a move.
+	 *
+	 * These functions are separated to provide flexibility about how weights are
+	 * calculated, and inspection of the calculated probabilities, e.g. for logging.
 	 */
 	TArray<DataType> Roll(
 		const FVulRandomStream& Rng,
-		TMap<DataType, float>&& Weights,
+		TMap<DataType, float> Weights,
 		const int Amount = 1
 	) const {
 		TArray<DataType> Out;

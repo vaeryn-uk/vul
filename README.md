@@ -282,7 +282,7 @@ This requires the Unreal `Json` module. C++ `concept` compiler support is also r
 
 The field system is designed to support automatic serialization & deserialization of C++ classes
 outside the Unreal reflection system. This template-driven feature allows serialization of your
-native C++ types & properties (non-`USTRUCT`/`UPROPERTY`/`UCLASS`) with minimal boilerplate code.
+both your native C++ and Unreal C++ types (`USTRUCT`, `UOBJECT` etc.) with minimal boilerplate code.
 
 At the heart of this system is `FVulField`, which wraps pointers that will be read from/written to.
 As we're generally defining types that include properties that themselves need to be serialized,
@@ -301,7 +301,7 @@ Set.Add(FVul::Create(&Str), "str");
 // occur.
 FVulFieldSerializationContext Ctx;
 TSharedPtr<FJsonValue> Result;
-bool Ok = Set.Deserialize(Result, Ctx);
+bool Ok = Set.Serialize(Result, Ctx);
 ```
 
 Result (as a JSON string for demonstration):
@@ -309,30 +309,22 @@ Result (as a JSON string for demonstration):
 { "int": 13, "str": "hello world" }
 ```
 
-[See the tests for more examples](./Source/VulRuntime/Private/Field/Tests/TestField.cpp).
+[See the tests for more examples](./Source/VulRuntime/Private/Field/Tests/TestVulField.cpp).
 
 To plug your types in to the system, there will need to exist serialization and deserialization
-template specializations based on `TVulFieldSerializer<T>`. It's recommended to implement
-`IVulFieldSetAware` in your types as this will automatically tie your type to an existing
-serializer and will be used to handle de/serialization without needing to implement a serializer
-for each of your types.
+template specializations based on `TVulFieldSerializer<T>`. This can be done in several ways:
 
-`IVulFieldSetAware` is reference interface and sometimes optional. Provided template 
-specializations will look directly for the existence of a `FVulFieldSet VulFieldSet() const` 
-function, regardless whether the interface is actually implemented. This is helpful for 
-`USTRUCT`s, where UHT trips up if a `USTRUCT` inherits from a single, non-`USTRUCT` 
-class; `: IVulFieldSetAware` can simply be omitted. The exception here is `UObject` types:
-they must explicitly extend `IVulFieldSetAware` for their field sets to be serialized correctly.
+* Implement `FVulFieldSet VulFieldSet() const` on your type to return object-based
+  representations.
+* Implement `FVulField VulField() const` for types that can be represented a single field
+  (e.g. a string).
+* Implement your own `TVulFieldSerializer<T>` specialization for your type for custom
+* Some types will need special consideration, such as those derived from `UObject`; 
+  these are described below.
 
-Similarly, types that define `FVulField VulField() const` will automatically support serialization.
-This is useful when you have a type that can be serialized as a single value and is not a 
-collection of other fields.
-
-If needed, you can forego these standard functions and implement your own serializers. There are definitions 
-for common types already in [VulFieldCommonSerializers.h](./Source/VulRuntime/Public/Field/VulFieldCommonSerializers.h).
+There are definitions for common types already in [VulFieldCommonSerializers.h](./Source/VulRuntime/Public/Field/VulFieldCommonSerializers.h).
 This includes container types, such as `TArray`, `TMap`, `TOptional`, `TSharedPtr`, so you only
 need to define for your concrete types themselves; containerized & pointer versions will be inferred.
-Specifics on provided serializes for some types are discussed below.
 
 Importantly, whilst the field system deals in `FJsonValue` and associated types, it is not explicitly 
 designed to be limited to JSON. `FJsonValue` is selected as a portable, standard data representation 
@@ -340,29 +332,8 @@ target as it allows the implementation to reuse what UE already provides.
 
 Features that might be worth adding in the future:
 
-* Add stack-based error tracking to produce precise error messages in complex object structures (with tests)
 * Integration with UE's reflection system to automatically de/serialize down UPROPERTY chains.
 * Enum support: int representation - would be more efficient in serialized outputs.
-
-#### Shared references
-
-Shared references provide two main features:
-
-1) When serializing, subsequent appearances of the same object are replaced with a string reference, reducing
-   duplication.
-2) When deserializing, references are deserialized to the same object instances.
-
-This behaviour is enabled by default, but can be toggled off via the `VulFieldSerializationFlag_Referencing` flag
-the `FVulFieldSerializationFlags` set in a serialization/deserialization context.
-
-Here's what serialized data might look like for an array of characters, where we have the same character twice.
-
-```
-[
-  { name: "Thor", health: 13, strength: 5, weapon: "hammer" }
-  "Thor" // referenced.
-]
-```
 
 References are resolved via `TVulFieldRefResolver`, which can be specialized for your types.
 
@@ -395,6 +366,26 @@ must implement `IVulFieldSetAware` for a useful serialized representation.
 Enums are serialized and deserialized as their string form. Your enums will need to implement `EnumToString`
 to be picked up by the provided serializer. The `DECLARE_ENUM_TO_STRING` and `DEFINE_ENUM_TO_STRING` macros
 provided by UE should be used to make your enums compatible.
+
+#### Shared references
+
+Shared references provide two main features:
+
+1) When serializing, subsequent appearances of the same object are replaced with a string reference, reducing
+   duplication.
+2) When deserializing, references are deserialized to the same object instances.
+
+This behaviour is enabled by default, but can be toggled off via the `VulFieldSerializationFlag_Referencing` flag
+the `FVulFieldSerializationFlags` set in a serialization/deserialization context.
+
+Here's what serialized data might look like for an array of characters, where we have the same character twice.
+
+```
+[
+  { name: "Thor", health: 13, strength: 5, weapon: "hammer" }
+  "Thor" // referenced.
+]
+```
 
 ### Copy on write pointer
 
