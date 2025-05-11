@@ -122,7 +122,7 @@ struct VULRUNTIME_API FVulFieldSerializationContext
 	/**
 	 * When serializing floating points, how many decimal places should we include?
 	 */
-	const int DefaultPrecision = 1;
+	int DefaultPrecision = 1;
 
 	template <typename T>
 	bool Serialize(
