@@ -35,6 +35,12 @@ struct VULRUNTIME_API FVulDataPtr
 	 */
 	FVulDataPtr(const FName& InRowName) : RowName(InRowName) {}
 
+	bool operator==(const FVulDataPtr& Other) const
+	{
+		return (!IsSet() && !Other.IsSet())
+			|| (Other.TableName == TableName && Other.RowName == RowName);
+	}
+
 	/**
 	 * Returns true if this is a null/non-set ptr.
 	 */
@@ -180,6 +186,11 @@ struct TVulDataPtr
 	friend bool operator!=(const TVulDataPtr& Lhs, const nullptr_t)
 	{
 		return Lhs.DataPtr.IsSet();
+	}
+
+	bool operator==(const TVulDataPtr& Other) const
+	{
+		return DataPtr == Other.DataPtr;
 	}
 
 	/**

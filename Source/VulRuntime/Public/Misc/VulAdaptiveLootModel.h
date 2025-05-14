@@ -227,13 +227,14 @@ public:
 	) const {
 		TArray<DataType> Out;
 
-		if (Weights.IsEmpty())
-		{
-			return {};
-		}
-
 		for (auto I = 0; I < Amount; I++)
 		{
+			// If nothing left to choose, bail early.
+			if (Weights.IsEmpty())
+			{
+				return Out;
+			}
+			
 			const auto Result = Rng.Weighted(Weights);
 			if (!ensureAlwaysMsgf(Pool.Contains(Result), TEXT("Unknown result")))
 			{
