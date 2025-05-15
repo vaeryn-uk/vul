@@ -191,11 +191,7 @@ const RowType* UVulDataRepository::FindRawChecked(const FName& TableName, const 
 template <typename RowType>
 TVulDataPtr<RowType> UVulDataRepository::FindChecked(const FName& TableName, const FName& RowName)
 {
-	const RowType* Ptr = FindRawChecked<RowType>(TableName, RowName);
-
-	// This assumes TVulDataPtr is the same size as FVulDataPtr.
-	static_assert(sizeof(TVulDataPtr<FTableRowBase>) == sizeof(FVulDataPtr), "FVulDataPtr and TVulDataPtr must be the same size");
-	return *reinterpret_cast<TVulDataPtr<RowType>*>(&Ptr);
+	return Get<RowType>(this, TableName, RowName);
 }
 
 template <typename RowType>

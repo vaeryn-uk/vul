@@ -161,7 +161,10 @@ struct TVulDataPtr
 {
 	static_assert(TIsDerivedFrom<RowType, FTableRowBase>::Value, "TVulDataPtr RowType must be a FTableRowBase");
 
-	TVulDataPtr() = default;
+	TVulDataPtr()
+	{
+		static_assert(sizeof(TVulDataPtr) == sizeof(FVulDataPtr), "FVulDataPtr and TVulDataPtr must be the same size");
+	}
 	TVulDataPtr(nullptr_t) {}
 	TVulDataPtr(const FVulDataPtr& Other)
 	{
