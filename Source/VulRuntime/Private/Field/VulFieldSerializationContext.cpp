@@ -17,7 +17,12 @@ bool FVulFieldSerializationErrors::RequireJsonType(const TSharedPtr<FJsonValue>&
 {
 	if (Value->Type != Type)
 	{
-		Add(TEXT("Required JSON type %s, but got %s"), *JsonTypeToString(Type), *JsonTypeToString(Value->Type));
+		Add(
+			TEXT("Required JSON type %s, but got %s"),
+			*VulRuntime::Field::JsonTypeToString(Type),
+			*VulRuntime::Field::JsonTypeToString(Value->Type)
+		);
+		
 		return false;
 	}
 
@@ -104,19 +109,4 @@ void FVulFieldSerializationErrors::Log()
 FString FVulFieldSerializationErrors::PathStr() const
 {
 	return VulRuntime::Field::PathStr(Stack);
-}
-
-FString FVulFieldSerializationErrors::JsonTypeToString(EJson Type)
-{
-	switch (Type)
-	{
-	case EJson::None: return TEXT("None");
-	case EJson::Null: return TEXT("Null");
-	case EJson::String: return TEXT("String");
-	case EJson::Number: return TEXT("Number");
-	case EJson::Boolean: return TEXT("Boolean");
-	case EJson::Array: return TEXT("Array");
-	case EJson::Object: return TEXT("Object");
-	default: return TEXT("Unknown");
-	}
 }

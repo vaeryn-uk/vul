@@ -31,6 +31,7 @@ struct VULRUNTIME_API FVulFieldSet
 			FVulFieldSerializationContext&,
 			const TOptional<VulRuntime::Field::FPathItem>& IdentifierCtx = {}
 		)> Fn = nullptr;
+		TFunction<void (FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description)> Describe;
 		bool OmitIfEmpty = true;
 	};
 	
@@ -71,6 +72,11 @@ struct VULRUNTIME_API FVulFieldSet
 		{
 			RefField = Identifier;
 		}
+
+		Created.Describe = [](FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description)
+		{
+			Ctx.Describe<T>(Description);
+		};
 
 		return Entries.Add(Identifier, Created);
 	}
@@ -121,9 +127,25 @@ struct VULRUNTIME_API FVulFieldSet
 		FVulFieldDeserializationContext Ctx;
 		return DeserializeFromJson<CharType>(JsonStr, Ctx);
 	}
+
+	void Describe(FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description) const;
+
+	TSharedPtr<FJsonValue> JsonSchema(FVulFieldSerializationContext& Ctx) const;
+	
+	template <typename CharType = TCHAR, typename PrintPolicy = TCondensedJsonPrintPolicy<CharType>>
+	bool JsonSchema(FVulFieldSerializationContext& Ctx, FString& Out) const
+	{
+		auto Writer = TJsonWriterFactory<CharType, PrintPolicy>::Create(&Out);
+		return FJsonSerializer::Serialize(JsonSchema(Ctx), "", Writer);
+	}
+
+	TOptional<FString> GetTypeName() const { return Name; }
+	TOptional<FString> GetDiscriminatorField() const { return DiscriminatorField; }
 private:
 	TMap<FString, FEntry> Entries;
 	TOptional<FString> RefField = {};
+	TOptional<FString> Name;
+	TOptional<FString> DiscriminatorField;
 };
 
 
@@ -167,6 +189,17 @@ struct TVulFieldSerializer<T>
 			return false;
 		}
 		return Result;
+	}
+};
+
+template <HasVulFieldSet T>
+struct TVulFieldMeta<T>
+{
+	static bool Describe(const FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description)
+	{
+		T Default;
+
+		return Default.VulFieldSet().Describe();
 	}
 };
 

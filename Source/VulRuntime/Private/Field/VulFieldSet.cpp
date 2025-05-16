@@ -1,5 +1,5 @@
 ﻿#include "Field/VulFieldSet.h"
-
+#include "Field/VulFieldMeta.h"
 #include "Field/VulFieldUtil.h"
 
 FVulFieldSet::FEntry& FVulFieldSet::FEntry::EvenIfEmpty(const bool IncludeIfEmpty)
@@ -129,4 +129,31 @@ bool FVulFieldSet::Deserialize(const TSharedPtr<FJsonValue>& Data, FVulFieldDese
 	}
 
 	return true;
+}
+
+void FVulFieldSet::Describe(FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description) const
+{
+	for (const auto Entry : Entries)
+	{
+		auto Field = MakeShared<FVulFieldDescription>();
+
+		if (Entry.Value.Fn)
+		{
+			Entry.Value.Describe(Ctx, Field);
+		} else
+		{
+			Entry.Value.Field.Describe(Ctx, Field);
+		}
+
+		Description->Prop(Entry.Key, Field, !Entry.Value.OmitIfEmpty);
+	}
+}
+
+TSharedPtr<FJsonValue> FVulFieldSet::JsonSchema(FVulFieldSerializationContext& Ctx) const
+{
+	TSharedPtr<FVulFieldDescription> Schema = MakeShared<FVulFieldDescription>();
+
+	Describe(Ctx, Schema);
+
+	return Schema->JsonSchema();
 }

@@ -6,6 +6,11 @@
 #include "VulFieldSerializationContext.h"
 #include "UObject/Object.h"
 
+struct FVulFieldDescription;
+
+template <typename T>
+concept SerializerHasDescribe = requires { TVulFieldSerializer<T>::Describe(); };
+
 /**
  * A field that can be conveniently serialized/deserialized.
  *
@@ -47,6 +52,8 @@ struct VULRUNTIME_API FVulField
 		) {
 			return Ctx.Deserialize<T>(Value, *static_cast<T*>(Ptr), IdentifierCtx);
 		};
+
+		Out.InitDescribeFn<T>();
 		
 		return Out;
 	}
@@ -80,6 +87,8 @@ struct VULRUNTIME_API FVulField
 			Ctx.State.Errors.Add(TEXT("cannot write read-only field"));
 			return false;
 		};
+		
+		Out.InitDescribeFn<T>();
 		
 		return Out;
 	}
@@ -158,9 +167,20 @@ struct VULRUNTIME_API FVulField
 
 	bool IsReadOnly() const;
 
+	void Describe(FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description) const;
+
 private:
 	bool bIsReadOnly = false;
 	void* Ptr = nullptr;
+
+	template <typename T>
+	void InitDescribeFn()
+	{
+		DescribeFn = [](FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description)
+		{
+			Ctx.Describe<T>(Description);
+		};
+	}
 	
 	TFunction<bool (
 		void*,
@@ -175,6 +195,8 @@ private:
 		FVulFieldDeserializationContext& Ctx,
 		const TOptional<VulRuntime::Field::FPathItem>& IdentifierCtx
 	)> Write;
+
+	TFunction<void (FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>&)> DescribeFn;
 };
 
 template <typename T>

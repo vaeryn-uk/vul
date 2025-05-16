@@ -23,6 +23,15 @@ struct TVulFieldSerializer<bool>
 	}
 };
 
+template<>
+struct TVulFieldMeta<bool>
+{
+	static void Describe(FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description)
+	{
+		Description->Boolean();
+	}
+};
+
 template <typename T>
 concept IsNumeric = std::is_arithmetic_v<T>;
 
@@ -53,6 +62,15 @@ struct TVulFieldSerializer<T>
 	}
 };
 
+template<IsNumeric T>
+struct TVulFieldMeta<T>
+{
+	static void Describe(FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description)
+	{
+		Description->Number();
+	}
+};
+
 template<>
 struct TVulFieldSerializer<FString>
 {
@@ -74,6 +92,15 @@ struct TVulFieldSerializer<FString>
 };
 
 template<>
+struct TVulFieldMeta<FString>
+{
+	static void Describe(FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description)
+	{
+		Description->String();
+	}
+};
+
+template<>
 struct TVulFieldSerializer<FName>
 {
 	static bool Serialize(const FName& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
@@ -91,6 +118,15 @@ struct TVulFieldSerializer<FName>
 
 		Out = FName(Data->AsString());
 		return true;
+	}
+};
+
+template<>
+struct TVulFieldMeta<FName>
+{
+	static void Describe(FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description)
+	{
+		Description->String();
 	}
 };
 
@@ -140,6 +176,18 @@ struct TVulFieldSerializer<TArray<V>>
 		}
 		
 		return true;
+	}
+};
+
+template<typename V>
+struct TVulFieldMeta<TArray<V>>
+{
+	static void Describe(FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description)
+	{
+		const auto Items = MakeShared<FVulFieldDescription>();
+		Ctx.Describe<V>(Items);
+		
+		Description->Array(Items);
 	}
 };
 
@@ -204,6 +252,22 @@ struct TVulFieldSerializer<TMap<K, V>>
 		}
 		
 		return true;
+	}
+};
+
+template <typename K, typename V>
+struct TVulFieldMeta<TMap<K, V>>
+{
+	static void Describe(FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description)
+	{
+		const auto Keys = MakeShared<FVulFieldDescription>();
+		Ctx.Describe<K>(Keys);
+		
+		const auto Values = MakeShared<FVulFieldDescription>();
+		Ctx.Describe<V>(Values);
+
+		// TODO: Should meta generation fail if invalid, such as specifying non-string keys?
+		Description->Map(Keys, Values);
 	}
 };
 

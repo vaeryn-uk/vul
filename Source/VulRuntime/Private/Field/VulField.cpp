@@ -32,3 +32,8 @@ bool FVulField::IsReadOnly() const
 {
 	return bIsReadOnly;
 }
+
+void FVulField::Describe(FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description) const
+{
+	DescribeFn(Ctx, Description);
+}

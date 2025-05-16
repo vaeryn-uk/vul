@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "VulFieldMeta.h"
 #include "VulFieldRefResolver.h"
 #include "VulFieldSerializationOptions.h"
 #include "VulFieldSerializer.h"
@@ -73,8 +74,6 @@ private:
 	VulRuntime::Field::FPath Stack;
 	FString PathStr() const;
 
-	static FString JsonTypeToString(EJson Type);
-
 	int MaxStackSize = 100;
 };
 
@@ -114,6 +113,11 @@ struct VULRUNTIME_API FVulFieldSerializationState
 template <typename T>
 concept SerializerHasSetup = requires { TVulFieldSerializer<T>::Setup(); };
 
+template <typename T>
+concept HasMetaDescribe = requires(FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description) {
+	{ TVulFieldMeta<T>::Describe(Ctx, Description) } -> std::same_as<void>;
+};
+
 struct VULRUNTIME_API FVulFieldSerializationContext
 {
 	FVulFieldSerializationState State;
@@ -123,6 +127,21 @@ struct VULRUNTIME_API FVulFieldSerializationContext
 	 * When serializing floating points, how many decimal places should we include?
 	 */
 	int DefaultPrecision = 1;
+
+	template <typename T>
+	void Describe(
+		const TSharedPtr<FVulFieldDescription>& Description,
+		const TOptional<VulRuntime::Field::FPathItem>& IdentifierCtx = {}
+	) {
+		if constexpr (HasMetaDescribe<T>)
+		{
+			State.Errors.WithIdentifierCtx(IdentifierCtx, [&]
+			{
+				TVulFieldMeta<T>::Describe(*this, Description);
+				return true;
+			});
+		}
+	}
 
 	template <typename T>
 	bool Serialize(

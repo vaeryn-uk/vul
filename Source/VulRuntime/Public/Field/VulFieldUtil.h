@@ -46,4 +46,9 @@ namespace VulRuntime::Field
 	 * This match ignores case.
 	 */
 	VULRUNTIME_API bool PathMatch(const FPath& Path, const FString& Match);
+
+	/**
+	 * Helper to return the string representation of the given JSON type.
+	 */
+	FString JsonTypeToString(const EJson Type);
 }
