@@ -167,7 +167,11 @@ struct VULRUNTIME_API FVulField
 
 	bool IsReadOnly() const;
 
-	void Describe(FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description) const;
+	bool Describe(
+		FVulFieldSerializationContext& Ctx,
+		const TSharedPtr<FVulFieldDescription>& Description,
+		const TOptional<VulRuntime::Field::FPathItem>& IdentifierCtx = {}
+	) const;
 
 private:
 	bool bIsReadOnly = false;
@@ -176,9 +180,12 @@ private:
 	template <typename T>
 	void InitDescribeFn()
 	{
-		DescribeFn = [](FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description)
-		{
-			Ctx.Describe<T>(Description);
+		DescribeFn = [](
+			FVulFieldSerializationContext& Ctx,
+			const TSharedPtr<FVulFieldDescription>& Description,
+			const TOptional<VulRuntime::Field::FPathItem>& IdentifierCtx
+		) {
+			return Ctx.Describe<T>(Description, IdentifierCtx);
 		};
 	}
 	
@@ -196,7 +203,11 @@ private:
 		const TOptional<VulRuntime::Field::FPathItem>& IdentifierCtx
 	)> Write;
 
-	TFunction<void (FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>&)> DescribeFn;
+	TFunction<bool (
+		FVulFieldSerializationContext& Ctx,
+		const TSharedPtr<FVulFieldDescription>&,
+		const TOptional<VulRuntime::Field::FPathItem>& IdentifierCtx
+	)> DescribeFn;
 };
 
 template <typename T>

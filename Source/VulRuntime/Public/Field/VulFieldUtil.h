@@ -50,5 +50,18 @@ namespace VulRuntime::Field
 	/**
 	 * Helper to return the string representation of the given JSON type.
 	 */
-	FString JsonTypeToString(const EJson Type);
+	VULRUNTIME_API FString JsonTypeToString(const EJson Type);
+
+	template <typename CharType = TCHAR, typename PrintPolicy = TCondensedJsonPrintPolicy<CharType>>
+	FString JsonToString(const TSharedPtr<FJsonValue>& Json)
+	{
+		FString Out;
+		auto Writer = TJsonWriterFactory<CharType, PrintPolicy>::Create(&Out);
+		if (!FJsonSerializer::Serialize(Json, "", Writer))
+		{
+			return "";
+		}
+
+		return Out;
+	}
 }

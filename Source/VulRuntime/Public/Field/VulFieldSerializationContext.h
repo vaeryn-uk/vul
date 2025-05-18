@@ -115,7 +115,7 @@ concept SerializerHasSetup = requires { TVulFieldSerializer<T>::Setup(); };
 
 template <typename T>
 concept HasMetaDescribe = requires(FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description) {
-	{ TVulFieldMeta<T>::Describe(Ctx, Description) } -> std::same_as<void>;
+	{ TVulFieldMeta<T>::Describe(Ctx, Description) } -> std::same_as<bool>;
 };
 
 struct VULRUNTIME_API FVulFieldSerializationContext
@@ -129,18 +129,30 @@ struct VULRUNTIME_API FVulFieldSerializationContext
 	int DefaultPrecision = 1;
 
 	template <typename T>
-	void Describe(
+	bool Describe(
 		const TSharedPtr<FVulFieldDescription>& Description,
 		const TOptional<VulRuntime::Field::FPathItem>& IdentifierCtx = {}
 	) {
-		if constexpr (HasMetaDescribe<T>)
+#if defined(__clang__) || defined(__GNUC__)
+		FString TypeName = ANSI_TO_TCHAR(__PRETTY_FUNCTION__);
+#elif defined(_MSC_VER)
+		FString TypeName = ANSI_TO_TCHAR(__FUNCSIG__);
+#else
+		FString TypeName = TEXT("UnknownType");
+#endif
+		
+		return State.Errors.WithIdentifierCtx(IdentifierCtx, [&]
 		{
-			State.Errors.WithIdentifierCtx(IdentifierCtx, [&]
+			const auto Result = TVulFieldMeta<T>::Describe(*this, Description);
+
+			if (!Description->IsValid())
 			{
-				TVulFieldMeta<T>::Describe(*this, Description);
-				return true;
-			});
-		}
+				State.Errors.Add(TEXT("TVulFieldMeta::Describe() did not produce a valid description. type info: %s"), *TypeName);
+				return false;
+			}
+
+			return Result;
+		});
 	}
 
 	template <typename T>

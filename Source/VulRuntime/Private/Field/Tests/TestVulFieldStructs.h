@@ -4,7 +4,7 @@
 #include "Field/VulField.h"
 #include "Field/VulFieldSet.h"
 #include "UObject/Object.h"
-#include "Field/VulFieldSet.h"
+#include "VulTest/Public/TestCase.h"
 #include "TestVulFieldStructs.generated.h"
 
 USTRUCT()
@@ -40,7 +40,7 @@ struct FVulTestFieldParent
 	
 	FVulTestFieldType Inner;
 	
-	FVulFieldSet FieldSet() const
+	FVulFieldSet VulFieldSet() const
 	{
 		FVulFieldSet Out;
 
@@ -61,6 +61,16 @@ struct TVulFieldSerializer<FVulTestFieldType>
 	static bool Deserialize(const TSharedPtr<FJsonValue>& Data, FVulTestFieldType& Out, FVulFieldDeserializationContext& Ctx)
 	{
 		return Out.FieldSet().Deserialize(Data, Ctx);
+	}
+};
+
+template<>
+struct TVulFieldMeta<FVulTestFieldType>
+{
+	static bool Describe(FVulFieldSerializationContext Ctx, const TSharedPtr<FVulFieldDescription>& Desc)
+	{
+		FVulTestFieldType F;
+		return F.FieldSet().Describe(Ctx, Desc);
 	}
 };
 
@@ -246,3 +256,22 @@ struct FVulSingleFieldType
 		return FVulField::Create(&Value);
 	}
 };
+
+inline bool CtxContainsError(VulTest::TC TC, const FVulFieldSerializationErrors& Errors, const FString& Term)
+{
+	for (const auto Err : Errors.Errors)
+	{
+		if (Err.Contains(Term))
+		{
+			return true;
+		}
+	}
+
+	TC.Error(FString::Printf(
+		TEXT("Could not find error term \"%s\" in errors (%d):\n%s"),
+		*Term,
+		Errors.Errors.Num(),
+		*FString::Join(Errors.Errors, TEXT("\n"))
+	));
+	return false;
+}

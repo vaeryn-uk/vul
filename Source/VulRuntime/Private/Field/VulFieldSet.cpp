@@ -131,29 +131,30 @@ bool FVulFieldSet::Deserialize(const TSharedPtr<FJsonValue>& Data, FVulFieldDese
 	return true;
 }
 
-void FVulFieldSet::Describe(FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description) const
+bool FVulFieldSet::Describe(FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description) const
 {
 	for (const auto Entry : Entries)
 	{
 		auto Field = MakeShared<FVulFieldDescription>();
 
+		const auto KeyAsPath = VulRuntime::Field::FPathItem(TInPlaceType<FString>(), Entry.Key);
+
 		if (Entry.Value.Fn)
 		{
-			Entry.Value.Describe(Ctx, Field);
+			if (!Entry.Value.Describe(Ctx, Field, KeyAsPath))
+			{
+				return false;
+			}
 		} else
 		{
-			Entry.Value.Field.Describe(Ctx, Field);
+			if (!Entry.Value.Field.Describe(Ctx, Field, KeyAsPath))
+			{
+				return false;
+			}
 		}
 
 		Description->Prop(Entry.Key, Field, !Entry.Value.OmitIfEmpty);
 	}
-}
 
-TSharedPtr<FJsonValue> FVulFieldSet::JsonSchema(FVulFieldSerializationContext& Ctx) const
-{
-	TSharedPtr<FVulFieldDescription> Schema = MakeShared<FVulFieldDescription>();
-
-	Describe(Ctx, Schema);
-
-	return Schema->JsonSchema();
+	return true;
 }

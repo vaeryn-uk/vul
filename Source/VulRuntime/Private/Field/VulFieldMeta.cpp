@@ -22,16 +22,21 @@ void FVulFieldDescription::Array(const TSharedPtr<FVulFieldDescription>& ItemsDe
 	Items = ItemsDescription; 
 }
 
-void FVulFieldDescription::Map(
+bool FVulFieldDescription::Map(
 	const TSharedPtr<FVulFieldDescription>& KeysDescription,
 	const TSharedPtr<FVulFieldDescription>& ValuesDescription
 ) {
 	ensureMsgf(Type == EJson::Object || Type == EJson::None, TEXT("should not define map as is already non-object type"));
 
-	ensureMsgf(KeysDescription->Type == EJson::String, TEXT("should not use a non-string type for a field map key"));
+	if (!ensureMsgf(KeysDescription->Type == EJson::String, TEXT("should not use a non-string type for a field map key")))
+	{
+		return false;
+	}
 
 	Type = EJson::Object;
 	AdditionalProperties = ValuesDescription;
+
+	return true;
 }
 
 TSharedPtr<FJsonValue> FVulFieldDescription::JsonSchema() const

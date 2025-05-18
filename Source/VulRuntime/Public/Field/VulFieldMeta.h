@@ -1,5 +1,4 @@
 ﻿#pragma once
-
 #include "VulFieldSerializationContext.h"
 
 /**
@@ -25,7 +24,7 @@ struct VULRUNTIME_API FVulFieldDescription
 
 	void Array(const TSharedPtr<FVulFieldDescription>& ItemsDescription);
 
-	void Map(
+	bool Map(
 		const TSharedPtr<FVulFieldDescription>& KeysDescription,
 		const TSharedPtr<FVulFieldDescription>& ValuesDescription
 	);
@@ -56,10 +55,10 @@ struct TVulFieldMeta
 	 * Describes the serialized form of a type, configuring the provided Description.
 	 *
 	 * Ctx is provided for further, nested serialization and inspecting any serialization
-	 * options that may effect the possible formats of this type's serialized form.
+	 * options that may affect the possible formats of this type's serialized form.
 	 */
-	static void Describe(FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description)
+	static bool Describe(struct FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description)
 	{
-		
+		return false;
 	}
 };

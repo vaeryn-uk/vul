@@ -26,13 +26,19 @@ struct VULRUNTIME_API FVulFieldSet
 	private:
 		friend FVulFieldSet;
 		FVulField Field;
+		bool OmitIfEmpty = true;
+		
 		TFunction<bool (
 			TSharedPtr<FJsonValue>&,
 			FVulFieldSerializationContext&,
-			const TOptional<VulRuntime::Field::FPathItem>& IdentifierCtx = {}
+			const TOptional<VulRuntime::Field::FPathItem>& IdentifierCtx
 		)> Fn = nullptr;
-		TFunction<void (FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description)> Describe;
-		bool OmitIfEmpty = true;
+		
+		TFunction<bool (
+			FVulFieldSerializationContext& Ctx,
+			const TSharedPtr<FVulFieldDescription>& Description,
+			const TOptional<VulRuntime::Field::FPathItem>& IdentifierCtx
+		)> Describe = nullptr;
 	};
 	
 	/**
@@ -73,9 +79,12 @@ struct VULRUNTIME_API FVulFieldSet
 			RefField = Identifier;
 		}
 
-		Created.Describe = [](FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description)
-		{
-			Ctx.Describe<T>(Description);
+		Created.Describe = [](
+			FVulFieldSerializationContext& Ctx,
+			const TSharedPtr<FVulFieldDescription>& Description,
+			const TOptional<VulRuntime::Field::FPathItem>& IdentifierCtx = {}
+		) {
+			return Ctx.Describe<T>(Description, IdentifierCtx);
 		};
 
 		return Entries.Add(Identifier, Created);
@@ -128,16 +137,7 @@ struct VULRUNTIME_API FVulFieldSet
 		return DeserializeFromJson<CharType>(JsonStr, Ctx);
 	}
 
-	void Describe(FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description) const;
-
-	TSharedPtr<FJsonValue> JsonSchema(FVulFieldSerializationContext& Ctx) const;
-	
-	template <typename CharType = TCHAR, typename PrintPolicy = TCondensedJsonPrintPolicy<CharType>>
-	bool JsonSchema(FVulFieldSerializationContext& Ctx, FString& Out) const
-	{
-		auto Writer = TJsonWriterFactory<CharType, PrintPolicy>::Create(&Out);
-		return FJsonSerializer::Serialize(JsonSchema(Ctx), "", Writer);
-	}
+	bool Describe(FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description) const;
 
 	TOptional<FString> GetTypeName() const { return Name; }
 	TOptional<FString> GetDiscriminatorField() const { return DiscriminatorField; }
@@ -170,8 +170,8 @@ public:
 template <typename T>
 concept HasVulFieldSet = std::is_base_of_v<IVulFieldSetAware, T> || 
 	requires(const T& Obj) {
-	{ Obj.VulFieldSet() } -> std::same_as<FVulFieldSet>;
-};
+		{ Obj.VulFieldSet() } -> std::same_as<FVulFieldSet>;
+	};
 
 template <HasVulFieldSet T>
 struct TVulFieldSerializer<T>
@@ -195,11 +195,11 @@ struct TVulFieldSerializer<T>
 template <HasVulFieldSet T>
 struct TVulFieldMeta<T>
 {
-	static bool Describe(const FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description)
+	static bool Describe(FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description)
 	{
 		T Default;
 
-		return Default.VulFieldSet().Describe();
+		return Default.VulFieldSet().Describe(Ctx, Description);
 	}
 };
 

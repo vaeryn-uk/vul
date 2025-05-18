@@ -26,9 +26,10 @@ struct TVulFieldSerializer<bool>
 template<>
 struct TVulFieldMeta<bool>
 {
-	static void Describe(FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description)
+	static bool Describe(FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description)
 	{
 		Description->Boolean();
+		return true;
 	}
 };
 
@@ -65,9 +66,10 @@ struct TVulFieldSerializer<T>
 template<IsNumeric T>
 struct TVulFieldMeta<T>
 {
-	static void Describe(FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description)
+	static bool Describe(FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description)
 	{
 		Description->Number();
+		return true;
 	}
 };
 
@@ -94,9 +96,10 @@ struct TVulFieldSerializer<FString>
 template<>
 struct TVulFieldMeta<FString>
 {
-	static void Describe(FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description)
+	static bool Describe(FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description)
 	{
 		Description->String();
+		return true;
 	}
 };
 
@@ -124,9 +127,10 @@ struct TVulFieldSerializer<FName>
 template<>
 struct TVulFieldMeta<FName>
 {
-	static void Describe(FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description)
+	static bool Describe(FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description)
 	{
 		Description->String();
+		return true;
 	}
 };
 
@@ -182,12 +186,14 @@ struct TVulFieldSerializer<TArray<V>>
 template<typename V>
 struct TVulFieldMeta<TArray<V>>
 {
-	static void Describe(FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description)
+	static bool Describe(FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description)
 	{
 		const auto Items = MakeShared<FVulFieldDescription>();
 		Ctx.Describe<V>(Items);
 		
 		Description->Array(Items);
+
+		return true;
 	}
 };
 
@@ -258,7 +264,7 @@ struct TVulFieldSerializer<TMap<K, V>>
 template <typename K, typename V>
 struct TVulFieldMeta<TMap<K, V>>
 {
-	static void Describe(FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description)
+	static bool Describe(FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description)
 	{
 		const auto Keys = MakeShared<FVulFieldDescription>();
 		Ctx.Describe<K>(Keys);
@@ -266,8 +272,7 @@ struct TVulFieldMeta<TMap<K, V>>
 		const auto Values = MakeShared<FVulFieldDescription>();
 		Ctx.Describe<V>(Values);
 
-		// TODO: Should meta generation fail if invalid, such as specifying non-string keys?
-		Description->Map(Keys, Values);
+		return Description->Map(Keys, Values);
 	}
 };
 
