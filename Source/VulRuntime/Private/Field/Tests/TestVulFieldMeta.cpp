@@ -61,8 +61,7 @@ bool TestVulFieldMeta::RunTest(const FString& Parameters)
 			"items": {"type": "boolean"}
 		}
 	}
-}
-)";
+})";
 		
 		(void)TC.JsonObjectsEqual(JsonSchema, Expected);
 	});
@@ -96,8 +95,7 @@ bool TestVulFieldMeta::RunTest(const FString& Parameters)
 			}
 		}
 	}
-}
-)";
+})";
 		
 		(void)TC.JsonObjectsEqual(JsonSchema, Expected);
 	});
@@ -168,8 +166,28 @@ bool TestVulFieldMeta::RunTest(const FString& Parameters)
     "name": {"type": "string"},
     "float": {"type": "number"}
   }
-}
-)";
+})";
+		
+		(void)TC.JsonObjectsEqual(JsonSchema, Expected);
+	});
+	
+	VulTest::Case(this, "Schema generation - enum", [](VulTest::TC TC)
+	{
+		FVulFieldSerializationContext Ctx;
+		TSharedPtr<FVulFieldDescription> Desc = MakeShared<FVulFieldDescription>();
+		VTC_MUST_EQUAL(true, TestDescribe<EVulFieldTestTreeNodeType>(TC, Ctx, Desc), "");
+
+		const auto JsonSchema = VulRuntime::Field::JsonToString(Desc->JsonSchema());
+
+		FString Expected = R"(
+{
+  "type": "string",
+  "enum": [
+    "Base",
+    "Node1",
+    "Node2"
+  ]
+})";
 		
 		(void)TC.JsonObjectsEqual(JsonSchema, Expected);
 	});

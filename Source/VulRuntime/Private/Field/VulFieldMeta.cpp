@@ -43,6 +43,13 @@ void FVulFieldDescription::Array(const TSharedPtr<FVulFieldDescription>& ItemsDe
 	Items = ItemsDescription;
 }
 
+void FVulFieldDescription::Enum(const FString& Item)
+{
+	String();
+	
+	EnumValues.Add(MakeShared<FJsonValueString>(Item));
+}
+
 bool FVulFieldDescription::Map(
 	const TSharedPtr<FVulFieldDescription>& KeysDescription,
 	const TSharedPtr<FVulFieldDescription>& ValuesDescription
@@ -134,6 +141,11 @@ TSharedPtr<FJsonValue> FVulFieldDescription::JsonSchema() const
 		}
 		
 		Out->Values.Add("oneOf", MakeShared<FJsonValueArray>(OneOf));
+	}
+
+	if (!EnumValues.IsEmpty())
+	{
+		Out->Values.Add("enum", MakeShared<FJsonValueArray>(EnumValues));
 	}
 
 	return MakeShared<FJsonValueObject>(Out);

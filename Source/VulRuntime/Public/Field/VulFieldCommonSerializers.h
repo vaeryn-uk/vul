@@ -553,6 +553,20 @@ struct TVulFieldSerializer<T>
 	}
 };
 
+template <HasEnumToString T>
+struct TVulFieldMeta<T>
+{
+	static bool Describe(FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description)
+	{
+		for (const auto Value : VulRuntime::Enum::StringValues<T>())
+		{
+			Description->Enum(Value);
+		}
+
+		return true;
+	}
+};
+
 template<typename T, typename S>
 struct TVulFieldSerializer<TPair<T,S>>
 {

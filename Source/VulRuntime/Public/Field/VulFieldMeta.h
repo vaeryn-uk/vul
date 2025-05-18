@@ -15,6 +15,11 @@
  */
 struct VULRUNTIME_API FVulFieldDescription
 {
+	/**
+	 * Defines a property in this field. Implies an object type.
+	 *
+	 * Required=true if this property is always present (even if empty).
+	 */
 	void Prop(const FString& Name, const TSharedPtr<FVulFieldDescription>& Description, bool Required);
 
 	/* Scalar type definitions. Sets a simple type. */
@@ -22,11 +27,26 @@ struct VULRUNTIME_API FVulFieldDescription
 	void Number() { Type = EJson::Number; }
 	void Boolean() { Type = EJson::Boolean; }
 
+	/**
+	 * Indicates this field can be null.
+	 */
 	void Nullable() { IsNullable = true; }
 
+	/**
+	 * For fields that can be one type or another (or more).
+	 *
+	 * This will merge in intelligently, detecting if all subtypes are
+	 * equivalent and setting this the single common type description
+	 * if so.
+	 */
 	void Union(const TArray<TSharedPtr<FVulFieldDescription>>& Subtypes);
 
 	void Array(const TSharedPtr<FVulFieldDescription>& ItemsDescription);
+
+	/**
+	 * Add the given string as one of the allowed values. Can be called repeatedly.
+	 */
+	void Enum(const FString& Item);
 
 	bool Map(
 		const TSharedPtr<FVulFieldDescription>& KeysDescription,
@@ -46,7 +66,7 @@ private:
 	TSharedPtr<FVulFieldDescription> AdditionalProperties;
 	TArray<FString> RequiredProperties;
 	bool CanBeRef = false;
-	TArray<TSharedPtr<FJsonValue>> Enum;
+	TArray<TSharedPtr<FJsonValue>> EnumValues;
 	TOptional<FString> TypeName;
 	bool IsNullable = false;
 	TArray<TSharedPtr<FVulFieldDescription>> UnionTypes = {}; 
