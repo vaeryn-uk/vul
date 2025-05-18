@@ -22,6 +22,10 @@ struct VULRUNTIME_API FVulFieldDescription
 	void Number() { Type = EJson::Number; }
 	void Boolean() { Type = EJson::Boolean; }
 
+	void Nullable() { IsNullable = true; }
+
+	void Union(const TArray<TSharedPtr<FVulFieldDescription>>& Subtypes);
+
 	void Array(const TSharedPtr<FVulFieldDescription>& ItemsDescription);
 
 	bool Map(
@@ -33,16 +37,19 @@ struct VULRUNTIME_API FVulFieldDescription
 
 	bool IsValid() const;
 
+	bool operator==(const FVulFieldDescription& Other) const;
+
 private:
 	EJson Type = EJson::None;
 	TSharedPtr<FVulFieldDescription> Items;
 	TMap<FString, TSharedPtr<FVulFieldDescription>> Properties;
 	TSharedPtr<FVulFieldDescription> AdditionalProperties;
-	TArray<TSharedPtr<FVulFieldDescription>> OneOf;
 	TArray<FString> RequiredProperties;
 	bool CanBeRef = false;
 	TArray<TSharedPtr<FJsonValue>> Enum;
 	TOptional<FString> TypeName;
+	bool IsNullable = false;
+	TArray<TSharedPtr<FVulFieldDescription>> UnionTypes = {}; 
 };
 
 /**

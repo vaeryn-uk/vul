@@ -14,12 +14,33 @@ void FVulFieldDescription::Prop(const FString& Name, const TSharedPtr<FVulFieldD
 	}
 }
 
+void FVulFieldDescription::Union(const TArray<TSharedPtr<FVulFieldDescription>>& Subtypes)
+{
+	TArray<FVulFieldDescription> UniqueTypes;
+	
+	for (const auto Subtype : Subtypes)
+	{
+		if (!UniqueTypes.Contains(*Subtype.Get()))
+		{
+			UniqueTypes.Add(*Subtype.Get());
+		}
+	}
+
+	if (UniqueTypes.Num() == 1)
+	{
+		*this = UniqueTypes[0];
+		return;
+	}
+
+	UnionTypes = Subtypes;
+}
+
 void FVulFieldDescription::Array(const TSharedPtr<FVulFieldDescription>& ItemsDescription)
 {
 	ensureMsgf(Type == EJson::Array || Type == EJson::None, TEXT("should not define items as is already non-array type"));
 
 	Type = EJson::Array;
-	Items = ItemsDescription; 
+	Items = ItemsDescription;
 }
 
 bool FVulFieldDescription::Map(
@@ -50,7 +71,23 @@ TSharedPtr<FJsonValue> FVulFieldDescription::JsonSchema() const
 	
 	TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
 
-	Out->Values.Add("type", MakeShared<FJsonValueString>(VulRuntime::Field::JsonTypeToString(Type)));
+	if (Type != EJson::None)
+	{
+		TSharedPtr<FJsonValue> TypeNode;
+		
+		if (IsNullable)
+		{
+			TypeNode = MakeShared<FJsonValueArray>(TArray<TSharedPtr<FJsonValue>>{
+				MakeShared<FJsonValueString>(VulRuntime::Field::JsonTypeToString(Type)),
+				MakeShared<FJsonValueString>(VulRuntime::Field::JsonTypeToString(EJson::Null)),
+			});
+		} else
+		{
+			TypeNode = MakeShared<FJsonValueString>(VulRuntime::Field::JsonTypeToString(Type));
+		}
+		
+		Out->Values.Add("type", TypeNode);
+	}
 
 	if (!Properties.IsEmpty())
 	{
@@ -87,10 +124,37 @@ TSharedPtr<FJsonValue> FVulFieldDescription::JsonSchema() const
 		Out->Values.Add("additionalProperties", AdditionalProperties->JsonSchema());
 	}
 
+	if (!UnionTypes.IsEmpty())
+	{
+		TArray<TSharedPtr<FJsonValue>> OneOf;
+		
+		for (const auto Subtype : UnionTypes)
+		{
+			OneOf.Add(Subtype->JsonSchema());
+		}
+		
+		Out->Values.Add("oneOf", MakeShared<FJsonValueArray>(OneOf));
+	}
+
 	return MakeShared<FJsonValueObject>(Out);
 }
 
 bool FVulFieldDescription::IsValid() const
 {
-	return Type != EJson::None;
+	return Type != EJson::None || !UnionTypes.IsEmpty();
+}
+
+bool FVulFieldDescription::operator==(const FVulFieldDescription& Other) const
+{
+	if (Type == Other.Type)
+	{
+		if (Type == EJson::String || Type == EJson::Number || Type == EJson::Boolean)
+		{
+			return IsNullable == Other.IsNullable;
+		}
+	}
+
+	// TODO: Only simple types can be equal for now. Implement something more thorough.
+
+	return false;
 }
