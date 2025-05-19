@@ -23,8 +23,6 @@ struct FVulFieldRegistry
 		TOptional<FString> BaseType;
 		TFunction<bool (FVulFieldSerializationContext&, TSharedPtr<FVulFieldDescription>&)> DescribeFn;
 	};
-	
-	TArray<FEntry> ConnectedEntries(const FString& TypeId) const;
 
 	static FVulFieldRegistry& Get() {
 		static FVulFieldRegistry Registry;
@@ -69,7 +67,13 @@ struct FVulFieldRegistry
 			.DiscriminatorField = DiscriminatorField,
 			.DescribeFn = [](FVulFieldSerializationContext& Ctx, TSharedPtr<FVulFieldDescription>& Description)
 			{
-				return Ctx.Describe<T>(Description);
+				if (Ctx.Describe<T>(Description))
+				{
+					Description->BindToType<T>();
+					return true;
+				}
+
+				return false;
 			}
 		});
 	}
@@ -84,7 +88,13 @@ struct FVulFieldRegistry
 			.BaseType = VulRuntime::Field::TypeId<BaseType>(),
 			.DescribeFn = [](FVulFieldSerializationContext& Ctx, TSharedPtr<FVulFieldDescription>& Description)
 			{
-				return Ctx.Describe<ThisType>(Description);
+				if (Ctx.Describe<ThisType>(Description))
+				{
+					Description->BindToType<ThisType>();
+					return true;
+				}
+
+				return false;
 			}
 		});
 	}

@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include "Field/VulFieldUtil.h"
 #include "VulFieldSerializationContext.h"
 
 /**
@@ -33,7 +34,13 @@ struct VULRUNTIME_API FVulFieldDescription
 	 */
 	bool Const(const TSharedPtr<FJsonValue>& Value);
 
-	void BindToType(const FString& Id) { TypeId = Id; }
+	/**
+	 * Binds this description to a CPP type that is registered in FVulRegistry.
+	 *
+	 * This implies the type is reusable throughout a schema.
+	 */
+	template <typename T>
+	void BindToType() { TypeId = VulRuntime::Field::TypeId<T>(); }
 
 	/**
 	 * Indicates this field can be null.
@@ -67,8 +74,6 @@ struct VULRUNTIME_API FVulFieldDescription
 
 	bool operator==(const FVulFieldDescription& Other) const;
 
-	TArray<TSharedPtr<FVulFieldDescription>> GetConnectedTypes(FVulFieldSerializationContext& Ctx) const;
-
 	TOptional<FString> GetTypeId() const { return TypeId; }
 
 private:
@@ -84,7 +89,6 @@ private:
 	bool IsNullable = false;
 	TArray<TSharedPtr<FVulFieldDescription>> UnionTypes = {};
 	TSharedPtr<FJsonValue> ConstValue = nullptr;
-	
 	TOptional<FString> TypeId;
 };
 

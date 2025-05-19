@@ -1,6 +1,5 @@
 ﻿#include "Field/VulFieldSet.h"
 #include "Field/VulFieldMeta.h"
-#include "Field/VulFieldRegistry.h"
 #include "Field/VulFieldUtil.h"
 
 FVulFieldSet::FEntry& FVulFieldSet::FEntry::EvenIfEmpty(const bool IncludeIfEmpty)
@@ -144,39 +143,6 @@ bool FVulFieldSet::Deserialize(const TSharedPtr<FJsonValue>& Data, FVulFieldDese
 
 bool FVulFieldSet::Describe(FVulFieldSerializationContext& Ctx, TSharedPtr<FVulFieldDescription>& Description) const
 {
-	if (TypeId.IsSet() && FVulFieldRegistry::Get().Has(TypeId.GetValue()))
-	{
-		TArray<TSharedPtr<FVulFieldDescription>> Subtypes;
-		
-		const auto DiscField = FVulFieldRegistry::Get().GetType(TypeId.GetValue())->DiscriminatorField;
-		
-		for (const auto Entry : FVulFieldRegistry::Get().GetSubtypes(TypeId.GetValue()))
-		{
-			TSharedPtr<FVulFieldDescription> SubDesc = MakeShared<FVulFieldDescription>();
-			
-			if (!Entry.DescribeFn(Ctx, SubDesc))
-			{
-				return false;
-			}
-
-			if (DiscField.IsSet() && Entry.DiscriminatorValue.IsSet())
-			{
-				const auto Discriminator = MakeShared<FVulFieldDescription>();
-				Discriminator->Const(MakeShared<FJsonValueString>(Entry.DiscriminatorValue.GetValue()()));
-				SubDesc->Prop(DiscField.GetValue(), Discriminator, true);
-			}
-			
-			Subtypes.Add(SubDesc);
-		}
-		
-		if (!Subtypes.IsEmpty())
-		{
-			Description->Union(Subtypes);
-			return true;
-		}
-	}
-
-	
 	for (const auto Entry : Entries)
 	{
 		TSharedPtr<FVulFieldDescription> Field = MakeShared<FVulFieldDescription>();
@@ -198,11 +164,6 @@ bool FVulFieldSet::Describe(FVulFieldSerializationContext& Ctx, TSharedPtr<FVulF
 		}
 
 		Description->Prop(Entry.Key, Field, !Entry.Value.OmitIfEmpty);
-	}
-
-	if (TypeId.IsSet())
-	{
-		Description->BindToType(TypeId.GetValue());
 	}
 
 	return true;

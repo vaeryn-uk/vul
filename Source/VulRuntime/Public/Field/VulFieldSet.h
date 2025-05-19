@@ -44,12 +44,6 @@ struct VULRUNTIME_API FVulFieldSet
 
 		TOptional<FString> TypeId;
 	};
-
-	template <typename T>
-	void Bind()
-	{
-		TypeId = VulRuntime::Field::TypeId<T>();
-	}
 	
 	/**
 	 * Adds a field to the set. If read only, the field will only be
@@ -156,7 +150,6 @@ struct VULRUNTIME_API FVulFieldSet
 private:
 	TMap<FString, FEntry> Entries;
 	TOptional<FString> RefField = {};
-	TOptional<FString> TypeId;
 };
 
 

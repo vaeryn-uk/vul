@@ -142,12 +142,19 @@ struct VULRUNTIME_API FVulFieldSerializationContext
 				return true;
 			}
 
-			if (IsKnownType(VulRuntime::Field::TypeId<T>()))
+			const auto TypeId = VulRuntime::Field::TypeId<T>(); 
+			if (IsKnownType(TypeId))
 			{
-				Description->BindToType(VulRuntime::Field::TypeId<T>());
-				if (!State.TypeDescriptions.Contains(VulRuntime::Field::TypeId<T>()))
+				Description->BindToType<T>();
+				
+				if (!State.TypeDescriptions.Contains(TypeId))
 				{
-					State.TypeDescriptions.Add(VulRuntime::Field::TypeId<T>(), Description);
+					State.TypeDescriptions.Add(TypeId, Description);
+				}
+				
+				if (GenerateAbstractDescription(TypeId, Description))
+				{
+					return true;
 				}
 			}
 			
@@ -214,6 +221,12 @@ struct VULRUNTIME_API FVulFieldSerializationContext
 
 private:
 	bool IsKnownType(const FString& TypeId) const;
+
+	/**
+	 * Generate a description for a type if it's an abstract type with a discriminator
+	 * field; i.e. is a OneOf/union of all subtypes.
+	 */
+	bool GenerateAbstractDescription(const FString& TypeId, const TSharedPtr<FVulFieldDescription>& Description);
 };
 
 struct VULRUNTIME_API FVulFieldDeserializationContext

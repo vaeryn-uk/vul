@@ -119,28 +119,6 @@ bool FVulFieldDescription::operator==(const FVulFieldDescription& Other) const
 	return false;
 }
 
-TArray<TSharedPtr<FVulFieldDescription>> FVulFieldDescription::GetConnectedTypes(
-	FVulFieldSerializationContext& Ctx
-) const {
-	TArray<TSharedPtr<FVulFieldDescription>> Out;
-	
-	if (TypeId.IsSet())
-	{
-		Out.Add(MakeShared<FVulFieldDescription>(*this));
-		
-		for (const auto Entry : FVulFieldRegistry::Get().ConnectedEntries(TypeId.GetValue()))
-		{
-			TSharedPtr<FVulFieldDescription> Description = MakeShared<FVulFieldDescription>();
-			if (Entry.DescribeFn(Ctx, Description))
-			{
-				Out.Add(Description);
-			}
-		}
-	}
-
-	return Out;
-}
-
 TSharedPtr<FJsonValue> FVulFieldDescription::JsonSchema(const TSharedPtr<FJsonObject>& Definitions, const bool AddToDefinitions) const
 {
 	if (!IsValid())

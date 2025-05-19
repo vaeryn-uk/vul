@@ -116,3 +116,43 @@ bool FVulFieldSerializationContext::IsKnownType(const FString& TypeId) const
 {
 	return FVulFieldRegistry::Get().Has(TypeId);
 }
+
+bool FVulFieldSerializationContext::GenerateAbstractDescription(
+	const FString& TypeId,
+	const TSharedPtr<FVulFieldDescription>& Description
+) {
+	TArray<TSharedPtr<FVulFieldDescription>> Subtypes;
+
+	const auto DiscField = FVulFieldRegistry::Get().GetType(TypeId)->DiscriminatorField;
+	if (!DiscField.IsSet())
+	{
+		return false;
+	}
+
+	for (const auto Entry : FVulFieldRegistry::Get().GetSubtypes(TypeId))
+	{
+		TSharedPtr<FVulFieldDescription> SubDesc = MakeShared<FVulFieldDescription>();
+
+		if (!Entry.DescribeFn(*this, SubDesc))
+		{
+			return false;
+		}
+
+		if (DiscField.IsSet() && Entry.DiscriminatorValue.IsSet())
+		{
+			const auto Discriminator = MakeShared<FVulFieldDescription>();
+			Discriminator->Const(MakeShared<FJsonValueString>(Entry.DiscriminatorValue.GetValue()()));
+			SubDesc->Prop(DiscField.GetValue(), Discriminator, true);
+		}
+
+		Subtypes.Add(SubDesc);
+	}
+
+	if (!Subtypes.IsEmpty())
+	{
+		Description->Union(Subtypes);
+		return true;
+	}
+
+	return false;
+}

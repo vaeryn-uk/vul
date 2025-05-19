@@ -99,7 +99,6 @@ struct FVulFieldTestTreeBase
 	FVulFieldSet VulFieldSet() const
 	{
 		FVulFieldSet Set;
-		Set.Bind<FVulFieldTestTreeBase>();
 		AddFields(Set);
 		return Set;
 	}
@@ -124,7 +123,6 @@ protected:
 	virtual void AddFields(FVulFieldSet& Set) const override
 	{
 		FVulFieldTestTreeBase::AddFields(Set);
-		Set.Bind<FVulFieldTestTreeNode1>();
 		Set.Add(FVulField::Create(&Int), "int");
 	}
 };
@@ -139,7 +137,6 @@ protected:
 	virtual void AddFields(FVulFieldSet& Set) const override
 	{
 		FVulFieldTestTreeBase::AddFields(Set);
-		Set.Bind<FVulFieldTestTreeNode2>();
 		Set.Add(FVulField::Create(&String), "str");
 	}
 };
