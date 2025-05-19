@@ -89,6 +89,7 @@ struct VULRUNTIME_API FVulFieldSerializationState
 {
 	FVulFieldSerializationMemory Memory;
 	FVulFieldSerializationErrors Errors;
+	TMap<FString, TSharedPtr<FVulFieldDescription>> TypeDescriptions;
 	
 	template <typename T>
 	bool ResolveRef(const T& From, TSharedPtr<FJsonValue>& Ref)
@@ -114,7 +115,7 @@ template <typename T>
 concept SerializerHasSetup = requires { TVulFieldSerializer<T>::Setup(); };
 
 template <typename T>
-concept HasMetaDescribe = requires(FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description) {
+concept HasMetaDescribe = requires(FVulFieldSerializationContext& Ctx, TSharedPtr<FVulFieldDescription>& Description) {
 	{ TVulFieldMeta<T>::Describe(Ctx, Description) } -> std::same_as<bool>;
 };
 
@@ -130,24 +131,34 @@ struct VULRUNTIME_API FVulFieldSerializationContext
 
 	template <typename T>
 	bool Describe(
-		const TSharedPtr<FVulFieldDescription>& Description,
+		TSharedPtr<FVulFieldDescription>& Description,
 		const TOptional<VulRuntime::Field::FPathItem>& IdentifierCtx = {}
 	) {
-#if defined(__clang__) || defined(__GNUC__)
-		FString TypeName = ANSI_TO_TCHAR(__PRETTY_FUNCTION__);
-#elif defined(_MSC_VER)
-		FString TypeName = ANSI_TO_TCHAR(__FUNCSIG__);
-#else
-		FString TypeName = TEXT("UnknownType");
-#endif
-		
 		return State.Errors.WithIdentifierCtx(IdentifierCtx, [&]
 		{
+			if (State.TypeDescriptions.Contains(VulRuntime::Field::TypeId<T>()))
+			{
+				Description = State.TypeDescriptions[VulRuntime::Field::TypeId<T>()];
+				return true;
+			}
+
+			if (IsKnownType(VulRuntime::Field::TypeId<T>()))
+			{
+				Description->BindToType(VulRuntime::Field::TypeId<T>());
+				if (!State.TypeDescriptions.Contains(VulRuntime::Field::TypeId<T>()))
+				{
+					State.TypeDescriptions.Add(VulRuntime::Field::TypeId<T>(), Description);
+				}
+			}
+			
 			const auto Result = TVulFieldMeta<T>::Describe(*this, Description);
 
 			if (!Description->IsValid())
 			{
-				State.Errors.Add(TEXT("TVulFieldMeta::Describe() did not produce a valid description. type info: %s"), *TypeName);
+				State.Errors.Add(
+					TEXT("TVulFieldMeta::Describe() did not produce a valid description. type info: %s"),
+					*VulRuntime::Field::TypeInfo<T>()
+				);
 				return false;
 			}
 
@@ -200,6 +211,9 @@ struct VULRUNTIME_API FVulFieldSerializationContext
 			return true;
 		});
 	}
+
+private:
+	bool IsKnownType(const FString& TypeId) const;
 };
 
 struct VULRUNTIME_API FVulFieldDeserializationContext

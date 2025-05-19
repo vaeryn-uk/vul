@@ -26,7 +26,7 @@ struct TVulFieldSerializer<bool>
 template<>
 struct TVulFieldMeta<bool>
 {
-	static bool Describe(FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description)
+	static bool Describe(FVulFieldSerializationContext& Ctx, TSharedPtr<FVulFieldDescription>& Description)
 	{
 		Description->Boolean();
 		return true;
@@ -66,7 +66,7 @@ struct TVulFieldSerializer<T>
 template<IsNumeric T>
 struct TVulFieldMeta<T>
 {
-	static bool Describe(FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description)
+	static bool Describe(FVulFieldSerializationContext& Ctx, TSharedPtr<FVulFieldDescription>& Description)
 	{
 		Description->Number();
 		return true;
@@ -96,7 +96,7 @@ struct TVulFieldSerializer<FString>
 template<>
 struct TVulFieldMeta<FString>
 {
-	static bool Describe(FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description)
+	static bool Describe(FVulFieldSerializationContext& Ctx, TSharedPtr<FVulFieldDescription>& Description)
 	{
 		Description->String();
 		return true;
@@ -127,7 +127,7 @@ struct TVulFieldSerializer<FName>
 template<>
 struct TVulFieldMeta<FName>
 {
-	static bool Describe(FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description)
+	static bool Describe(FVulFieldSerializationContext& Ctx, TSharedPtr<FVulFieldDescription>& Description)
 	{
 		Description->String();
 		return true;
@@ -186,9 +186,9 @@ struct TVulFieldSerializer<TArray<V>>
 template<typename V>
 struct TVulFieldMeta<TArray<V>>
 {
-	static bool Describe(FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description)
+	static bool Describe(FVulFieldSerializationContext& Ctx, TSharedPtr<FVulFieldDescription>& Description)
 	{
-		const auto Items = MakeShared<FVulFieldDescription>();
+		TSharedPtr<FVulFieldDescription> Items = MakeShared<FVulFieldDescription>();
 		if (!Ctx.Describe<V>(Items))
 		{
 			return false;
@@ -267,15 +267,15 @@ struct TVulFieldSerializer<TMap<K, V>>
 template <typename K, typename V>
 struct TVulFieldMeta<TMap<K, V>>
 {
-	static bool Describe(FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description)
+	static bool Describe(FVulFieldSerializationContext& Ctx, TSharedPtr<FVulFieldDescription>& Description)
 	{
-		const auto Keys = MakeShared<FVulFieldDescription>();
+		TSharedPtr<FVulFieldDescription> Keys = MakeShared<FVulFieldDescription>();
 		if (!Ctx.Describe<K>(Keys))
 		{
 			return false;
 		}
 		
-		const auto Values = MakeShared<FVulFieldDescription>();
+		TSharedPtr<FVulFieldDescription> Values = MakeShared<FVulFieldDescription>();
 		if (!Ctx.Describe<V>(Values))
 		{
 			return false;
@@ -321,7 +321,7 @@ struct TVulFieldSerializer<TOptional<T>>
 template <typename T>
 struct TVulFieldMeta<TOptional<T>>
 {
-	static bool Describe(FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description)
+	static bool Describe(FVulFieldSerializationContext& Ctx, TSharedPtr<FVulFieldDescription>& Description)
 	{
 		if (!Ctx.Describe<T>(Description))
 		{
@@ -369,7 +369,7 @@ struct TVulFieldSerializer<TSharedPtr<T>>
 template <typename T>
 struct TVulFieldMeta<TSharedPtr<T>>
 {
-	static bool Describe(FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description)
+	static bool Describe(FVulFieldSerializationContext& Ctx, TSharedPtr<FVulFieldDescription>& Description)
 	{
 		return TVulFieldMeta<TOptional<T>>::Describe(Ctx, Description);
 	}
@@ -412,7 +412,7 @@ struct TVulFieldSerializer<TUniquePtr<T>>
 template <typename T>
 struct TVulFieldMeta<TUniquePtr<T>>
 {
-	static bool Describe(FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description)
+	static bool Describe(FVulFieldSerializationContext& Ctx, TSharedPtr<FVulFieldDescription>& Description)
 	{
 		return TVulFieldMeta<TOptional<T>>::Describe(Ctx, Description);
 	}
@@ -453,7 +453,7 @@ struct TVulFieldSerializer<TWeakObjectPtr<T>>
 template <typename T>
 struct TVulFieldMeta<TWeakObjectPtr<T>>
 {
-	static bool Describe(FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description)
+	static bool Describe(FVulFieldSerializationContext& Ctx, TSharedPtr<FVulFieldDescription>& Description)
 	{
 		return TVulFieldMeta<TOptional<T>>::Describe(Ctx, Description);
 	}
@@ -494,7 +494,7 @@ struct TVulFieldSerializer<T*>
 template <typename T>
 struct TVulFieldMeta<T*>
 {
-	static bool Describe(FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description)
+	static bool Describe(FVulFieldSerializationContext& Ctx, TSharedPtr<FVulFieldDescription>& Description)
 	{
 		return TVulFieldMeta<TOptional<T>>::Describe(Ctx, Description);
 	}
@@ -520,11 +520,6 @@ struct TVulFieldSerializer<TSharedRef<T>>
 
 		return true;
 	}
-};
-
-template <typename T>
-concept HasEnumToString = requires(T value) {
-	{ EnumToString(value) } -> std::same_as<FString>;
 };
 
 template <HasEnumToString T>
@@ -556,7 +551,7 @@ struct TVulFieldSerializer<T>
 template <HasEnumToString T>
 struct TVulFieldMeta<T>
 {
-	static bool Describe(FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description)
+	static bool Describe(FVulFieldSerializationContext& Ctx, TSharedPtr<FVulFieldDescription>& Description)
 	{
 		for (const auto Value : VulRuntime::Enum::StringValues<T>())
 		{
@@ -623,21 +618,21 @@ struct TVulFieldSerializer<TPair<T,S>>
 template <typename T, typename S>
 struct TVulFieldMeta<TPair<T, S>>
 {
-	static bool Describe(FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description)
+	static bool Describe(FVulFieldSerializationContext& Ctx, TSharedPtr<FVulFieldDescription>& Description)
 	{
-		const auto TDescription = MakeShared<FVulFieldDescription>();
+		TSharedPtr<FVulFieldDescription> TDescription = MakeShared<FVulFieldDescription>();
 		if (!Ctx.Describe<T>(TDescription, VulRuntime::Field::FPathItem(TInPlaceType<int>(), 0)))
 		{
 			return false;
 		}
 		
-		const auto SDescription = MakeShared<FVulFieldDescription>();
+		TSharedPtr<FVulFieldDescription> SDescription = MakeShared<FVulFieldDescription>();
 		if (!Ctx.Describe<S>(SDescription, VulRuntime::Field::FPathItem(TInPlaceType<int>(), 1)))
 		{
 			return false;
 		}
 
-		const auto Inner = MakeShared<FVulFieldDescription>();
+		TSharedPtr<FVulFieldDescription> Inner = MakeShared<FVulFieldDescription>();
 		Inner->Union({TDescription, SDescription});
 
 		Description->Array(Inner);
@@ -688,7 +683,7 @@ struct TVulFieldSerializer<FGuid>
 template <>
 struct TVulFieldMeta<FGuid>
 {
-	static bool Describe(FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description)
+	static bool Describe(FVulFieldSerializationContext& Ctx, TSharedPtr<FVulFieldDescription>& Description)
 	{
 		return TVulFieldMeta<FString>::Describe(Ctx, Description);
 	}

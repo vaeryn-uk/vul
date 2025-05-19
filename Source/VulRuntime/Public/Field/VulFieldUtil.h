@@ -3,6 +3,11 @@
 #include "CoreMinimal.h"
 #include "UObject/Object.h"
 
+template <typename T>
+concept HasEnumToString = requires(T value) {
+	{ EnumToString(value) } -> std::same_as<FString>;
+};
+
 namespace VulRuntime::Field
 {
 	/**
@@ -63,5 +68,23 @@ namespace VulRuntime::Field
 		}
 
 		return Out;
+	}
+
+	template <typename T>
+	FString TypeInfo()
+	{
+#if defined(__clang__) || defined(__GNUC__)
+		return ANSI_TO_TCHAR(__PRETTY_FUNCTION__);
+#elif defined(_MSC_VER)
+		return ANSI_TO_TCHAR(__FUNCSIG__);
+#else
+		checkf(false, "Compiler unable to infer typeinfo")
+#endif
+	}
+
+	template <typename T>
+	FString TypeId()
+	{
+		return FMD5::HashAnsiString(*TypeInfo<T>());
 	}
 }

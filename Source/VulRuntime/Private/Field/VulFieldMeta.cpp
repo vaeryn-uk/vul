@@ -1,4 +1,5 @@
 ﻿#include "Field/VulFieldMeta.h"
+#include "Field/VulFieldRegistry.h"
 #include "Field/VulFieldUtil.h"
 
 void FVulFieldDescription::Prop(const FString& Name, const TSharedPtr<FVulFieldDescription>& Description, bool Required)
@@ -12,6 +13,23 @@ void FVulFieldDescription::Prop(const FString& Name, const TSharedPtr<FVulFieldD
 	{
 		RequiredProperties.Add(Name);
 	}
+}
+
+bool FVulFieldDescription::Const(const TSharedPtr<FJsonValue>& Value)
+{
+	const static TArray Allowed = {EJson::Number, EJson::String, EJson::Boolean};
+
+	if (!ensureAlwaysMsgf(
+		Allowed.Contains(Value->Type),
+		TEXT("Cannot use Const() with a complex value type (must be str, bool or number)")
+	))
+	{
+		return false;
+	}
+
+	ConstValue = Value;
+
+	return true;
 }
 
 void FVulFieldDescription::Union(const TArray<TSharedPtr<FVulFieldDescription>>& Subtypes)
@@ -69,14 +87,93 @@ bool FVulFieldDescription::Map(
 
 TSharedPtr<FJsonValue> FVulFieldDescription::JsonSchema() const
 {
+	TSharedPtr<FJsonObject> Definitions = MakeShared<FJsonObject>();
+
+	auto Out = JsonSchema(Definitions, true);
+
+	if (!Definitions->Values.IsEmpty())
+	{
+		Out->AsObject()->Values.Add("definitions", MakeShared<FJsonValueObject>(Definitions));
+	}
+
+	return Out;
+}
+
+bool FVulFieldDescription::IsValid() const
+{
+	return Type != EJson::None || !UnionTypes.IsEmpty() || TypeId.IsSet() || ConstValue.IsValid();
+}
+
+bool FVulFieldDescription::operator==(const FVulFieldDescription& Other) const
+{
+	if (Type == Other.Type)
+	{
+		if (Type == EJson::String || Type == EJson::Number || Type == EJson::Boolean)
+		{
+			return IsNullable == Other.IsNullable;
+		}
+	}
+
+	// TODO: Only simple types can be equal for now. Implement something more thorough.
+
+	return false;
+}
+
+TArray<TSharedPtr<FVulFieldDescription>> FVulFieldDescription::GetConnectedTypes(
+	FVulFieldSerializationContext& Ctx
+) const {
+	TArray<TSharedPtr<FVulFieldDescription>> Out;
+	
+	if (TypeId.IsSet())
+	{
+		Out.Add(MakeShared<FVulFieldDescription>(*this));
+		
+		for (const auto Entry : FVulFieldRegistry::Get().ConnectedEntries(TypeId.GetValue()))
+		{
+			TSharedPtr<FVulFieldDescription> Description = MakeShared<FVulFieldDescription>();
+			if (Entry.DescribeFn(Ctx, Description))
+			{
+				Out.Add(Description);
+			}
+		}
+	}
+
+	return Out;
+}
+
+TSharedPtr<FJsonValue> FVulFieldDescription::JsonSchema(const TSharedPtr<FJsonObject>& Definitions, const bool AddToDefinitions) const
+{
 	if (!IsValid())
 	{
 		// If no useful description has been provided, we want to match
 		// anything, which is bool(true) in JSON schema.
 		return MakeShared<FJsonValueBoolean>(true);
 	}
+
+	TOptional<FString> TypeName = {};
+	TSharedPtr<FJsonValueObject> RefObject;
+
+	if (TypeId.IsSet())
+	{
+		auto Entry = FVulFieldRegistry::Get().GetType(TypeId.GetValue());
+		TypeName = Entry->Name;
+		
+		RefObject = MakeShared<FJsonValueObject>(MakeShared<FJsonObject>(TMap<FString, TSharedPtr<FJsonValue>>{
+			{"$ref", MakeShared<FJsonValueString>(FString::Printf(TEXT("#definitions/%s"), *TypeName.GetValue()))}
+		}));;
+
+		if (Definitions->Values.Contains(TypeName.GetValue()))
+		{
+			return RefObject;
+		}
+	}
 	
 	TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
+
+	if (AddToDefinitions && TypeName.IsSet())
+	{
+		Definitions->Values.Add(TypeName.GetValue(), MakeShared<FJsonValueObject>(Out));
+	}
 
 	if (Type != EJson::None)
 	{
@@ -104,7 +201,7 @@ TSharedPtr<FJsonValue> FVulFieldDescription::JsonSchema() const
 		
 		for (const auto Child : Properties)
 		{
-			ChildProperties->Values.Add(Child.Key, Child.Value->JsonSchema());
+			ChildProperties->Values.Add(Child.Key, Child.Value->JsonSchema(Definitions));
 		}
 		
 		Out->Values.Add("properties", MakeShared<FJsonValueObject>(ChildProperties));
@@ -123,12 +220,12 @@ TSharedPtr<FJsonValue> FVulFieldDescription::JsonSchema() const
 
 	if (Items.IsValid())
 	{
-		Out->Values.Add("items", Items->JsonSchema());
+		Out->Values.Add("items", Items->JsonSchema(Definitions));
 	}
 
 	if (AdditionalProperties.IsValid())
 	{
-		Out->Values.Add("additionalProperties", AdditionalProperties->JsonSchema());
+		Out->Values.Add("additionalProperties", AdditionalProperties->JsonSchema(Definitions));
 	}
 
 	if (!UnionTypes.IsEmpty())
@@ -137,7 +234,7 @@ TSharedPtr<FJsonValue> FVulFieldDescription::JsonSchema() const
 		
 		for (const auto Subtype : UnionTypes)
 		{
-			OneOf.Add(Subtype->JsonSchema());
+			OneOf.Add(Subtype->JsonSchema(Definitions));
 		}
 		
 		Out->Values.Add("oneOf", MakeShared<FJsonValueArray>(OneOf));
@@ -148,25 +245,15 @@ TSharedPtr<FJsonValue> FVulFieldDescription::JsonSchema() const
 		Out->Values.Add("enum", MakeShared<FJsonValueArray>(EnumValues));
 	}
 
-	return MakeShared<FJsonValueObject>(Out);
-}
-
-bool FVulFieldDescription::IsValid() const
-{
-	return Type != EJson::None || !UnionTypes.IsEmpty();
-}
-
-bool FVulFieldDescription::operator==(const FVulFieldDescription& Other) const
-{
-	if (Type == Other.Type)
+	if (ConstValue.IsValid())
 	{
-		if (Type == EJson::String || Type == EJson::Number || Type == EJson::Boolean)
-		{
-			return IsNullable == Other.IsNullable;
-		}
+		Out->Values.Add("const", ConstValue);
 	}
 
-	// TODO: Only simple types can be equal for now. Implement something more thorough.
+	if (RefObject.IsValid())
+	{
+		return RefObject;
+	}
 
-	return false;
+	return MakeShared<FJsonValueObject>(Out);
 }

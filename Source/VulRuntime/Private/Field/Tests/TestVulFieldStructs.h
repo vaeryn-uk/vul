@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Field/VulField.h"
+#include "Field/VulFieldRegistry.h"
 #include "Field/VulFieldSet.h"
 #include "UObject/Object.h"
 #include "VulTest/Public/TestCase.h"
@@ -67,7 +68,7 @@ struct TVulFieldSerializer<FVulTestFieldType>
 template<>
 struct TVulFieldMeta<FVulTestFieldType>
 {
-	static bool Describe(FVulFieldSerializationContext Ctx, const TSharedPtr<FVulFieldDescription>& Desc)
+	static bool Describe(FVulFieldSerializationContext Ctx, TSharedPtr<FVulFieldDescription>& Desc)
 	{
 		FVulTestFieldType F;
 		return F.FieldSet().Describe(Ctx, Desc);
@@ -98,6 +99,7 @@ struct FVulFieldTestTreeBase
 	FVulFieldSet VulFieldSet() const
 	{
 		FVulFieldSet Set;
+		Set.Bind<FVulFieldTestTreeBase>();
 		AddFields(Set);
 		return Set;
 	}
@@ -122,6 +124,7 @@ protected:
 	virtual void AddFields(FVulFieldSet& Set) const override
 	{
 		FVulFieldTestTreeBase::AddFields(Set);
+		Set.Bind<FVulFieldTestTreeNode1>();
 		Set.Add(FVulField::Create(&Int), "int");
 	}
 };
@@ -136,9 +139,14 @@ protected:
 	virtual void AddFields(FVulFieldSet& Set) const override
 	{
 		FVulFieldTestTreeBase::AddFields(Set);
+		Set.Bind<FVulFieldTestTreeNode2>();
 		Set.Add(FVulField::Create(&String), "str");
 	}
 };
+
+VUL_FIELD_ABSTRACT(FVulFieldTestTreeBase, "VulFieldTestTreeBase", "type")
+VUL_FIELD_EXTENDS(FVulFieldTestTreeNode1, "VulFieldTestTreeNode1", FVulFieldTestTreeBase, EVulFieldTestTreeNodeType::Node1);
+VUL_FIELD_EXTENDS(FVulFieldTestTreeNode2, "VulFieldTestTreeNode2", FVulFieldTestTreeBase, EVulFieldTestTreeNodeType::Node2);
 
 template<>
 struct TVulFieldSerializer<TSharedPtr<FVulFieldTestTreeBase>>

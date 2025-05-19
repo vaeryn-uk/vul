@@ -2,6 +2,7 @@
 #include "VulRuntime.h"
 #include "VulRuntimeSettings.h"
 #include "Field/VulFieldUtil.h"
+#include "Field/VulFieldRegistry.h"
 
 bool FVulFieldSerializationErrors::IsSuccess() const
 {
@@ -109,4 +110,9 @@ void FVulFieldSerializationErrors::Log()
 FString FVulFieldSerializationErrors::PathStr() const
 {
 	return VulRuntime::Field::PathStr(Stack);
+}
+
+bool FVulFieldSerializationContext::IsKnownType(const FString& TypeId) const
+{
+	return FVulFieldRegistry::Get().Has(TypeId);
 }

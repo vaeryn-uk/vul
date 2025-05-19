@@ -3,10 +3,9 @@
 #include "CoreMinimal.h"
 #include "VulFieldSerializer.h"
 #include "VulFieldCommonSerializers.h"
+#include "VulFieldRegistry.h"
 #include "VulFieldSerializationContext.h"
 #include "UObject/Object.h"
-
-struct FVulFieldDescription;
 
 template <typename T>
 concept SerializerHasDescribe = requires { TVulFieldSerializer<T>::Describe(); };
@@ -52,6 +51,11 @@ struct VULRUNTIME_API FVulField
 		) {
 			return Ctx.Deserialize<T>(Value, *static_cast<T*>(Ptr), IdentifierCtx);
 		};
+
+		if (FVulFieldRegistry::Get().Has<T>())
+		{
+			Out.TypeId = FVulFieldRegistry::Get().GetType<T>()->TypeId;
+		}
 
 		Out.InitDescribeFn<T>();
 		
@@ -169,9 +173,11 @@ struct VULRUNTIME_API FVulField
 
 	bool Describe(
 		FVulFieldSerializationContext& Ctx,
-		const TSharedPtr<FVulFieldDescription>& Description,
+		TSharedPtr<FVulFieldDescription>& Description,
 		const TOptional<VulRuntime::Field::FPathItem>& IdentifierCtx = {}
 	) const;
+
+	TOptional<FString> GetTypeId() const { return TypeId; }
 
 private:
 	bool bIsReadOnly = false;
@@ -182,7 +188,7 @@ private:
 	{
 		DescribeFn = [](
 			FVulFieldSerializationContext& Ctx,
-			const TSharedPtr<FVulFieldDescription>& Description,
+			TSharedPtr<FVulFieldDescription>& Description,
 			const TOptional<VulRuntime::Field::FPathItem>& IdentifierCtx
 		) {
 			return Ctx.Describe<T>(Description, IdentifierCtx);
@@ -205,9 +211,11 @@ private:
 
 	TFunction<bool (
 		FVulFieldSerializationContext& Ctx,
-		const TSharedPtr<FVulFieldDescription>&,
+		TSharedPtr<FVulFieldDescription>&,
 		const TOptional<VulRuntime::Field::FPathItem>& IdentifierCtx
 	)> DescribeFn;
+
+	TOptional<FString> TypeId;
 };
 
 template <typename T>

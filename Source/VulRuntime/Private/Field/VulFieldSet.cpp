@@ -1,11 +1,22 @@
 ﻿#include "Field/VulFieldSet.h"
 #include "Field/VulFieldMeta.h"
+#include "Field/VulFieldRegistry.h"
 #include "Field/VulFieldUtil.h"
 
 FVulFieldSet::FEntry& FVulFieldSet::FEntry::EvenIfEmpty(const bool IncludeIfEmpty)
 {
 	OmitIfEmpty = !IncludeIfEmpty;
 	return *this; 
+}
+
+TOptional<FString> FVulFieldSet::FEntry::GetTypeId() const
+{
+	if (TypeId.IsSet())
+	{
+		return TypeId;
+	}
+
+	return Field.GetTypeId();
 }
 
 FVulFieldSet::FEntry& FVulFieldSet::Add(const FVulField& Field, const FString& Identifier, const bool IsRef)
@@ -131,14 +142,47 @@ bool FVulFieldSet::Deserialize(const TSharedPtr<FJsonValue>& Data, FVulFieldDese
 	return true;
 }
 
-bool FVulFieldSet::Describe(FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description) const
+bool FVulFieldSet::Describe(FVulFieldSerializationContext& Ctx, TSharedPtr<FVulFieldDescription>& Description) const
 {
+	if (TypeId.IsSet() && FVulFieldRegistry::Get().Has(TypeId.GetValue()))
+	{
+		TArray<TSharedPtr<FVulFieldDescription>> Subtypes;
+		
+		const auto DiscField = FVulFieldRegistry::Get().GetType(TypeId.GetValue())->DiscriminatorField;
+		
+		for (const auto Entry : FVulFieldRegistry::Get().GetSubtypes(TypeId.GetValue()))
+		{
+			TSharedPtr<FVulFieldDescription> SubDesc = MakeShared<FVulFieldDescription>();
+			
+			if (!Entry.DescribeFn(Ctx, SubDesc))
+			{
+				return false;
+			}
+
+			if (DiscField.IsSet() && Entry.DiscriminatorValue.IsSet())
+			{
+				const auto Discriminator = MakeShared<FVulFieldDescription>();
+				Discriminator->Const(MakeShared<FJsonValueString>(Entry.DiscriminatorValue.GetValue()()));
+				SubDesc->Prop(DiscField.GetValue(), Discriminator, true);
+			}
+			
+			Subtypes.Add(SubDesc);
+		}
+		
+		if (!Subtypes.IsEmpty())
+		{
+			Description->Union(Subtypes);
+			return true;
+		}
+	}
+
+	
 	for (const auto Entry : Entries)
 	{
-		auto Field = MakeShared<FVulFieldDescription>();
+		TSharedPtr<FVulFieldDescription> Field = MakeShared<FVulFieldDescription>();
 
 		const auto KeyAsPath = VulRuntime::Field::FPathItem(TInPlaceType<FString>(), Entry.Key);
-
+		
 		if (Entry.Value.Fn)
 		{
 			if (!Entry.Value.Describe(Ctx, Field, KeyAsPath))
@@ -154,6 +198,11 @@ bool FVulFieldSet::Describe(FVulFieldSerializationContext& Ctx, const TSharedPtr
 		}
 
 		Description->Prop(Entry.Key, Field, !Entry.Value.OmitIfEmpty);
+	}
+
+	if (TypeId.IsSet())
+	{
+		Description->BindToType(TypeId.GetValue());
 	}
 
 	return true;

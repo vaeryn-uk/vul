@@ -1,4 +1,5 @@
 ﻿#pragma once
+
 #include "VulFieldSerializationContext.h"
 
 /**
@@ -26,6 +27,13 @@ struct VULRUNTIME_API FVulFieldDescription
 	void String() { Type = EJson::String; }
 	void Number() { Type = EJson::Number; }
 	void Boolean() { Type = EJson::Boolean; }
+
+	/**
+	 * For a field that can only ever be a single value.
+	 */
+	bool Const(const TSharedPtr<FJsonValue>& Value);
+
+	void BindToType(const FString& Id) { TypeId = Id; }
 
 	/**
 	 * Indicates this field can be null.
@@ -59,7 +67,13 @@ struct VULRUNTIME_API FVulFieldDescription
 
 	bool operator==(const FVulFieldDescription& Other) const;
 
+	TArray<TSharedPtr<FVulFieldDescription>> GetConnectedTypes(FVulFieldSerializationContext& Ctx) const;
+
+	TOptional<FString> GetTypeId() const { return TypeId; }
+
 private:
+	TSharedPtr<FJsonValue> JsonSchema(const TSharedPtr<FJsonObject>& Definitions, const bool AddToDefinitions = true) const;
+	
 	EJson Type = EJson::None;
 	TSharedPtr<FVulFieldDescription> Items;
 	TMap<FString, TSharedPtr<FVulFieldDescription>> Properties;
@@ -67,9 +81,11 @@ private:
 	TArray<FString> RequiredProperties;
 	bool CanBeRef = false;
 	TArray<TSharedPtr<FJsonValue>> EnumValues;
-	TOptional<FString> TypeName;
 	bool IsNullable = false;
-	TArray<TSharedPtr<FVulFieldDescription>> UnionTypes = {}; 
+	TArray<TSharedPtr<FVulFieldDescription>> UnionTypes = {};
+	TSharedPtr<FJsonValue> ConstValue = nullptr;
+	
+	TOptional<FString> TypeId;
 };
 
 /**
@@ -84,7 +100,7 @@ struct TVulFieldMeta
 	 * Ctx is provided for further, nested serialization and inspecting any serialization
 	 * options that may affect the possible formats of this type's serialized form.
 	 */
-	static bool Describe(struct FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Description)
+	static bool Describe(struct FVulFieldSerializationContext& Ctx, TSharedPtr<FVulFieldDescription>& Description)
 	{
 		return false;
 	}

@@ -9,7 +9,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 )
 
 template <typename T>
-bool TestDescribe(VulTest::TC TC, FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Desc)
+bool TestDescribe(VulTest::TC TC, FVulFieldSerializationContext& Ctx, TSharedPtr<FVulFieldDescription>& Desc)
 {
 	const auto Ok = Ctx.Describe<T>(Desc);
 
@@ -22,7 +22,7 @@ bool TestDescribe(VulTest::TC TC, FVulFieldSerializationContext& Ctx, const TSha
 	return Ok;
 }
 
-bool TestDescribe(VulTest::TC TC, const FVulFieldSet& Set, FVulFieldSerializationContext& Ctx, const TSharedPtr<FVulFieldDescription>& Desc)
+bool TestDescribe(VulTest::TC TC, const FVulFieldSet& Set, FVulFieldSerializationContext& Ctx, TSharedPtr<FVulFieldDescription>& Desc)
 {
 	const auto Ok = Set.Describe(Ctx, Desc);
 
@@ -188,6 +188,143 @@ bool TestVulFieldMeta::RunTest(const FString& Parameters)
     "Node2"
   ]
 })";
+		
+		(void)TC.JsonObjectsEqual(JsonSchema, Expected);
+	});
+	
+	VulTest::Case(this, "Schema generation - other common types", [](VulTest::TC TC)
+	{
+		TOptional<FString> Optional;
+		TSharedPtr<FString> SharedPtr;
+		TUniquePtr<FString> UniquePtr;
+		TPair<FString, FString> Pair;
+		TPair<FString, int> DifferingPair;
+		FString* Ptr;
+		FGuid Guid;
+		FName Name;
+		float Float;
+		
+		FVulFieldSet Set;
+		Set.Add(FVulField::Create(&Optional), "optional");
+		Set.Add(FVulField::Create(&SharedPtr), "sharedPtr");
+		Set.Add(FVulField::Create(&UniquePtr), "uniquePtr");
+		Set.Add(FVulField::Create(&Pair), "pair");
+		Set.Add(FVulField::Create(&DifferingPair), "differingPair");
+		Set.Add(FVulField::Create(&Ptr), "ptr");
+		Set.Add(FVulField::Create(&Guid), "guid");
+		Set.Add(FVulField::Create(&Name), "name");
+		Set.Add(FVulField::Create(&Float), "float");
+		
+		FVulFieldSerializationContext Ctx;
+		TSharedPtr<FVulFieldDescription> Desc = MakeShared<FVulFieldDescription>();
+		VTC_MUST_EQUAL(true, TestDescribe(TC, Set, Ctx, Desc), "");
+
+		const auto JsonSchema = VulRuntime::Field::JsonToString(Desc->JsonSchema());
+
+		FString Expected = R"(
+{
+  "type": "object",
+  "properties": {
+    "optional": {"type": ["string", "null"]},
+    "sharedPtr": {"type": ["string", "null"]},
+    "uniquePtr": {"type": ["string", "null"]},
+    "pair": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "differingPair": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {"type": "string"},
+          {"type": "number"}
+        ]
+      }
+    },
+    "ptr": {"type": ["string", "null"]},
+    "guid": {"type": "string"},
+    "name": {"type": "string"},
+    "float": {"type": "number"}
+  }
+})";
+		
+		(void)TC.JsonObjectsEqual(JsonSchema, Expected);
+	});
+	
+	VulTest::Case(this, "Schema generation - inheritance tree", [](VulTest::TC TC)
+	{
+		TSharedPtr<FVulFieldTestTreeBase> Base;
+		FVulFieldSet Set;
+		Set.Add(FVulField::Create(&Base), "base");
+		
+		FVulFieldSerializationContext Ctx;
+		TSharedPtr<FVulFieldDescription> Desc = MakeShared<FVulFieldDescription>();
+		VTC_MUST_EQUAL(true, TestDescribe(TC, Set, Ctx, Desc), "");
+
+		const auto JsonSchema = VulRuntime::Field::JsonToString(Desc->JsonSchema());
+
+		FString Expected = R"(
+{
+  "type": "object",
+  "properties": {
+    "base": {
+      "$ref": "#definitions/VulFieldTestTreeBase"
+    }
+  },
+  "definitions": {
+    "VulFieldTestTreeBase": {
+      "oneOf": [
+        {
+          "$ref": "#definitions/VulFieldTestTreeNode1"
+        },
+        {
+          "$ref": "#definitions/VulFieldTestTreeNode2"
+        }
+      ]
+    },
+    "VulFieldTestTreeNode1": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "Node1"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#definitions/VulFieldTestTreeBase"
+          }
+        },
+        "int": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "type"
+      ]
+    },
+    "VulFieldTestTreeNode2": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "Node2"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#definitions/VulFieldTestTreeBase"
+          }
+        },
+        "str": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type"
+      ]
+    }
+  }
+}
+)";
 		
 		(void)TC.JsonObjectsEqual(JsonSchema, Expected);
 	});
