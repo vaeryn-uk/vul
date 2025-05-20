@@ -133,3 +133,18 @@ bool VulRuntime::Field::PathMatch(const FPath& Path, const FString& Match)
 
 	return true;
 }
+
+FString VulRuntime::Field::JsonTypeToString(const EJson Type)
+{
+	switch (Type)
+	{
+	case EJson::None: return TEXT("none");
+	case EJson::Null: return TEXT("null");
+	case EJson::String: return TEXT("string");
+	case EJson::Number: return TEXT("number");
+	case EJson::Boolean: return TEXT("boolean");
+	case EJson::Array: return TEXT("array");
+	case EJson::Object: return TEXT("object");
+	default: return TEXT("Unknown");
+	}
+}

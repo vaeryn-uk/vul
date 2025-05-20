@@ -51,3 +51,16 @@ Name = Load; \
 return Name.IsValid(); \
 }
 
+
+#define VUL_CONCAT_IMPL(x, y) x##y
+#define VUL_CONCAT(x, y) VUL_CONCAT_IMPL(x, y)
+
+// Use a helper macro to ensure the counter is expanded once
+#define VUL_RUN_ONCE(code_block) \
+     VUL_RUN_ONCE_INTERNAL(VUL_CONCAT(FVUL_InitOnceStruct_, __COUNTER__), code_block)
+
+#define VUL_RUN_ONCE_INTERNAL(name, code_block) \
+	struct name {                                   \
+		name() { code_block; }                      \
+	};                                              \
+	inline static name VUL_CONCAT(VUL_run_once_instance_, name);

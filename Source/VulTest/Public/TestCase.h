@@ -105,6 +105,56 @@ namespace VulTest
 
 			return Ok;
 		}
+		
+		/**
+		 * Asserts that two JSON strings are equal, regardless formatting differences (e.g. whitespace).
+		 */
+		bool JsonObjectsEqual(const FString& ActualJson, const FString& ExpectedJson, const FString Message = FString()) const
+		{
+			TSharedPtr<FJsonObject> ActualJsonObject;
+			TSharedPtr<FJsonObject> ExpectedJsonObject;
+
+			TSharedRef<TJsonReader<>> ActualReader = TJsonReaderFactory<>::Create(ActualJson);
+			TSharedRef<TJsonReader<>> ExpectedReader = TJsonReaderFactory<>::Create(ExpectedJson);
+
+			if (!FJsonSerializer::Deserialize(ActualReader, ActualJsonObject) || !ActualJsonObject.IsValid())
+			{
+				TestInstance->AddError(FormatTestTitle(
+					Message,
+					FString::Printf(TEXT("Failed to parse actual JSON str. %s"), *Message)
+				));
+				return false;
+			}
+
+			if (!FJsonSerializer::Deserialize(ExpectedReader, ExpectedJsonObject) || !ExpectedJsonObject.IsValid())
+			{
+				TestInstance->AddError(FormatTestTitle(
+					Message,
+					FString::Printf(TEXT("Failed to parse expected JSON string. %s"), *Message)
+				));
+				return false;
+			}
+
+			FString NormalizedActual, NormalizedExpected;
+			TSharedRef<TJsonWriter<>> ActualWriter = TJsonWriterFactory<>::Create(&NormalizedActual);
+			TSharedRef<TJsonWriter<>> ExpectedWriter = TJsonWriterFactory<>::Create(&NormalizedExpected);
+
+			FJsonSerializer::Serialize(ActualJsonObject.ToSharedRef(), ActualWriter);
+			FJsonSerializer::Serialize(ExpectedJsonObject.ToSharedRef(), ExpectedWriter);
+
+			if (NormalizedActual != NormalizedExpected)
+			{
+				TestInstance->AddError(FormatTestTitle(Message, FString::Printf(
+					TEXT("JSON does not match. %s\nActual: %s\nExpected: %s"),
+					*Message,
+					*NormalizedActual,
+					*NormalizedExpected
+				)));
+				return false;
+			}
+
+			return true;
+		}
 
 		template <typename Type>
 		bool NotEqual(Type A, Type B, const FString Message = FString()) const

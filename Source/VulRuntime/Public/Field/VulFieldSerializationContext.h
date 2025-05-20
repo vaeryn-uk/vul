@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "VulFieldMeta.h"
 #include "VulFieldRefResolver.h"
 #include "VulFieldSerializationOptions.h"
 #include "VulFieldSerializer.h"
@@ -73,8 +74,6 @@ private:
 	VulRuntime::Field::FPath Stack;
 	FString PathStr() const;
 
-	static FString JsonTypeToString(EJson Type);
-
 	int MaxStackSize = 100;
 };
 
@@ -90,6 +89,7 @@ struct VULRUNTIME_API FVulFieldSerializationState
 {
 	FVulFieldSerializationMemory Memory;
 	FVulFieldSerializationErrors Errors;
+	TMap<FString, TSharedPtr<FVulFieldDescription>> TypeDescriptions;
 	
 	template <typename T>
 	bool ResolveRef(const T& From, TSharedPtr<FJsonValue>& Ref)
@@ -114,6 +114,11 @@ struct VULRUNTIME_API FVulFieldSerializationState
 template <typename T>
 concept SerializerHasSetup = requires { TVulFieldSerializer<T>::Setup(); };
 
+template <typename T>
+concept HasMetaDescribe = requires(FVulFieldSerializationContext& Ctx, TSharedPtr<FVulFieldDescription>& Description) {
+	{ TVulFieldMeta<T>::Describe(Ctx, Description) } -> std::same_as<bool>;
+};
+
 struct VULRUNTIME_API FVulFieldSerializationContext
 {
 	FVulFieldSerializationState State;
@@ -123,6 +128,50 @@ struct VULRUNTIME_API FVulFieldSerializationContext
 	 * When serializing floating points, how many decimal places should we include?
 	 */
 	int DefaultPrecision = 1;
+
+	template <typename T>
+	bool Describe(
+		TSharedPtr<FVulFieldDescription>& Description,
+		const TOptional<VulRuntime::Field::FPathItem>& IdentifierCtx = {}
+	) {
+		return State.Errors.WithIdentifierCtx(IdentifierCtx, [&]
+		{
+			if (State.TypeDescriptions.Contains(VulRuntime::Field::TypeId<T>()))
+			{
+				Description = State.TypeDescriptions[VulRuntime::Field::TypeId<T>()];
+				return true;
+			}
+
+			const auto TypeId = VulRuntime::Field::TypeId<T>(); 
+			if (IsKnownType(TypeId))
+			{
+				Description->BindToType<T>();
+				
+				if (!State.TypeDescriptions.Contains(TypeId))
+				{
+					State.TypeDescriptions.Add(TypeId, Description);
+				}
+				
+				if (GenerateAbstractDescription(TypeId, Description))
+				{
+					return true;
+				}
+			}
+			
+			const auto Result = TVulFieldMeta<T>::Describe(*this, Description);
+
+			if (!Description->IsValid())
+			{
+				State.Errors.Add(
+					TEXT("TVulFieldMeta::Describe() did not produce a valid description. type info: %s"),
+					*VulRuntime::Field::TypeInfo<T>()
+				);
+				return false;
+			}
+
+			return Result;
+		});
+	}
 
 	template <typename T>
 	bool Serialize(
@@ -169,6 +218,15 @@ struct VULRUNTIME_API FVulFieldSerializationContext
 			return true;
 		});
 	}
+
+private:
+	bool IsKnownType(const FString& TypeId) const;
+
+	/**
+	 * Generate a description for a type if it's an abstract type with a discriminator
+	 * field; i.e. is a OneOf/union of all subtypes.
+	 */
+	bool GenerateAbstractDescription(const FString& TypeId, const TSharedPtr<FVulFieldDescription>& Description);
 };
 
 struct VULRUNTIME_API FVulFieldDeserializationContext

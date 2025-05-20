@@ -9,24 +9,6 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter
 )
 
-bool CtxContainsError(VulTest::TC TC, const FVulFieldSerializationErrors& Errors, const FString& Term)
-{
-	for (const auto Err : Errors.Errors)
-	{
-		if (Err.Contains(Term))
-		{
-			return true;
-		}
-	}
-
-	TC.Error(FString::Printf(
-		TEXT("Could not find error term \"%s\" in errors:\n%s"),
-		*Term,
-		*FString::Join(Errors.Errors, TEXT("\n"))
-	));
-	return false;
-}
-
 bool TestVulField::RunTest(const FString& Parameters)
 {
 	VulTest::Case(this, "Field access", [](VulTest::TC TC)
@@ -129,7 +111,7 @@ bool TestVulField::RunTest(const FString& Parameters)
 		};
 	
 		FString ObjStr;
-		TC.Equal(true, TestParent.FieldSet().SerializeToJson(ObjStr), "serialize to json");
+		TC.Equal(true, TestParent.VulFieldSet().SerializeToJson(ObjStr), "serialize to json");
 		TC.Equal(
 			FString("{\"inner\":{\"bool\":true,\"int\":13,\"string\":\"hello world\",\"map\":{\"foo\":13,\"bar\":14},\"array\":[true,false,true]}}"),
 			ObjStr,
@@ -137,7 +119,7 @@ bool TestVulField::RunTest(const FString& Parameters)
 		);
 	
 		FString NewJson = "{\"inner\":{\"bool\":false,\"int\":5,\"string\":\"hi\",\"map\":{\"qux\":10},\"array\":[true, true, true, false]}}";
-		TC.Equal(true, TestParent.FieldSet().DeserializeFromJson(NewJson), "deserialize from json");
+		TC.Equal(true, TestParent.VulFieldSet().DeserializeFromJson(NewJson), "deserialize from json");
 		TC.Equal(false, TestParent.Inner.B, "deserialize from json: bool");
 		TC.Equal(5, TestParent.Inner.I, "deserialize from json: int");
 		TC.Equal(FString("hi"), TestParent.Inner.S, "deserialize from json: str");

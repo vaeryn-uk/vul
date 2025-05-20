@@ -23,15 +23,26 @@ struct VULRUNTIME_API FVulFieldSet
 		 * The default behaviour is to omit empty values (checked via VulRuntime::Field::IsEmpty).
 		 */
 		FEntry& EvenIfEmpty(const bool IncludeIfEmpty = true);
+
+		TOptional<FString> GetTypeId() const;
 	private:
 		friend FVulFieldSet;
 		FVulField Field;
+		bool OmitIfEmpty = true;
+		
 		TFunction<bool (
 			TSharedPtr<FJsonValue>&,
 			FVulFieldSerializationContext&,
-			const TOptional<VulRuntime::Field::FPathItem>& IdentifierCtx = {}
+			const TOptional<VulRuntime::Field::FPathItem>& IdentifierCtx
 		)> Fn = nullptr;
-		bool OmitIfEmpty = true;
+		
+		TFunction<bool (
+			FVulFieldSerializationContext& Ctx,
+			TSharedPtr<FVulFieldDescription>& Description,
+			const TOptional<VulRuntime::Field::FPathItem>& IdentifierCtx
+		)> Describe = nullptr;
+
+		TOptional<FString> TypeId;
 	};
 	
 	/**
@@ -70,6 +81,19 @@ struct VULRUNTIME_API FVulFieldSet
 		if (IsRef)
 		{
 			RefField = Identifier;
+		}
+
+		Created.Describe = [](
+			FVulFieldSerializationContext& Ctx,
+			TSharedPtr<FVulFieldDescription>& Description,
+			const TOptional<VulRuntime::Field::FPathItem>& IdentifierCtx = {}
+		) {
+			return Ctx.Describe<T>(Description, IdentifierCtx);
+		};
+
+		if (FVulFieldRegistry::Get().Has<T>())
+		{
+			Created.TypeId = FVulFieldRegistry::Get().GetType<T>()->TypeId;
 		}
 
 		return Entries.Add(Identifier, Created);
@@ -121,6 +145,8 @@ struct VULRUNTIME_API FVulFieldSet
 		FVulFieldDeserializationContext Ctx;
 		return DeserializeFromJson<CharType>(JsonStr, Ctx);
 	}
+
+	bool Describe(FVulFieldSerializationContext& Ctx, TSharedPtr<FVulFieldDescription>& Description) const;
 private:
 	TMap<FString, FEntry> Entries;
 	TOptional<FString> RefField = {};
@@ -148,8 +174,8 @@ public:
 template <typename T>
 concept HasVulFieldSet = std::is_base_of_v<IVulFieldSetAware, T> || 
 	requires(const T& Obj) {
-	{ Obj.VulFieldSet() } -> std::same_as<FVulFieldSet>;
-};
+		{ Obj.VulFieldSet() } -> std::same_as<FVulFieldSet>;
+	};
 
 template <HasVulFieldSet T>
 struct TVulFieldSerializer<T>
@@ -167,6 +193,17 @@ struct TVulFieldSerializer<T>
 			return false;
 		}
 		return Result;
+	}
+};
+
+template <HasVulFieldSet T>
+struct TVulFieldMeta<T>
+{
+	static bool Describe(FVulFieldSerializationContext& Ctx, TSharedPtr<FVulFieldDescription>& Description)
+	{
+		T Default;
+
+		return Default.VulFieldSet().Describe(Ctx, Description);
 	}
 };
 
