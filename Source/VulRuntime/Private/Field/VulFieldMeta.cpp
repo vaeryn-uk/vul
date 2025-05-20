@@ -228,6 +228,11 @@ TSharedPtr<FJsonValue> FVulFieldDescription::JsonSchema(const TSharedPtr<FJsonOb
 		Out->Values.Add("const", ConstValue);
 	}
 
+	if (TypeName.IsSet())
+	{
+		Out->Values.Add("x-vul-typename", MakeShared<FJsonValueString>(TypeName.GetValue()));
+	}
+
 	if (RefObject.IsValid())
 	{
 		return RefObject;

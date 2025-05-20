@@ -138,7 +138,7 @@ namespace VulTest
 			FString NormalizedActual, NormalizedExpected;
 			TSharedRef<TJsonWriter<>> ActualWriter = TJsonWriterFactory<>::Create(&NormalizedActual);
 			TSharedRef<TJsonWriter<>> ExpectedWriter = TJsonWriterFactory<>::Create(&NormalizedExpected);
-
+			
 			FJsonSerializer::Serialize(ActualJsonObject.ToSharedRef(), ActualWriter);
 			FJsonSerializer::Serialize(ExpectedJsonObject.ToSharedRef(), ExpectedWriter);
 

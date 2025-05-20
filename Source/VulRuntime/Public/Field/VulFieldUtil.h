@@ -70,6 +70,11 @@ namespace VulRuntime::Field
 		return Out;
 	}
 
+	/**
+	 * Helper returning a string indicating the type T.
+	 *
+	 * Based on compiler macros, avoiding typeid(); the output will not be clean.
+	 */
 	template <typename T>
 	FString TypeInfo()
 	{
@@ -82,16 +87,16 @@ namespace VulRuntime::Field
 #endif
 	}
  
- /**
- * Returns a unique identifier string for the C++ type `T`.
- * 
- * This identifier is consistent within a single build and runtime,
- * and is used by the Vul reflection system for type registration and lookup.
- * It can also be used in diagnostics or error messages to reference types clearly.
- *
- * Note: This ID is not stable across builds and should not be used for persistent storage
- * or communication between different binaries.
- */
+	/**
+	 * Returns a unique identifier string for the C++ type `T`.
+	 * 
+	 * This identifier is consistent within a single build and runtime,
+	 * and is used by the Vul reflection system for type registration and lookup.
+	 * It can also be used in diagnostics or error messages to reference types clearly.
+	 *
+	 * Note: This ID is not stable across builds and should not be used for persistent storage
+	 * or communication between different binaries.
+	 */
 	template <typename T>
 	FString TypeId()
 	{

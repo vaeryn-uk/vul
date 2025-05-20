@@ -83,6 +83,8 @@ enum class EVulFieldTestTreeNodeType : uint8
 	Node2,
 };
 
+VUL_FIELD_TYPE(EVulFieldTestTreeNodeType, "VulFieldTestTreeNodeType");
+
 // Substituted-out macro of DECLARE_ENUM_TO_STRING + DEFINE_ENUM_TO_STRING to save needing a .cpp file.
 FString EnumToString(const EVulFieldTestTreeNodeType Value)
 {
@@ -92,6 +94,8 @@ FString EnumToString(const EVulFieldTestTreeNodeType Value)
 
 struct FVulFieldTestTreeBase
 {
+	VUL_FIELD_ABSTRACT(FVulFieldTestTreeBase, "VulFieldTestTreeBase", "type")
+	
 	virtual ~FVulFieldTestTreeBase() = default;
 	
 	TArray<TSharedPtr<FVulFieldTestTreeBase>> Children;
@@ -115,6 +119,8 @@ protected:
 
 struct FVulFieldTestTreeNode1 : FVulFieldTestTreeBase
 {
+	VUL_FIELD_EXTENDS(FVulFieldTestTreeNode1, "VulFieldTestTreeNode1", FVulFieldTestTreeBase, EVulFieldTestTreeNodeType::Node1);
+	
 	int Int;
 
 	virtual EVulFieldTestTreeNodeType Type() const override { return EVulFieldTestTreeNodeType::Node1; }
@@ -129,6 +135,8 @@ protected:
 
 struct FVulFieldTestTreeNode2 : FVulFieldTestTreeBase
 {
+	VUL_FIELD_EXTENDS(FVulFieldTestTreeNode2, "VulFieldTestTreeNode2", FVulFieldTestTreeBase, EVulFieldTestTreeNodeType::Node2);
+	
 	FString String;
 
 	virtual EVulFieldTestTreeNodeType Type() const override { return EVulFieldTestTreeNodeType::Node2; }
@@ -140,10 +148,6 @@ protected:
 		Set.Add(FVulField::Create(&String), "str");
 	}
 };
-
-VUL_FIELD_ABSTRACT(FVulFieldTestTreeBase, "VulFieldTestTreeBase", "type")
-VUL_FIELD_EXTENDS(FVulFieldTestTreeNode1, "VulFieldTestTreeNode1", FVulFieldTestTreeBase, EVulFieldTestTreeNodeType::Node1);
-VUL_FIELD_EXTENDS(FVulFieldTestTreeNode2, "VulFieldTestTreeNode2", FVulFieldTestTreeBase, EVulFieldTestTreeNodeType::Node2);
 
 template<>
 struct TVulFieldSerializer<TSharedPtr<FVulFieldTestTreeBase>>

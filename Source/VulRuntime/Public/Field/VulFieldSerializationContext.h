@@ -152,10 +152,7 @@ struct VULRUNTIME_API FVulFieldSerializationContext
 					State.TypeDescriptions.Add(TypeId, Description);
 				}
 				
-				if (GenerateAbstractDescription(TypeId, Description))
-				{
-					return true;
-				}
+				GenerateAbstractDescription(TypeId, Description);
 			}
 			
 			const auto Result = TVulFieldMeta<T>::Describe(*this, Description);

@@ -181,12 +181,14 @@ bool TestVulFieldMeta::RunTest(const FString& Parameters)
 
 		FString Expected = R"(
 {
-  "type": "string",
-  "enum": [
-    "Base",
-    "Node1",
-    "Node2"
-  ]
+  "$ref": "#definitions/VulFieldTestTreeNodeType",
+  "definitions": {
+    "VulFieldTestTreeNodeType": {
+      "type": "string",
+      "enum": ["Base", "Node1", "Node2"],
+      "x-vul-typename": "VulFieldTestTreeNodeType"
+    }
+  }
 })";
 		
 		(void)TC.JsonObjectsEqual(JsonSchema, Expected);
@@ -214,6 +216,14 @@ bool TestVulFieldMeta::RunTest(const FString& Parameters)
   },
   "definitions": {
     "VulFieldTestTreeBase": {
+      "type": [ "object", "null" ],
+      "properties": {
+        "type": { "$ref": "#definitions/VulFieldTestTreeNodeType" },
+        "children": {
+          "type": "array",
+          "items": { "$ref": "#definitions/VulFieldTestTreeBase" }
+        }
+      },
       "oneOf": [
         {
           "$ref": "#definitions/VulFieldTestTreeNode1"
@@ -221,7 +231,13 @@ bool TestVulFieldMeta::RunTest(const FString& Parameters)
         {
           "$ref": "#definitions/VulFieldTestTreeNode2"
         }
-      ]
+      ],
+      "x-vul-typename": "VulFieldTestTreeBase"
+    },
+    "VulFieldTestTreeNodeType": {
+      "type": "string",
+      "enum": ["Base", "Node1", "Node2"],
+      "x-vul-typename": "VulFieldTestTreeNodeType"
     },
     "VulFieldTestTreeNode1": {
       "type": "object",
@@ -241,7 +257,8 @@ bool TestVulFieldMeta::RunTest(const FString& Parameters)
       },
       "required": [
         "type"
-      ]
+      ],
+      "x-vul-typename": "VulFieldTestTreeNode1"
     },
     "VulFieldTestTreeNode2": {
       "type": "object",
@@ -261,7 +278,8 @@ bool TestVulFieldMeta::RunTest(const FString& Parameters)
       },
       "required": [
         "type"
-      ]
+      ],
+      "x-vul-typename": "VulFieldTestTreeNode2"
     }
   }
 }

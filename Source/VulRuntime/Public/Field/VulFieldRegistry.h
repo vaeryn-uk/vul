@@ -67,13 +67,20 @@ struct FVulFieldRegistry
 			.DiscriminatorField = DiscriminatorField,
 			.DescribeFn = [](FVulFieldSerializationContext& Ctx, TSharedPtr<FVulFieldDescription>& Description)
 			{
-				if (Ctx.Describe<T>(Description))
-				{
-					Description->BindToType<T>();
-					return true;
-				}
-
-				return false;
+				return Ctx.Describe<T>(Description);
+			}
+		});
+	}
+	
+	template <typename T>
+	void Register(const FString& TypeName)
+	{
+		Entries.Add(VulRuntime::Field::TypeId<T>(), FEntry{
+			.Name = TypeName,
+			.TypeId = VulRuntime::Field::TypeId<T>(),
+			.DescribeFn = [](FVulFieldSerializationContext& Ctx, TSharedPtr<FVulFieldDescription>& Description)
+			{
+				return Ctx.Describe<T>(Description);
 			}
 		});
 	}
@@ -88,13 +95,7 @@ struct FVulFieldRegistry
 			.BaseType = VulRuntime::Field::TypeId<BaseType>(),
 			.DescribeFn = [](FVulFieldSerializationContext& Ctx, TSharedPtr<FVulFieldDescription>& Description)
 			{
-				if (Ctx.Describe<ThisType>(Description))
-				{
-					Description->BindToType<ThisType>();
-					return true;
-				}
-
-				return false;
+				return Ctx.Describe<ThisType>(Description);
 			}
 		});
 	}
@@ -103,12 +104,46 @@ private:
 	TMap<FString, FEntry> Entries;
 };
 
+/**
+ * Register the CPP type TYPE with the Vul field system as an abstract class.
+ *
+ * TYPE_NAME should be as you want this to appear in metadata outputs, such as
+ * schemas.
+ *
+ * DISCRIMINATOR_FIELD is the property of this type that distinguishes which concrete
+ * subtype a serialized object. This should be the string name of the property
+ * as it is specified in VulFieldSet().
+ */
 #define VUL_FIELD_ABSTRACT(TYPE, TYPE_NAME, DISCRIMINATOR_FIELD) \
 VUL_RUN_ONCE({ \
 	FVulFieldRegistry::Get().Abstract<TYPE>(TYPE_NAME, DISCRIMINATOR_FIELD); \
 })
 
+/**
+ * Register the CPP type TYPE with the Vul field system as a concrete subtype of
+ * an abstract.
+ *
+ * TYPE_NAME should be as you want this to appear in metadata outputs, such as
+ * schemas.
+ *
+ * BASE_TYPE is the CPP type this concrete type extends, and ENUM_VALUE is the
+ * value of the base's DISCRIMINATOR_FIELD that maps to this subtype.
+ */
 #define VUL_FIELD_EXTENDS(TYPE, TYPE_NAME, BASE_TYPE, ENUM_VALUE) \
 VUL_RUN_ONCE({ \
 	(FVulFieldRegistry::Get().Extends<TYPE, BASE_TYPE>(TYPE_NAME, ENUM_VALUE)); \
+})
+
+/**
+ * Register the CPP type TYPE with the Vul field system.
+ *
+ * TYPE_NAME should be as you want this to appear in metadata outputs, such as
+ * schemas.
+ *
+ * This is appropriate for simple types (i.e. no polymorphism) that want to be
+ * exposed in metadata tooling as a standalone types, such as for enums.
+ */
+#define VUL_FIELD_TYPE(TYPE, TYPE_NAME) \
+VUL_RUN_ONCE({ \
+	(FVulFieldRegistry::Get().Register<TYPE>(TYPE_NAME)); \
 })
