@@ -288,5 +288,45 @@ bool TestVulFieldMeta::RunTest(const FString& Parameters)
 		(void)TC.JsonObjectsEqual(JsonSchema, Expected);
 	});
 	
+	VulTest::Case(this, "Typescript definitions - inheritance tree", [](VulTest::TC TC)
+	{
+		TSharedPtr<FVulFieldTestTreeBase> Base;
+		FVulFieldSet Set;
+		Set.Add(FVulField::Create(&Base), "base");
+		
+		FVulFieldSerializationContext Ctx;
+		TSharedPtr<FVulFieldDescription> Desc = MakeShared<FVulFieldDescription>();
+		VTC_MUST_EQUAL(true, TestDescribe(TC, Set, Ctx, Desc), "");
+
+		FString Expected = R"(
+export type VulFieldTestTreeBase = {
+    type: VulFieldTestTreeNodeType;
+    children: VulFieldTestTreeBase[];
+}
+
+export enum VulFieldTestTreeNodeType {
+    Base = "Base",
+    Node1 = "Node1",
+    Node2 = "Node2",
+}
+
+export type VulFieldTestTreeNode1 = {
+    type: any;
+    children: VulFieldTestTreeBase[];
+    int: number;
+}
+
+export type VulFieldTestTreeNode2 = {
+    type: any;
+    children: VulFieldTestTreeBase[];
+    str: string;
+}
+)";
+
+		const auto Actual = Desc->TypeScriptDefinitions();
+
+		VTC_MUST_EQUAL(*Actual, *Expected, "typescript definition match")
+	});
+	
 	return true;
 }

@@ -76,8 +76,19 @@ struct VULRUNTIME_API FVulFieldDescription
 
 	TOptional<FString> GetTypeId() const { return TypeId; }
 
+	FString TypeScriptDefinitions() const;
+
+	/**
+	 * Extracts all descriptions that are named types, i.e. registered with FVulFieldRegistry.
+	 */
+	void GetNamedTypes(TArray<TSharedPtr<FVulFieldDescription>>& Types) const;
+
+	TOptional<FString> GetTypeName() const;
+
 private:
 	TSharedPtr<FJsonValue> JsonSchema(const TSharedPtr<FJsonObject>& Definitions, const bool AddToDefinitions = true) const;
+
+	FString TypeScriptType() const;
 	
 	EJson Type = EJson::None;
 	TSharedPtr<FVulFieldDescription> Items;

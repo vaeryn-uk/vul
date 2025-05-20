@@ -119,6 +119,102 @@ bool FVulFieldDescription::operator==(const FVulFieldDescription& Other) const
 	return false;
 }
 
+FString FVulFieldDescription::TypeScriptDefinitions() const
+{
+	TArray<TSharedPtr<FVulFieldDescription>> Descriptions;
+
+	const static FString Indent = "\t";
+
+	FString Out;
+	
+	GetNamedTypes(Descriptions);
+
+	for (const auto Description : Descriptions)
+	{
+		const auto TypeName = Description->GetTypeName().GetValue();
+		
+		if (!Description->EnumValues.IsEmpty())
+		{
+			Out += FString::Printf(TEXT("export enum %s {"), *TypeName);
+			Out += LINE_TERMINATOR;
+
+			for (const auto Value : Description->EnumValues)
+			{
+				if (!ensureAlwaysMsgf(Value->Type == EJson::String, TEXT("Only string enum values are supported (%s)"), *TypeName))
+				{
+					continue;
+				}
+				
+				Out += Indent + Value->AsString() + " = \"" + Value->AsString() + "\",";
+				Out += LINE_TERMINATOR;
+			}
+			
+			Out += "}";
+			Out += LINE_TERMINATOR;
+			Out += LINE_TERMINATOR;
+		} else if (!Description->Properties.IsEmpty())
+		{
+			Out += FString::Printf(TEXT("export type %s = {"), *TypeName);
+			Out += LINE_TERMINATOR;
+
+			for (const auto Entry : Description->Properties)
+			{
+				Out += Indent + Entry.Key + ": " + Entry.Value->TypeScriptType() + ";";
+				Out += LINE_TERMINATOR;
+			}
+
+			Out += "}";
+			Out += LINE_TERMINATOR;
+			Out += LINE_TERMINATOR;
+		}
+	}
+
+	return Out;
+}
+
+void FVulFieldDescription::GetNamedTypes(TArray<TSharedPtr<FVulFieldDescription>>& Types) const
+{
+	if (TypeId.IsSet())
+	{
+		const auto AlreadyExists = Types.IndexOfByPredicate([&](const TSharedPtr<FVulFieldDescription>& Existing)
+		{
+			return Existing->TypeId == TypeId;
+		});
+
+		if (AlreadyExists != INDEX_NONE)
+		{
+			return;
+		}
+		
+		Types.Add(MakeShared<FVulFieldDescription>(*this));
+	}
+
+	for (const auto Prop : Properties)
+	{
+		Prop.Value->GetNamedTypes(Types);
+	}
+
+	for (const auto Subtype : UnionTypes)
+	{
+		Subtype->GetNamedTypes(Types);
+	}
+
+	if (Items.IsValid())
+	{
+		Items->GetNamedTypes(Types);
+	}
+}
+
+TOptional<FString> FVulFieldDescription::GetTypeName() const
+{
+	if (TypeId.IsSet())
+	{
+		return FVulFieldRegistry::Get().GetType(TypeId.GetValue())->Name;
+	}
+
+	return TOptional<FString>();
+}
+
 TSharedPtr<FJsonValue> FVulFieldDescription::JsonSchema(const TSharedPtr<FJsonObject>& Definitions, const bool AddToDefinitions) const
 {
 	if (!IsValid())
@@ -239,4 +335,35 @@ TSharedPtr<FJsonValue> FVulFieldDescription::JsonSchema(const TSharedPtr<FJsonOb
 	}
 
 	return MakeShared<FJsonValueObject>(Out);
+}
+
+FString FVulFieldDescription::TypeScriptType() const
+{
+	const auto KnownType = GetTypeName();
+	if (KnownType.IsSet())
+	{
+		return KnownType.GetValue();
+	}
+
+	if (Type == EJson::String)
+	{
+		return "string";
+	}
+
+	if (Type == EJson::Boolean)
+	{
+		return "boolean";
+	}
+
+	if (Type == EJson::Number)
+	{
+		return "number";
+	}
+
+	if (Items.IsValid())
+	{
+		return Items->TypeScriptType() + "[]";
+	}
+
+	return "any";
 }
