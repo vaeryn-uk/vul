@@ -224,6 +224,8 @@ UCLASS()
 class UVulFieldTestUObject2 : public UObject, public IVulFieldSetAware, public IVulFieldTestInterface1
 {
 	GENERATED_BODY()
+
+	VUL_FIELD_TYPE(UVulFieldTestUObject2, "VulFieldTestUObject2");
 	
 public:
 	FString Str;
@@ -240,6 +242,8 @@ UCLASS()
 class UVulFieldTestUObject1 : public UObject, public IVulFieldSetAware
 {
 	GENERATED_BODY()
+
+	VUL_FIELD_TYPE(UVulFieldTestUObject1, "VulFieldTestUObject1");
 
 public:
 	FString Str;

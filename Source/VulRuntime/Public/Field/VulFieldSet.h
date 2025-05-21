@@ -196,14 +196,26 @@ struct TVulFieldSerializer<T>
 	}
 };
 
+template <typename T>
+concept IsUObject = std::is_base_of_v<UObject, T>;
+
 template <HasVulFieldSet T>
 struct TVulFieldMeta<T>
 {
 	static bool Describe(FVulFieldSerializationContext& Ctx, TSharedPtr<FVulFieldDescription>& Description)
 	{
-		T Default;
+		FVulFieldSet Set;
+		if constexpr (IsUObject<T>)
+		{
+			T* Default = NewObject<T>();
+			Set = Default->VulFieldSet();
+		} else
+		{
+			T Default;
+			Set = Default.VulFieldSet();
+		}
 
-		return Default.VulFieldSet().Describe(Ctx, Description);
+		return Set.Describe(Ctx, Description);
 	}
 };
 
@@ -221,9 +233,6 @@ struct TVulFieldRefResolver<T>
 		return Out.IsValid();
 	}
 };
-
-template <typename T>
-concept IsUObject = std::is_base_of_v<UObject, T>;
 
 template <IsUObject T>
 struct TVulFieldSerializer<T*>

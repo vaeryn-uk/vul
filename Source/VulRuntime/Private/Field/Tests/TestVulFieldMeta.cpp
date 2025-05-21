@@ -292,10 +292,12 @@ bool TestVulFieldMeta::RunTest(const FString& Parameters)
 	{
 		TSharedPtr<FVulFieldTestTreeBase> Base;
 		FMyStringAlias StrAlias;
+		UVulFieldTestUObject1* Obj;
 		
 		FVulFieldSet Set;
 		Set.Add(FVulField::Create(&Base), "base");
 		Set.Add(FVulField::Create(&StrAlias), "strAlias");
+		Set.Add(FVulField::Create(&Obj), "uObject");
 		
 		FVulFieldSerializationContext Ctx;
 		TSharedPtr<FVulFieldDescription> Desc = MakeShared<FVulFieldDescription>();
@@ -324,6 +326,15 @@ export interface VulFieldTestTreeNode2 extends VulFieldTestTreeBase  {
 }
 
 export type StringAlias = string;
+
+export interface VulFieldTestUObject1 {
+	str: string;
+	obj: VulFieldTestUObject2;
+}
+
+export interface VulFieldTestUObject2 {
+	str: string;
+}
 )";
 
 		const auto Actual = Desc->TypeScriptDefinitions();
