@@ -95,7 +95,7 @@ struct VULRUNTIME_API FVulFieldDescription
 private:
 	TSharedPtr<FJsonValue> JsonSchema(const TSharedPtr<FJsonObject>& Definitions, const bool AddToDefinitions = true) const;
 
-	FString TypeScriptType() const;
+	FString TypeScriptType(const bool AllowRegisteredType = true) const;
 	
 	EJson Type = EJson::None;
 	TSharedPtr<FVulFieldDescription> Items;

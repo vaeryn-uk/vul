@@ -284,3 +284,34 @@ inline bool CtxContainsError(VulTest::TC TC, const FVulFieldSerializationErrors&
 	));
 	return false;
 }
+
+struct FMyStringAlias : FString
+{
+	VUL_FIELD_TYPE(FMyStringAlias, "StringAlias");
+};
+
+template<>
+struct TVulFieldSerializer<FMyStringAlias>
+{
+	static bool Serialize(const FMyStringAlias& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
+	{
+		// Not used.
+		return true;
+	}
+
+	static bool Deserialize(const TSharedPtr<FJsonValue>& Data, FMyStringAlias& Out, FVulFieldDeserializationContext& Ctx)
+	{
+		// Not used.
+		return true;
+	}
+};
+
+template <>
+struct TVulFieldMeta<FMyStringAlias>
+{
+	static bool Describe(FVulFieldSerializationContext Ctx, TSharedPtr<FVulFieldDescription>& Desc)
+	{
+		Desc->String();
+		return true;
+	}
+};

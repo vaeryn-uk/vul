@@ -264,6 +264,16 @@ FString FVulFieldDescription::TypeScriptDefinitions() const
 			Out += "}";
 			Out += LINE_TERMINATOR;
 			Out += LINE_TERMINATOR;
+		} else if (TArray{EJson::String, EJson::Number, EJson::Boolean}.Contains(Entry.Value->Type))
+		{
+			// Simple type alias.
+			Out += FString::Printf(
+				TEXT("export type %s = %s;"),
+				*Entry.Value->GetTypeName().GetValue(),
+				*Entry.Value->TypeScriptType(false)
+			);
+			Out += LINE_TERMINATOR;
+			Out += LINE_TERMINATOR;
 		}
 	}
 
@@ -430,10 +440,10 @@ TSharedPtr<FJsonValue> FVulFieldDescription::JsonSchema(const TSharedPtr<FJsonOb
 	return MakeShared<FJsonValueObject>(Out);
 }
 
-FString FVulFieldDescription::TypeScriptType() const
+FString FVulFieldDescription::TypeScriptType(const bool AllowRegisteredType) const
 {
 	const auto KnownType = GetTypeName();
-	if (KnownType.IsSet())
+	if (AllowRegisteredType && KnownType.IsSet())
 	{
 		return KnownType.GetValue();
 	}

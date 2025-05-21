@@ -288,11 +288,14 @@ bool TestVulFieldMeta::RunTest(const FString& Parameters)
 		(void)TC.JsonObjectsEqual(JsonSchema, Expected);
 	});
 	
-	VulTest::Case(this, "Typescript definitions - inheritance tree", [](VulTest::TC TC)
+	VulTest::Case(this, "Typescript definitions", [](VulTest::TC TC)
 	{
 		TSharedPtr<FVulFieldTestTreeBase> Base;
+		FMyStringAlias StrAlias;
+		
 		FVulFieldSet Set;
 		Set.Add(FVulField::Create(&Base), "base");
+		Set.Add(FVulField::Create(&StrAlias), "strAlias");
 		
 		FVulFieldSerializationContext Ctx;
 		TSharedPtr<FVulFieldDescription> Desc = MakeShared<FVulFieldDescription>();
@@ -318,7 +321,10 @@ export interface VulFieldTestTreeNode1 extends VulFieldTestTreeBase  {
 export interface VulFieldTestTreeNode2 extends VulFieldTestTreeBase  {
     type: VulFieldTestTreeNodeType.Node2;
     str: string;
-})";
+}
+
+export type StringAlias = string;
+)";
 
 		const auto Actual = Desc->TypeScriptDefinitions();
 
