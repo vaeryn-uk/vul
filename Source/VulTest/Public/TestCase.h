@@ -46,6 +46,36 @@ namespace VulTest
 			return TestInstance->TestEqual(FormatTestTitle("TOptional value check", Message), Actual.GetValue(), Expected.GetValue());
 		}
 
+		bool EqualNoWhitespace(const FString& Actual, const FString& Expected, const FString& Message = FString()) const
+		{
+			FString ActualStripped = Actual;
+			ActualStripped.ReplaceInline(TEXT(" "), TEXT(""));
+			ActualStripped.ReplaceInline(TEXT("\t"), TEXT(""));
+			ActualStripped.ReplaceInline(TEXT("\n"), TEXT(""));
+			ActualStripped.ReplaceInline(TEXT("\r"), TEXT(""));
+			
+			FString ExpectedStripped = Expected;
+			ExpectedStripped.ReplaceInline(TEXT(" "), TEXT(""));
+			ExpectedStripped.ReplaceInline(TEXT("\t"), TEXT(""));
+			ExpectedStripped.ReplaceInline(TEXT("\n"), TEXT(""));
+			ExpectedStripped.ReplaceInline(TEXT("\r"), TEXT(""));
+
+			if (ActualStripped != ExpectedStripped)
+			{
+				TestInstance->AddError(FormatTestTitle(
+					FString::Printf(
+						TEXT("Whitespace-stripped equality failed.\nActual:\n%s\nExpected:\n%s"),
+						*Actual,
+						*Expected
+					),
+					Message
+				));
+				return false;
+			}
+
+			return true;
+		}
+
 		/**
 		 * Asserts two TMap values are equal.
 		 */

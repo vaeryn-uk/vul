@@ -23,6 +23,7 @@ struct VULRUNTIME_API FVulFieldDescription
 	 * Required=true if this property is always present (even if empty).
 	 */
 	void Prop(const FString& Name, const TSharedPtr<FVulFieldDescription>& Description, bool Required);
+	TSharedPtr<FVulFieldDescription> GetProperty(const FString& Name);
 
 	/* Scalar type definitions. Sets a simple type. */
 	void String() { Type = EJson::String; }
@@ -31,8 +32,12 @@ struct VULRUNTIME_API FVulFieldDescription
 
 	/**
 	 * For a field that can only ever be a single value.
+	 *
+	 * Of specifies the type that this value belongs to. Often an enum description.
 	 */
-	bool Const(const TSharedPtr<FJsonValue>& Value);
+	bool Const(const TSharedPtr<FJsonValue>& Value, const TSharedPtr<FVulFieldDescription>& Of);
+
+	bool static AreEquivalent(const TSharedPtr<FVulFieldDescription>& A, const TSharedPtr<FVulFieldDescription>& B);
 
 	/**
 	 * Binds this description to a CPP type that is registered in FVulRegistry.
@@ -63,6 +68,8 @@ struct VULRUNTIME_API FVulFieldDescription
 	 */
 	void Enum(const FString& Item);
 
+	bool HasEnumValue(const FString& Item) const;
+
 	bool Map(
 		const TSharedPtr<FVulFieldDescription>& KeysDescription,
 		const TSharedPtr<FVulFieldDescription>& ValuesDescription
@@ -81,7 +88,7 @@ struct VULRUNTIME_API FVulFieldDescription
 	/**
 	 * Extracts all descriptions that are named types, i.e. registered with FVulFieldRegistry.
 	 */
-	void GetNamedTypes(TArray<TSharedPtr<FVulFieldDescription>>& Types) const;
+	void GetNamedTypes(TMap<FString, TSharedPtr<FVulFieldDescription>>& Types) const;
 
 	TOptional<FString> GetTypeName() const;
 
@@ -100,6 +107,7 @@ private:
 	bool IsNullable = false;
 	TArray<TSharedPtr<FVulFieldDescription>> UnionTypes = {};
 	TSharedPtr<FJsonValue> ConstValue = nullptr;
+	TSharedPtr<FVulFieldDescription> ConstOf = nullptr;
 	TOptional<FString> TypeId;
 };
 

@@ -14,3 +14,22 @@ TArray<FVulFieldRegistry::FEntry> FVulFieldRegistry::GetSubtypes(const FString& 
 
 	return Out;
 }
+
+TOptional<FVulFieldRegistry::FEntry> FVulFieldRegistry::GetBaseType(const FString& TypeId) const
+{
+	const auto Type = GetType(TypeId);
+	if (!Type.IsSet())
+	{
+		return {};
+	}
+
+	for (const auto Entry : Entries)
+	{
+		if (Type->BaseType == Entry.Value.TypeId)
+		{
+			return Entry.Value;
+		}
+	}
+
+	return {};
+}

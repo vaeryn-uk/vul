@@ -57,6 +57,7 @@ struct FVulFieldRegistry
 	}
 
 	TArray<FEntry> GetSubtypes(const FString& TypeId) const;
+	TOptional<FEntry> GetBaseType(const FString& TypeId) const;
 
 	template <typename T>
 	void Abstract(const FString& TypeName, const FString& DiscriminatorField)

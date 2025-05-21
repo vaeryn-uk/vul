@@ -15,7 +15,17 @@ void FVulFieldDescription::Prop(const FString& Name, const TSharedPtr<FVulFieldD
 	}
 }
 
-bool FVulFieldDescription::Const(const TSharedPtr<FJsonValue>& Value)
+TSharedPtr<FVulFieldDescription> FVulFieldDescription::GetProperty(const FString& Name)
+{
+	if (Properties.Contains(Name))
+	{
+		return Properties[Name];
+	}
+
+	return nullptr;
+}
+
+bool FVulFieldDescription::Const(const TSharedPtr<FJsonValue>& Value, const TSharedPtr<FVulFieldDescription>& Of)
 {
 	const static TArray Allowed = {EJson::Number, EJson::String, EJson::Boolean};
 
@@ -28,6 +38,62 @@ bool FVulFieldDescription::Const(const TSharedPtr<FJsonValue>& Value)
 	}
 
 	ConstValue = Value;
+	ConstOf = Of;
+
+	return true;
+}
+
+bool FVulFieldDescription::AreEquivalent(
+	const TSharedPtr<FVulFieldDescription>& A,
+	const TSharedPtr<FVulFieldDescription>& B
+) {
+	if (!A.IsValid() && !B.IsValid()) return true;
+	if (A.IsValid() != B.IsValid()) return false;
+
+	// Recursion protection: if this field is a known type and is not customized
+	// with const value restrictions, consider equal.
+	if (A->TypeId.IsSet() && A->TypeId == B->TypeId && !A->ConstValue.IsValid() && !B->ConstValue.IsValid())
+	{
+		return true;
+	}
+	
+	if (A->TypeId != B->TypeId) return false;
+	if (A->Type != B->Type) return false;
+	if (A->IsNullable != B->IsNullable) return false;
+	if (A->CanBeRef != B->CanBeRef) return false;
+	if (!AreEquivalent(A->Items, B->Items)) return false;
+	if (!AreEquivalent(A->AdditionalProperties, B->AdditionalProperties)) return false;
+	if (!AreEquivalent(A->ConstOf, B->ConstOf)) return false;
+
+	if (A->Properties.Num() != B->Properties.Num()) return false;
+	for (const auto Prop : A->Properties)
+	{
+		if (!B->Properties.Contains(Prop.Key) || !AreEquivalent(Prop.Value, B->Properties[Prop.Key]))
+		{
+			return false;
+		}
+	}
+
+	if (A->ConstValue.IsValid() != B->ConstValue.IsValid()) return false;
+	if (A->ConstValue && !FJsonValue::CompareEqual(*A->ConstValue.Get(), *B->ConstValue.Get())) return false;
+	
+	if (A->EnumValues.Num() != B->EnumValues.Num()) return false;
+	for (int I = 0; I < A->EnumValues.Num(); I++)
+	{
+		if (!FJsonValue::CompareEqual(*A->EnumValues[I], *B->EnumValues[I]))
+		{
+			return false;
+		}
+	}
+	
+	if (A->UnionTypes.Num() != B->UnionTypes.Num()) return false;
+	for (int I = 0; I < A->UnionTypes.Num(); I++)
+	{
+		if (!AreEquivalent(A->UnionTypes[I], B->UnionTypes[I]))
+		{
+			return false;
+		}
+	}
 
 	return true;
 }
@@ -68,6 +134,19 @@ void FVulFieldDescription::Enum(const FString& Item)
 	EnumValues.Add(MakeShared<FJsonValueString>(Item));
 }
 
+bool FVulFieldDescription::HasEnumValue(const FString& Item) const
+{
+	for (const auto Value : EnumValues)
+	{
+		if (Value->AsString() == Item)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
 bool FVulFieldDescription::Map(
 	const TSharedPtr<FVulFieldDescription>& KeysDescription,
 	const TSharedPtr<FVulFieldDescription>& ValuesDescription
@@ -106,22 +185,12 @@ bool FVulFieldDescription::IsValid() const
 
 bool FVulFieldDescription::operator==(const FVulFieldDescription& Other) const
 {
-	if (Type == Other.Type)
-	{
-		if (Type == EJson::String || Type == EJson::Number || Type == EJson::Boolean)
-		{
-			return IsNullable == Other.IsNullable;
-		}
-	}
-
-	// TODO: Only simple types can be equal for now. Implement something more thorough.
-
-	return false;
+	return AreEquivalent(MakeShared<FVulFieldDescription>(*this), MakeShared<FVulFieldDescription>(Other));
 }
 
 FString FVulFieldDescription::TypeScriptDefinitions() const
 {
-	TArray<TSharedPtr<FVulFieldDescription>> Descriptions;
+	TMap<FString, TSharedPtr<FVulFieldDescription>> Descriptions;
 
 	const static FString Indent = "\t";
 
@@ -129,8 +198,9 @@ FString FVulFieldDescription::TypeScriptDefinitions() const
 	
 	GetNamedTypes(Descriptions);
 
-	for (const auto Description : Descriptions)
+	for (const auto Entry : Descriptions)
 	{
+		const auto Description = Entry.Value;
 		const auto TypeName = Description->GetTypeName().GetValue();
 		
 		if (!Description->EnumValues.IsEmpty())
@@ -154,12 +224,40 @@ FString FVulFieldDescription::TypeScriptDefinitions() const
 			Out += LINE_TERMINATOR;
 		} else if (!Description->Properties.IsEmpty())
 		{
-			Out += FString::Printf(TEXT("export type %s = {"), *TypeName);
+			const auto BaseType = FVulFieldRegistry::Get().GetBaseType(Entry.Key);
+			TSharedPtr<FVulFieldDescription> BaseDesc;
+			if (BaseType.IsSet())
+			{
+				BaseDesc = Descriptions.Contains(BaseType->TypeId) ? Descriptions[BaseType->TypeId] : nullptr;
+			}
+			
+			if (BaseDesc.IsValid())
+			{
+				Out += FString::Printf(
+					TEXT("export interface %s extends %s {"),
+					*TypeName,
+					*BaseDesc->GetTypeName().GetValue()
+				);
+			} else
+			{
+				Out += FString::Printf(TEXT("export interface %s {"), *TypeName);
+			}
 			Out += LINE_TERMINATOR;
 
-			for (const auto Entry : Description->Properties)
+			for (const auto PropertyEntry : Description->Properties)
 			{
-				Out += Indent + Entry.Key + ": " + Entry.Value->TypeScriptType() + ";";
+				if (BaseDesc.IsValid())
+				{
+					const auto BaseProp = BaseDesc->GetProperty(PropertyEntry.Key);
+					if (BaseProp.IsValid() && AreEquivalent(BaseProp, PropertyEntry.Value))
+					{
+						// Skip duplicate properties as their presence in the
+						// base type implies the property on subtypes.
+						continue;
+					}
+				}
+				
+				Out += Indent + PropertyEntry.Key + ": " + PropertyEntry.Value->TypeScriptType() + ";";
 				Out += LINE_TERMINATOR;
 			}
 
@@ -172,21 +270,16 @@ FString FVulFieldDescription::TypeScriptDefinitions() const
 	return Out;
 }
 
-void FVulFieldDescription::GetNamedTypes(TArray<TSharedPtr<FVulFieldDescription>>& Types) const
+void FVulFieldDescription::GetNamedTypes(TMap<FString, TSharedPtr<FVulFieldDescription>>& Types) const
 {
 	if (TypeId.IsSet())
 	{
-		const auto AlreadyExists = Types.IndexOfByPredicate([&](const TSharedPtr<FVulFieldDescription>& Existing)
-		{
-			return Existing->TypeId == TypeId;
-		});
-
-		if (AlreadyExists != INDEX_NONE)
+		if (Types.Contains(TypeId.GetValue()))
 		{
 			return;
 		}
-		
-		Types.Add(MakeShared<FVulFieldDescription>(*this));
+
+		Types.Add(TypeId.GetValue(), MakeShared<FVulFieldDescription>(*this));
 	}
 
 	for (const auto Prop : Properties)
@@ -343,6 +436,16 @@ FString FVulFieldDescription::TypeScriptType() const
 	if (KnownType.IsSet())
 	{
 		return KnownType.GetValue();
+	}
+
+	if (ConstValue.IsValid())
+	{
+		if (ConstOf.IsValid() && ConstOf->HasEnumValue(ConstValue->AsString()) && ConstOf->TypeId.IsSet())
+		{
+			return ConstOf->GetTypeName().GetValue() + "." + ConstValue->AsString();
+		}
+		
+		return VulRuntime::Field::JsonToString(ConstValue);
 	}
 
 	if (Type == EJson::String)

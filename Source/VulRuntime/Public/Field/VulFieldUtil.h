@@ -60,6 +60,12 @@ namespace VulRuntime::Field
 	template <typename CharType = TCHAR, typename PrintPolicy = TCondensedJsonPrintPolicy<CharType>>
 	FString JsonToString(const TSharedPtr<FJsonValue>& Json)
 	{
+		// UE Json serialization doesn't support non-objects.
+		if (Json->Type == EJson::String)
+		{
+			return "\"" + Json->AsString() + "\"";
+		}
+		
 		FString Out;
 		auto Writer = TJsonWriterFactory<CharType, PrintPolicy>::Create(&Out);
 		if (!FJsonSerializer::Serialize(Json, "", Writer))

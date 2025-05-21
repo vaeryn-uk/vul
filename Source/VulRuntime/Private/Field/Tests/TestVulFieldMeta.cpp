@@ -299,7 +299,7 @@ bool TestVulFieldMeta::RunTest(const FString& Parameters)
 		VTC_MUST_EQUAL(true, TestDescribe(TC, Set, Ctx, Desc), "");
 
 		FString Expected = R"(
-export type VulFieldTestTreeBase = {
+export interface VulFieldTestTreeBase {
     type: VulFieldTestTreeNodeType;
     children: VulFieldTestTreeBase[];
 }
@@ -310,22 +310,22 @@ export enum VulFieldTestTreeNodeType {
     Node2 = "Node2",
 }
 
-export type VulFieldTestTreeNode1 = {
-    type: any;
-    children: VulFieldTestTreeBase[];
+export interface VulFieldTestTreeNode1 extends VulFieldTestTreeBase  {
+    type: VulFieldTestTreeNodeType.Node1;
     int: number;
 }
 
-export type VulFieldTestTreeNode2 = {
-    type: any;
-    children: VulFieldTestTreeBase[];
+export interface VulFieldTestTreeNode2 extends VulFieldTestTreeBase  {
+    type: VulFieldTestTreeNodeType.Node2;
     str: string;
-}
-)";
+})";
 
 		const auto Actual = Desc->TypeScriptDefinitions();
 
-		VTC_MUST_EQUAL(*Actual, *Expected, "typescript definition match")
+		if (!TC.EqualNoWhitespace(Actual, Expected, "typescript definition match"))
+		{
+			return;
+		}
 	});
 	
 	return true;

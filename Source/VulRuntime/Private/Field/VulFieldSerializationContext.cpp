@@ -140,9 +140,17 @@ bool FVulFieldSerializationContext::GenerateAbstractDescription(
 
 		if (DiscField.IsSet() && Entry.DiscriminatorValue.IsSet())
 		{
-			const auto Discriminator = MakeShared<FVulFieldDescription>();
-			Discriminator->Const(MakeShared<FJsonValueString>(Entry.DiscriminatorValue.GetValue()()));
-			SubDesc->Prop(DiscField.GetValue(), Discriminator, true);
+			if (const auto DiscriminatorDesc = SubDesc->GetProperty(DiscField.GetValue()))
+			{
+				const auto Discriminator = MakeShared<FVulFieldDescription>();
+				
+				Discriminator->Const(
+					MakeShared<FJsonValueString>(Entry.DiscriminatorValue.GetValue()()),
+					DiscriminatorDesc
+				);
+				
+				SubDesc->Prop(DiscField.GetValue(), Discriminator, true);
+			}
 		}
 
 		Subtypes.Add(SubDesc);
