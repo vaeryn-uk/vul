@@ -356,3 +356,20 @@ struct TVulFieldSerializer<TVulDataPtr<T>>
 		return Out.VulFieldSet().Deserialize(Data, Ctx);
 	}
 };
+
+template <typename T>
+struct TVulFieldMeta<TVulDataPtr<T>>
+{
+	static bool Describe(FVulFieldSerializationContext& Ctx, TSharedPtr<FVulFieldDescription>& Description)
+	{
+		if (Ctx.Flags.IsEnabled(VulDataPtr_SerializationFlag_Short, Ctx.State.Errors.GetPath()))
+		{
+			Description->String();
+			return true;
+		}
+
+		Ctx.State.Errors.Add(TEXT("Descriptions of TVulDataPtr<> are not supported with VulDataPtr_SerializationFlag_Short disabled"));
+
+		return false;
+	}
+};

@@ -137,6 +137,8 @@ public:
 	typedef TPair<TSharedPtr<TVulNumber>, TSharedPtr<TVulNumber>> FClamp;
 	using FModification = TVulNumberModification<NumberType, ModificationId, DefaultIdGenerator>;
 
+	VULFLD_TYPE(TVulNumber, "VulNumber")
+
 	/**
 	 * Helper to create a clamp definition where either boundary is optional and expressed
 	 * as a single number.
