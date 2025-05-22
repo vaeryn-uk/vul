@@ -293,11 +293,13 @@ bool TestVulFieldMeta::RunTest(const FString& Parameters)
 		TSharedPtr<FVulFieldTestTreeBase> Base;
 		FMyStringAlias StrAlias;
 		UVulFieldTestUObject1* Obj;
+		FVulSingleFieldType SingleFieldType;
 		
 		FVulFieldSet Set;
 		Set.Add(FVulField::Create(&Base), "base");
 		Set.Add(FVulField::Create(&StrAlias), "strAlias");
 		Set.Add(FVulField::Create(&Obj), "uObject");
+		Set.Add(FVulField::Create(&SingleFieldType), "singleField");
 		
 		FVulFieldSerializationContext Ctx;
 		TSharedPtr<FVulFieldDescription> Desc = MakeShared<FVulFieldDescription>();
@@ -335,6 +337,8 @@ export interface VulFieldTestUObject1 {
 export interface VulFieldTestUObject2 {
 	str: string;
 }
+
+export type SingleFieldType = number;
 )";
 
 		const auto Actual = Desc->TypeScriptDefinitions();

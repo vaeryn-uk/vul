@@ -285,6 +285,8 @@ public:
 
 struct FVulSingleFieldType
 {
+	VULFLD_TYPE(FVulSingleFieldType, "SingleFieldType")
+	
 	int Value = 0;
 	
 	FVulField VulField() const

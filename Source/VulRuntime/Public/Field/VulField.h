@@ -239,3 +239,14 @@ struct TVulFieldSerializer<T>
 		return Out.VulField().Deserialize(Data, Ctx);
 	}
 };
+
+template<HasVulField T>
+struct TVulFieldMeta<T>
+{
+	static bool Describe(FVulFieldSerializationContext& Ctx, TSharedPtr<FVulFieldDescription>& Description)
+	{
+		T Default;
+
+		return Default.VulField().Describe(Ctx, Description);
+	}
+};
