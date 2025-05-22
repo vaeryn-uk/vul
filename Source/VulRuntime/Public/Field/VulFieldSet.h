@@ -331,7 +331,10 @@ struct TVulFieldMeta<TScriptInterface<T>>
 			return false;
 		}
 
-		Ctx.RegisterDescription<T>(Description);
+		if (bool _; !Ctx.RegisterDescription<T>(Description, _))
+		{
+			return false;
+		}
 
 		return true;
 	}

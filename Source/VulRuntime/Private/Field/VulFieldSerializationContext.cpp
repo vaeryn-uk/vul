@@ -131,6 +131,7 @@ bool FVulFieldSerializationContext::GenerateBaseTypeDescription(
 
 		if (!Entry.DescribeFn(*this, SubDesc))
 		{
+			State.Errors.Add(TEXT("Failed to describe subtype %s"), *Entry.Name);
 			return false;
 		}
 
@@ -155,8 +156,7 @@ bool FVulFieldSerializationContext::GenerateBaseTypeDescription(
 	if (!Subtypes.IsEmpty())
 	{
 		Description->Union(Subtypes);
-		return true;
 	}
 
-	return false;
+	return true;
 }

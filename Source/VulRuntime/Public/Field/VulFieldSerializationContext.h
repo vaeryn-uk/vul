@@ -130,19 +130,20 @@ struct VULRUNTIME_API FVulFieldSerializationContext
 	int DefaultPrecision = 1;
 
 	/**
-	 * Registers the given description pointer with this context, returning false if already registered.
+	 * Registers the given description pointer with this context, returning true if no errors.
 	 *
 	 * Usually consumers don't need to worry about this and can just call Describe instead, but
 	 * there are rare situations where this registration needs to happen without full Description
 	 * recursion.
 	 */
 	template <typename T>
-	bool RegisterDescription(TSharedPtr<FVulFieldDescription>& Description)
+	bool RegisterDescription(TSharedPtr<FVulFieldDescription>& Description, bool& AlreadyKnown)
 	{
 		if (State.TypeDescriptions.Contains(VulRuntime::Field::TypeId<T>()))
 		{
 			Description = State.TypeDescriptions[VulRuntime::Field::TypeId<T>()];
-			return false;
+			AlreadyKnown = true;
+			return true;
 		}
 
 		const auto TypeId = VulRuntime::Field::TypeId<T>(); 
@@ -155,7 +156,10 @@ struct VULRUNTIME_API FVulFieldSerializationContext
 				State.TypeDescriptions.Add(TypeId, Description);
 			}
 				
-			GenerateBaseTypeDescription(TypeId, Description);
+			if (!GenerateBaseTypeDescription(TypeId, Description))
+			{
+				return false;
+			}
 		}
 
 		return true;
@@ -168,9 +172,14 @@ struct VULRUNTIME_API FVulFieldSerializationContext
 	) {
 		return State.Errors.WithIdentifierCtx(IdentifierCtx, [&]
 		{
-			if (!RegisterDescription<T>(Description))
+			bool AlreadyKnown = false;
+			if (!RegisterDescription<T>(Description, AlreadyKnown))
 			{
-				// Type already known, no need to duplicate.
+				return false;
+			}
+			
+			if (AlreadyKnown)
+			{
 				return true;
 			}
 			
@@ -242,6 +251,8 @@ private:
 	 * Generate a description for a type if it's a base type with 1 or more subtypes.
 	 * 
 	 * A OneOf/union of all subtypes.
+	 *
+	 * Returns true if no error (not necessarily that a base type was generated). 
 	 */
 	bool GenerateBaseTypeDescription(const FString& TypeId, const TSharedPtr<FVulFieldDescription>& Description);
 };
