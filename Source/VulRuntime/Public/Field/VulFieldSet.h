@@ -317,3 +317,22 @@ struct TVulFieldSerializer<TScriptInterface<T>>
 		return true;
 	}
 };
+
+template <typename T>
+struct TVulFieldMeta<TScriptInterface<T>>
+{
+	static bool Describe(FVulFieldSerializationContext& Ctx, TSharedPtr<FVulFieldDescription>& Description)
+	{
+		// We don't expect any field integration with interfaces beyond they're registered
+		// types so the rest of the meta system can describe their concrete implementations.
+		if (!FVulFieldRegistry::Get().Has<T>())
+		{
+			Ctx.State.Errors.Add(TEXT("Cannot describe UINTERFACE as it has not been registered with VULFLD_ macros"));
+			return false;
+		}
+
+		Ctx.RegisterDescription<T>(Description);
+
+		return true;
+	}
+};

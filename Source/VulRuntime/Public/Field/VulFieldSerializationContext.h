@@ -129,6 +129,38 @@ struct VULRUNTIME_API FVulFieldSerializationContext
 	 */
 	int DefaultPrecision = 1;
 
+	/**
+	 * Registers the given description pointer with this context, returning false if already registered.
+	 *
+	 * Usually consumers don't need to worry about this and can just call Describe instead, but
+	 * there are rare situations where this registration needs to happen without full Description
+	 * recursion.
+	 */
+	template <typename T>
+	bool RegisterDescription(TSharedPtr<FVulFieldDescription>& Description)
+	{
+		if (State.TypeDescriptions.Contains(VulRuntime::Field::TypeId<T>()))
+		{
+			Description = State.TypeDescriptions[VulRuntime::Field::TypeId<T>()];
+			return false;
+		}
+
+		const auto TypeId = VulRuntime::Field::TypeId<T>(); 
+		if (IsKnownType(TypeId))
+		{
+			Description->BindToType<T>();
+				
+			if (!State.TypeDescriptions.Contains(TypeId))
+			{
+				State.TypeDescriptions.Add(TypeId, Description);
+			}
+				
+			GenerateBaseTypeDescription(TypeId, Description);
+		}
+
+		return true;
+	}
+
 	template <typename T>
 	bool Describe(
 		TSharedPtr<FVulFieldDescription>& Description,
@@ -136,23 +168,10 @@ struct VULRUNTIME_API FVulFieldSerializationContext
 	) {
 		return State.Errors.WithIdentifierCtx(IdentifierCtx, [&]
 		{
-			if (State.TypeDescriptions.Contains(VulRuntime::Field::TypeId<T>()))
+			if (!RegisterDescription<T>(Description))
 			{
-				Description = State.TypeDescriptions[VulRuntime::Field::TypeId<T>()];
+				// Type already known, no need to duplicate.
 				return true;
-			}
-
-			const auto TypeId = VulRuntime::Field::TypeId<T>(); 
-			if (IsKnownType(TypeId))
-			{
-				Description->BindToType<T>();
-				
-				if (!State.TypeDescriptions.Contains(TypeId))
-				{
-					State.TypeDescriptions.Add(TypeId, Description);
-				}
-				
-				GenerateAbstractDescription(TypeId, Description);
 			}
 			
 			const auto Result = TVulFieldMeta<T>::Describe(*this, Description);
@@ -220,10 +239,11 @@ private:
 	bool IsKnownType(const FString& TypeId) const;
 
 	/**
-	 * Generate a description for a type if it's an abstract type with a discriminator
-	 * field; i.e. is a OneOf/union of all subtypes.
+	 * Generate a description for a type if it's a base type with 1 or more subtypes.
+	 * 
+	 * A OneOf/union of all subtypes.
 	 */
-	bool GenerateAbstractDescription(const FString& TypeId, const TSharedPtr<FVulFieldDescription>& Description);
+	bool GenerateBaseTypeDescription(const FString& TypeId, const TSharedPtr<FVulFieldDescription>& Description);
 };
 
 struct VULRUNTIME_API FVulFieldDeserializationContext

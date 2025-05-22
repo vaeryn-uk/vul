@@ -117,17 +117,13 @@ bool FVulFieldSerializationContext::IsKnownType(const FString& TypeId) const
 	return FVulFieldRegistry::Get().Has(TypeId);
 }
 
-bool FVulFieldSerializationContext::GenerateAbstractDescription(
+bool FVulFieldSerializationContext::GenerateBaseTypeDescription(
 	const FString& TypeId,
 	const TSharedPtr<FVulFieldDescription>& Description
 ) {
 	TArray<TSharedPtr<FVulFieldDescription>> Subtypes;
 
 	const auto DiscField = FVulFieldRegistry::Get().GetType(TypeId)->DiscriminatorField;
-	if (!DiscField.IsSet())
-	{
-		return false;
-	}
 
 	for (const auto Entry : FVulFieldRegistry::Get().GetSubtypes(TypeId))
 	{

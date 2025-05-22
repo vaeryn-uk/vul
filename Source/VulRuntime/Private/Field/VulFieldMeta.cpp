@@ -222,7 +222,7 @@ FString FVulFieldDescription::TypeScriptDefinitions() const
 			Out += "}";
 			Out += LINE_TERMINATOR;
 			Out += LINE_TERMINATOR;
-		} else if (!Description->Properties.IsEmpty())
+		} else if (!Description->Properties.IsEmpty() || Entry.Value->UnionTypes.Num() > 0)
 		{
 			const auto BaseType = FVulFieldRegistry::Get().GetBaseType(Entry.Key);
 			TSharedPtr<FVulFieldDescription> BaseDesc;

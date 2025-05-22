@@ -83,7 +83,7 @@ enum class EVulFieldTestTreeNodeType : uint8
 	Node2,
 };
 
-VUL_FIELD_TYPE(EVulFieldTestTreeNodeType, "VulFieldTestTreeNodeType");
+VULFLD_TYPE(EVulFieldTestTreeNodeType, "VulFieldTestTreeNodeType");
 
 // Substituted-out macro of DECLARE_ENUM_TO_STRING + DEFINE_ENUM_TO_STRING to save needing a .cpp file.
 FString EnumToString(const EVulFieldTestTreeNodeType Value)
@@ -94,7 +94,8 @@ FString EnumToString(const EVulFieldTestTreeNodeType Value)
 
 struct FVulFieldTestTreeBase
 {
-	VUL_FIELD_ABSTRACT(FVulFieldTestTreeBase, "VulFieldTestTreeBase", "type")
+	VULFLD_TYPE(FVulFieldTestTreeBase, "VulFieldTestTreeBase")
+	VULFLD_DISCRIMINATOR_FIELD(FVulFieldTestTreeBase, "type")
 	
 	virtual ~FVulFieldTestTreeBase() = default;
 	
@@ -119,7 +120,8 @@ protected:
 
 struct FVulFieldTestTreeNode1 : FVulFieldTestTreeBase
 {
-	VUL_FIELD_EXTENDS(FVulFieldTestTreeNode1, "VulFieldTestTreeNode1", FVulFieldTestTreeBase, EVulFieldTestTreeNodeType::Node1);
+	VULFLD_DERIVED_TYPE(FVulFieldTestTreeNode1, "VulFieldTestTreeNode1", FVulFieldTestTreeBase);
+	VULFLD_DERIVED_DISCRIMINATOR(FVulFieldTestTreeNode1, EVulFieldTestTreeNodeType::Node1);
 	
 	int Int;
 
@@ -135,7 +137,8 @@ protected:
 
 struct FVulFieldTestTreeNode2 : FVulFieldTestTreeBase
 {
-	VUL_FIELD_EXTENDS(FVulFieldTestTreeNode2, "VulFieldTestTreeNode2", FVulFieldTestTreeBase, EVulFieldTestTreeNodeType::Node2);
+	VULFLD_DERIVED_TYPE(FVulFieldTestTreeNode2, "VulFieldTestTreeNode2", FVulFieldTestTreeBase);
+	VULFLD_DERIVED_DISCRIMINATOR(FVulFieldTestTreeNode2, EVulFieldTestTreeNodeType::Node2);
 	
 	FString String;
 
@@ -207,6 +210,8 @@ class UVulFieldTestInterface1 : public UInterface
 class IVulFieldTestInterface1
 {
 	GENERATED_BODY()
+	
+	VULFLD_TYPE(IVulFieldTestInterface1, "IVulFieldTestInterface1");
 };
 
 UINTERFACE()
@@ -225,7 +230,7 @@ class UVulFieldTestUObject2 : public UObject, public IVulFieldSetAware, public I
 {
 	GENERATED_BODY()
 
-	VUL_FIELD_TYPE(UVulFieldTestUObject2, "VulFieldTestUObject2");
+	VULFLD_DERIVED_TYPE(UVulFieldTestUObject2, "VulFieldTestUObject2", IVulFieldTestInterface1);
 	
 public:
 	FString Str;
@@ -239,11 +244,29 @@ public:
 };
 
 UCLASS()
+class UVulFieldTestUObject3 : public UObject, public IVulFieldSetAware, public IVulFieldTestInterface1
+{
+	GENERATED_BODY()
+
+	VULFLD_DERIVED_TYPE(UVulFieldTestUObject3, "VulFieldTestUObject3", IVulFieldTestInterface1);
+	
+public:
+	bool Bool;
+
+	virtual FVulFieldSet VulFieldSet() const override
+	{
+		FVulFieldSet Set;
+		Set.Add(FVulField::Create(&Bool), "bool", true);
+		return Set;
+	}
+};
+
+UCLASS()
 class UVulFieldTestUObject1 : public UObject, public IVulFieldSetAware
 {
 	GENERATED_BODY()
 
-	VUL_FIELD_TYPE(UVulFieldTestUObject1, "VulFieldTestUObject1");
+	VULFLD_TYPE(UVulFieldTestUObject1, "VulFieldTestUObject1");
 
 public:
 	FString Str;
@@ -291,7 +314,7 @@ inline bool CtxContainsError(VulTest::TC TC, const FVulFieldSerializationErrors&
 
 struct FMyStringAlias : FString
 {
-	VUL_FIELD_TYPE(FMyStringAlias, "StringAlias");
+	VULFLD_TYPE(FMyStringAlias, "StringAlias");
 };
 
 template<>

@@ -345,5 +345,40 @@ export interface VulFieldTestUObject2 {
 		}
 	});
 	
+	VulTest::Case(this, "Typescript definitions - UINTERFACES", [](VulTest::TC TC)
+	{
+		TSharedPtr<FVulFieldTestTreeBase> Base;
+
+		TScriptInterface<IVulFieldTestInterface1> Interface;
+		
+		FVulFieldSet Set;
+		Set.Add(FVulField::Create(&Interface), "uInterface");
+		
+		FVulFieldSerializationContext Ctx;
+		TSharedPtr<FVulFieldDescription> Desc = MakeShared<FVulFieldDescription>();
+		VTC_MUST_EQUAL(true, TestDescribe(TC, Set, Ctx, Desc), "");
+
+		FString Expected = R"(
+export interface IVulFieldTestInterface1 {
+
+}
+
+export interface VulFieldTestUObject2 extends IVulFieldTestInterface1 {
+	str: string;
+}
+
+export interface VulFieldTestUObject3 extends IVulFieldTestInterface1 {
+	bool: boolean;
+}
+)";
+
+		const auto Actual = Desc->TypeScriptDefinitions();
+
+		if (!TC.EqualNoWhitespace(Actual, Expected, "typescript definition match"))
+		{
+			return;
+		}
+	});
+	
 	return true;
 }

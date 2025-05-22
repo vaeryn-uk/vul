@@ -14,5 +14,11 @@ _Highly experimental. Likely doesn't work for complex object structures not desc
   metadata implementations are less likely to be needed.
 * Non-VulFieldSet types will need their own `TVulMeta::Describe()`. This plugin
   provides this for common types, such as strings, numeric and UE pointers & containers.
-* Define known types  via `VUL_FIELD_` macros.
+* Define known types  via `VULFLD_` macros.
 * Supports polymorphism via discriminator fields (e.g. a `type` field).
+  ```
+  Event: { id: string, type: enum }
+  DamageDoneEvent: { amount: number } // extends Event, type=DamageDone.
+  PlayerJoinedEvent: { playerId: string } // extends Event, type=PlayerJoined.
+  ```
+  Where Event is our base type, and "type" is the discriminator field.
