@@ -1,5 +1,11 @@
 ﻿#include "Field/VulFieldRegistry.h"
 
+FVulFieldRegistry& FVulFieldRegistry::Get()
+{
+	static FVulFieldRegistry Registry;
+	return Registry;
+}
+
 TArray<FVulFieldRegistry::FEntry> FVulFieldRegistry::GetSubtypes(const FString& TypeId) const
 {
 	TArray<FEntry> Out;

@@ -9,7 +9,7 @@
 
 struct FVulFieldSerializationContext;
 
-struct FVulFieldRegistry
+struct VULRUNTIME_API FVulFieldRegistry
 {
 	struct FEntry {
 		/* Do not mutate FEntrys directly; see VULFLD_ macros */
@@ -50,10 +50,7 @@ struct FVulFieldRegistry
 		TFunction<bool (FVulFieldSerializationContext&, TSharedPtr<FVulFieldDescription>&)> DescribeFn;
 	};
 
-	static FVulFieldRegistry& Get() {
-		static FVulFieldRegistry Registry;
-		return Registry;
-	}
+	static FVulFieldRegistry& Get();
 
 	template <typename T>
 	TOptional<FEntry> GetType() const
