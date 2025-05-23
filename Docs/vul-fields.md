@@ -22,6 +22,8 @@ _Highly experimental. Likely doesn't work for complex object structures not desc
   PlayerJoinedEvent: { playerId: string } // extends Event, type=PlayerJoined.
   ```
   Where Event is our base type, and "type" is the discriminator field.
+* You must export types from your game code via `MYGAMEPROJECT_API` macros when using `VULFLD_` macros.
+  This includes `DECLARE_ENUM_TO_STRING()`; should be `MYGAMEPROJECT_API DECLARE_ENUM_TO_STRING()`.
 
 ### TODOs
 

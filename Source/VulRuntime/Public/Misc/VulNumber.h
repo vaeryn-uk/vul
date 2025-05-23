@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "VulObjectWatches.h"
+#include "Field/VulFieldRegistry.h"
 #include "UObject/Object.h"
 
 /**
@@ -22,6 +23,8 @@ template <typename NumberType, typename ModificationId = FGuid, typename Default
 struct TVulNumberModification
 {
 	ModificationId Id;
+
+	VULFLD_TYPE(TVulNumberModification, "VulNumberModification")
 
 	bool operator==(const TVulNumberModification& Other) const
 	{

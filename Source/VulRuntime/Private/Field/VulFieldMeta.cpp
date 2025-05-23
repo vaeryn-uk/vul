@@ -464,6 +464,11 @@ FString FVulFieldDescription::TypeScriptType(const bool AllowRegisteredType) con
 		return VulRuntime::Field::JsonToString(ConstValue);
 	}
 
+	if (AdditionalProperties.IsValid())
+	{
+		return "Record<string, " + AdditionalProperties->TypeScriptType() + ">";
+	}
+
 	if (Type == EJson::String)
 	{
 		return "string";
