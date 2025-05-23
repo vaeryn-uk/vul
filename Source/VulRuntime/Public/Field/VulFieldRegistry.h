@@ -85,6 +85,12 @@ struct VULRUNTIME_API FVulFieldRegistry
 	template <typename T>
 	FEntry& Register(const FString& TypeName)
 	{
+		if (Entries.Contains(VulRuntime::Field::TypeId<T>()))
+		{
+			// Cannot override for now. Works around a VUL_RUN_ONCE macro not actually running once.
+			return Entries[VulRuntime::Field::TypeId<T>()];
+		}
+		
 		return Entries.Add(VulRuntime::Field::TypeId<T>(), FEntry{
 			.Name = TypeName,
 			.TypeId = VulRuntime::Field::TypeId<T>(),

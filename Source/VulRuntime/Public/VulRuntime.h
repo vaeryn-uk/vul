@@ -3,7 +3,7 @@
 #include "CoreMinimal.h"
 #include "Modules/ModuleManager.h"
 
-DECLARE_LOG_CATEGORY_EXTERN(LogVul, Display, Display)
+VULRUNTIME_API DECLARE_LOG_CATEGORY_EXTERN(LogVul, Display, Display)
 
 class FVulRuntimeModule : public IModuleInterface
 {
@@ -55,7 +55,7 @@ return Name.IsValid(); \
 #define VUL_CONCAT_IMPL(x, y) x##y
 #define VUL_CONCAT(x, y) VUL_CONCAT_IMPL(x, y)
 
-// Use a helper macro to ensure the counter is expanded once
+// TODO: This actual runs multiple times. Once per translation unit.
 #define VUL_RUN_ONCE(code_block) \
      VUL_RUN_ONCE_INTERNAL(VUL_CONCAT(FVUL_InitOnceStruct_, __COUNTER__), code_block)
 
