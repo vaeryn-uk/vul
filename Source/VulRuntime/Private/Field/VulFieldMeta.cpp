@@ -193,6 +193,7 @@ FString FVulFieldDescription::TypeScriptDefinitions() const
 	TMap<FString, TSharedPtr<FVulFieldDescription>> Descriptions;
 
 	const static FString Indent = "\t";
+	const static FString LineEnding = "\n";
 
 	FString Out;
 	
@@ -206,7 +207,7 @@ FString FVulFieldDescription::TypeScriptDefinitions() const
 		if (!Description->EnumValues.IsEmpty())
 		{
 			Out += FString::Printf(TEXT("export enum %s {"), *TypeName);
-			Out += LINE_TERMINATOR;
+			Out += LineEnding;
 
 			for (const auto Value : Description->EnumValues)
 			{
@@ -216,12 +217,12 @@ FString FVulFieldDescription::TypeScriptDefinitions() const
 				}
 				
 				Out += Indent + Value->AsString() + " = \"" + Value->AsString() + "\",";
-				Out += LINE_TERMINATOR;
+				Out += LineEnding;
 			}
 			
 			Out += "}";
-			Out += LINE_TERMINATOR;
-			Out += LINE_TERMINATOR;
+			Out += LineEnding;
+			Out += LineEnding;
 		} else if (!Description->Properties.IsEmpty() || Entry.Value->UnionTypes.Num() > 0)
 		{
 			const auto BaseType = FVulFieldRegistry::Get().GetBaseType(Entry.Key);
@@ -242,7 +243,7 @@ FString FVulFieldDescription::TypeScriptDefinitions() const
 			{
 				Out += FString::Printf(TEXT("export interface %s {"), *TypeName);
 			}
-			Out += LINE_TERMINATOR;
+			Out += LineEnding;
 
 			for (const auto PropertyEntry : Description->Properties)
 			{
@@ -258,12 +259,12 @@ FString FVulFieldDescription::TypeScriptDefinitions() const
 				}
 				
 				Out += Indent + PropertyEntry.Key + ": " + PropertyEntry.Value->TypeScriptType() + ";";
-				Out += LINE_TERMINATOR;
+				Out += LineEnding;
 			}
 
 			Out += "}";
-			Out += LINE_TERMINATOR;
-			Out += LINE_TERMINATOR;
+			Out += LineEnding;
+			Out += LineEnding;
 		} else if (TArray{EJson::String, EJson::Number, EJson::Boolean}.Contains(Entry.Value->Type))
 		{
 			// Simple type alias.
@@ -272,8 +273,8 @@ FString FVulFieldDescription::TypeScriptDefinitions() const
 				*Entry.Value->GetTypeName().GetValue(),
 				*Entry.Value->TypeScriptType(false)
 			);
-			Out += LINE_TERMINATOR;
-			Out += LINE_TERMINATOR;
+			Out += LineEnding;
+			Out += LineEnding;
 		}
 	}
 
@@ -305,6 +306,11 @@ void FVulFieldDescription::GetNamedTypes(TMap<FString, TSharedPtr<FVulFieldDescr
 	if (Items.IsValid())
 	{
 		Items->GetNamedTypes(Types);
+	}
+
+	if (AdditionalProperties.IsValid())
+	{
+		AdditionalProperties->GetNamedTypes(Types);
 	}
 }
 

@@ -22,3 +22,7 @@ _Highly experimental. Likely doesn't work for complex object structures not desc
   PlayerJoinedEvent: { playerId: string } // extends Event, type=PlayerJoined.
   ```
   Where Event is our base type, and "type" is the discriminator field.
+
+### TODOs
+
+* Use new meta system to automatically deserialize based on discriminator.
