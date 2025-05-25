@@ -3,8 +3,12 @@
 #include "CoreMinimal.h"
 #include "VulFieldSerializer.h"
 #include "VulFieldCommonSerializers.h"
+#include "VulFieldRegistry.h"
 #include "VulFieldSerializationContext.h"
 #include "UObject/Object.h"
+
+template <typename T>
+concept SerializerHasDescribe = requires { TVulFieldSerializer<T>::Describe(); };
 
 /**
  * A field that can be conveniently serialized/deserialized.
@@ -47,6 +51,13 @@ struct VULRUNTIME_API FVulField
 		) {
 			return Ctx.Deserialize<T>(Value, *static_cast<T*>(Ptr), IdentifierCtx);
 		};
+
+		if (FVulFieldRegistry::Get().Has<T>())
+		{
+			Out.TypeId = FVulFieldRegistry::Get().GetType<T>()->TypeId;
+		}
+
+		Out.InitDescribeFn<T>();
 		
 		return Out;
 	}
@@ -80,6 +91,8 @@ struct VULRUNTIME_API FVulField
 			Ctx.State.Errors.Add(TEXT("cannot write read-only field"));
 			return false;
 		};
+		
+		Out.InitDescribeFn<T>();
 		
 		return Out;
 	}
@@ -158,9 +171,29 @@ struct VULRUNTIME_API FVulField
 
 	bool IsReadOnly() const;
 
+	bool Describe(
+		FVulFieldSerializationContext& Ctx,
+		TSharedPtr<FVulFieldDescription>& Description,
+		const TOptional<VulRuntime::Field::FPathItem>& IdentifierCtx = {}
+	) const;
+
+	TOptional<FString> GetTypeId() const { return TypeId; }
+
 private:
 	bool bIsReadOnly = false;
 	void* Ptr = nullptr;
+
+	template <typename T>
+	void InitDescribeFn()
+	{
+		DescribeFn = [](
+			FVulFieldSerializationContext& Ctx,
+			TSharedPtr<FVulFieldDescription>& Description,
+			const TOptional<VulRuntime::Field::FPathItem>& IdentifierCtx
+		) {
+			return Ctx.Describe<T>(Description, IdentifierCtx);
+		};
+	}
 	
 	TFunction<bool (
 		void*,
@@ -175,6 +208,14 @@ private:
 		FVulFieldDeserializationContext& Ctx,
 		const TOptional<VulRuntime::Field::FPathItem>& IdentifierCtx
 	)> Write;
+
+	TFunction<bool (
+		FVulFieldSerializationContext& Ctx,
+		TSharedPtr<FVulFieldDescription>&,
+		const TOptional<VulRuntime::Field::FPathItem>& IdentifierCtx
+	)> DescribeFn;
+
+	TOptional<FString> TypeId;
 };
 
 template <typename T>
@@ -196,5 +237,16 @@ struct TVulFieldSerializer<T>
 	static bool Deserialize(const TSharedPtr<FJsonValue>& Data, T& Out, struct FVulFieldDeserializationContext& Ctx)
 	{
 		return Out.VulField().Deserialize(Data, Ctx);
+	}
+};
+
+template<HasVulField T>
+struct TVulFieldMeta<T>
+{
+	static bool Describe(FVulFieldSerializationContext& Ctx, TSharedPtr<FVulFieldDescription>& Description)
+	{
+		T Default;
+
+		return Default.VulField().Describe(Ctx, Description);
 	}
 };

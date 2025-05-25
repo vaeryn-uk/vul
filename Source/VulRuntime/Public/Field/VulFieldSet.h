@@ -23,15 +23,26 @@ struct VULRUNTIME_API FVulFieldSet
 		 * The default behaviour is to omit empty values (checked via VulRuntime::Field::IsEmpty).
 		 */
 		FEntry& EvenIfEmpty(const bool IncludeIfEmpty = true);
+
+		TOptional<FString> GetTypeId() const;
 	private:
 		friend FVulFieldSet;
 		FVulField Field;
+		bool OmitIfEmpty = true;
+		
 		TFunction<bool (
 			TSharedPtr<FJsonValue>&,
 			FVulFieldSerializationContext&,
-			const TOptional<VulRuntime::Field::FPathItem>& IdentifierCtx = {}
+			const TOptional<VulRuntime::Field::FPathItem>& IdentifierCtx
 		)> Fn = nullptr;
-		bool OmitIfEmpty = true;
+		
+		TFunction<bool (
+			FVulFieldSerializationContext& Ctx,
+			TSharedPtr<FVulFieldDescription>& Description,
+			const TOptional<VulRuntime::Field::FPathItem>& IdentifierCtx
+		)> Describe = nullptr;
+
+		TOptional<FString> TypeId;
 	};
 	
 	/**
@@ -72,10 +83,24 @@ struct VULRUNTIME_API FVulFieldSet
 			RefField = Identifier;
 		}
 
+		Created.Describe = [](
+			FVulFieldSerializationContext& Ctx,
+			TSharedPtr<FVulFieldDescription>& Description,
+			const TOptional<VulRuntime::Field::FPathItem>& IdentifierCtx = {}
+		) {
+			return Ctx.Describe<T>(Description, IdentifierCtx);
+		};
+
+		if (FVulFieldRegistry::Get().Has<T>())
+		{
+			Created.TypeId = FVulFieldRegistry::Get().GetType<T>()->TypeId;
+		}
+
 		return Entries.Add(Identifier, Created);
 	}
 
 	TSharedPtr<FJsonValue> GetRef(FVulFieldSerializationState& State) const;
+	bool HasRef() const;
 
 	bool Serialize(TSharedPtr<FJsonValue>& Out) const;
 	bool Serialize(TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx) const;
@@ -121,6 +146,8 @@ struct VULRUNTIME_API FVulFieldSet
 		FVulFieldDeserializationContext Ctx;
 		return DeserializeFromJson<CharType>(JsonStr, Ctx);
 	}
+
+	bool Describe(FVulFieldSerializationContext& Ctx, TSharedPtr<FVulFieldDescription>& Description) const;
 private:
 	TMap<FString, FEntry> Entries;
 	TOptional<FString> RefField = {};
@@ -148,8 +175,8 @@ public:
 template <typename T>
 concept HasVulFieldSet = std::is_base_of_v<IVulFieldSetAware, T> || 
 	requires(const T& Obj) {
-	{ Obj.VulFieldSet() } -> std::same_as<FVulFieldSet>;
-};
+		{ Obj.VulFieldSet() } -> std::same_as<FVulFieldSet>;
+	};
 
 template <HasVulFieldSet T>
 struct TVulFieldSerializer<T>
@@ -170,10 +197,48 @@ struct TVulFieldSerializer<T>
 	}
 };
 
+template <typename T>
+concept IsUObject = std::is_base_of_v<UObject, T>;
+
+template <HasVulFieldSet T>
+struct TVulFieldMeta<T>
+{
+	static bool Describe(FVulFieldSerializationContext& Ctx, TSharedPtr<FVulFieldDescription>& Description)
+	{
+		FVulFieldSet Set;
+		if constexpr (IsUObject<T>)
+		{
+			T* Default = NewObject<T>();
+			Set = Default->VulFieldSet();
+		} else
+		{
+			T Default;
+			Set = Default.VulFieldSet();
+		}
+
+		return Set.Describe(Ctx, Description);
+	}
+};
+
 template<HasVulFieldSet T>
 struct TVulFieldRefResolver<T>
 {
-	static constexpr bool SupportsRef = true;
+	static bool SupportsRef()
+	{
+		FVulFieldSet Set;
+		
+		if constexpr (IsUObject<T>)
+		{
+			T* Default = NewObject<T>();
+			Set = Default->VulFieldSet();
+		} else
+		{
+			T Default;
+			Set = Default.VulFieldSet();
+		}
+
+		return Set.HasRef();
+	}
 	
 	static bool Resolve(
 		const T& Value,
@@ -185,8 +250,24 @@ struct TVulFieldRefResolver<T>
 	}
 };
 
-template <typename T>
-concept IsUObject = std::is_base_of_v<UObject, T>;
+template<>
+struct TVulFieldRefResolver<UObject>
+{
+	// Special case: UObject ref resolution needs to report itself as supported,
+	// even though actual UObjects cannot resolve references alone. This is
+	// required due to how TScriptInterface deserialization uses UObjects, then
+	// at runtime uses UE reflection to resolve to the correct derived UObject type.
+	
+	static bool SupportsRef() { return true; }
+	
+	static bool Resolve(
+		const UObject& Value,
+		TSharedPtr<FJsonValue>& Out,
+		FVulFieldSerializationState& State
+	) {
+		return false;
+	}
+};
 
 template <IsUObject T>
 struct TVulFieldSerializer<T*>
@@ -268,6 +349,28 @@ struct TVulFieldSerializer<TScriptInterface<T>>
 		}
 
 		Out = TScriptInterface<T>(Obj);
+		return true;
+	}
+};
+
+template <typename T>
+struct TVulFieldMeta<TScriptInterface<T>>
+{
+	static bool Describe(FVulFieldSerializationContext& Ctx, TSharedPtr<FVulFieldDescription>& Description)
+	{
+		// We don't expect any field integration with interfaces beyond their registered
+		// types so the rest of the meta system can describe their concrete implementations.
+		if (!FVulFieldRegistry::Get().Has<T>())
+		{
+			Ctx.State.Errors.Add(TEXT("Cannot describe UINTERFACE as it has not been registered with VULFLD_ macros"));
+			return false;
+		}
+
+		if (bool _; !Ctx.RegisterDescription<T>(Description, _))
+		{
+			return false;
+		}
+
 		return true;
 	}
 };

@@ -12,6 +12,8 @@
 template <typename NumberType>
 struct TVulMeasure
 {
+	VULFLD_TYPE(TVulMeasure, "VulMeasure")
+	
 	TVulMeasure()
 	{
 		Init(0, 0);

@@ -2,9 +2,10 @@
 
 #include "CoreMinimal.h"
 #include "Field/VulField.h"
+#include "Field/VulFieldRegistry.h"
 #include "Field/VulFieldSet.h"
 #include "UObject/Object.h"
-#include "Field/VulFieldSet.h"
+#include "VulTest/Public/TestCase.h"
 #include "TestVulFieldStructs.generated.h"
 
 USTRUCT()
@@ -40,7 +41,7 @@ struct FVulTestFieldParent
 	
 	FVulTestFieldType Inner;
 	
-	FVulFieldSet FieldSet() const
+	FVulFieldSet VulFieldSet() const
 	{
 		FVulFieldSet Out;
 
@@ -64,6 +65,16 @@ struct TVulFieldSerializer<FVulTestFieldType>
 	}
 };
 
+template<>
+struct TVulFieldMeta<FVulTestFieldType>
+{
+	static bool Describe(FVulFieldSerializationContext Ctx, TSharedPtr<FVulFieldDescription>& Desc)
+	{
+		FVulTestFieldType F;
+		return F.FieldSet().Describe(Ctx, Desc);
+	}
+};
+
 UENUM()
 enum class EVulFieldTestTreeNodeType : uint8
 {
@@ -71,6 +82,8 @@ enum class EVulFieldTestTreeNodeType : uint8
 	Node1,
 	Node2,
 };
+
+VULFLD_TYPE(EVulFieldTestTreeNodeType, "VulFieldTestTreeNodeType");
 
 // Substituted-out macro of DECLARE_ENUM_TO_STRING + DEFINE_ENUM_TO_STRING to save needing a .cpp file.
 FString EnumToString(const EVulFieldTestTreeNodeType Value)
@@ -81,6 +94,9 @@ FString EnumToString(const EVulFieldTestTreeNodeType Value)
 
 struct FVulFieldTestTreeBase
 {
+	VULFLD_TYPE(FVulFieldTestTreeBase, "VulFieldTestTreeBase")
+	VULFLD_DISCRIMINATOR_FIELD(FVulFieldTestTreeBase, "type")
+	
 	virtual ~FVulFieldTestTreeBase() = default;
 	
 	TArray<TSharedPtr<FVulFieldTestTreeBase>> Children;
@@ -104,6 +120,9 @@ protected:
 
 struct FVulFieldTestTreeNode1 : FVulFieldTestTreeBase
 {
+	VULFLD_DERIVED_TYPE(FVulFieldTestTreeNode1, "VulFieldTestTreeNode1", FVulFieldTestTreeBase);
+	VULFLD_DERIVED_DISCRIMINATOR(FVulFieldTestTreeNode1, EVulFieldTestTreeNodeType::Node1);
+	
 	int Int;
 
 	virtual EVulFieldTestTreeNodeType Type() const override { return EVulFieldTestTreeNodeType::Node1; }
@@ -118,6 +137,9 @@ protected:
 
 struct FVulFieldTestTreeNode2 : FVulFieldTestTreeBase
 {
+	VULFLD_DERIVED_TYPE(FVulFieldTestTreeNode2, "VulFieldTestTreeNode2", FVulFieldTestTreeBase);
+	VULFLD_DERIVED_DISCRIMINATOR(FVulFieldTestTreeNode2, EVulFieldTestTreeNodeType::Node2);
+	
 	FString String;
 
 	virtual EVulFieldTestTreeNodeType Type() const override { return EVulFieldTestTreeNodeType::Node2; }
@@ -188,6 +210,8 @@ class UVulFieldTestInterface1 : public UInterface
 class IVulFieldTestInterface1
 {
 	GENERATED_BODY()
+	
+	VULFLD_TYPE(IVulFieldTestInterface1, "IVulFieldTestInterface1");
 };
 
 UINTERFACE()
@@ -205,6 +229,8 @@ UCLASS()
 class UVulFieldTestUObject2 : public UObject, public IVulFieldSetAware, public IVulFieldTestInterface1
 {
 	GENERATED_BODY()
+
+	VULFLD_DERIVED_TYPE(UVulFieldTestUObject2, "VulFieldTestUObject2", IVulFieldTestInterface1);
 	
 public:
 	FString Str;
@@ -218,9 +244,29 @@ public:
 };
 
 UCLASS()
+class UVulFieldTestUObject3 : public UObject, public IVulFieldSetAware, public IVulFieldTestInterface1
+{
+	GENERATED_BODY()
+
+	VULFLD_DERIVED_TYPE(UVulFieldTestUObject3, "VulFieldTestUObject3", IVulFieldTestInterface1);
+	
+public:
+	bool Bool;
+
+	virtual FVulFieldSet VulFieldSet() const override
+	{
+		FVulFieldSet Set;
+		Set.Add(FVulField::Create(&Bool), "bool", true);
+		return Set;
+	}
+};
+
+UCLASS()
 class UVulFieldTestUObject1 : public UObject, public IVulFieldSetAware
 {
 	GENERATED_BODY()
+
+	VULFLD_TYPE(UVulFieldTestUObject1, "VulFieldTestUObject1");
 
 public:
 	FString Str;
@@ -239,10 +285,125 @@ public:
 
 struct FVulSingleFieldType
 {
+	VULFLD_TYPE(FVulSingleFieldType, "SingleFieldType")
+	
 	int Value = 0;
 	
 	FVulField VulField() const
 	{
 		return FVulField::Create(&Value);
+	}
+};
+
+inline bool CtxContainsError(VulTest::TC TC, const FVulFieldSerializationErrors& Errors, const FString& Term)
+{
+	for (const auto Err : Errors.Errors)
+	{
+		if (Err.Contains(Term))
+		{
+			return true;
+		}
+	}
+
+	TC.Error(FString::Printf(
+		TEXT("Could not find error term \"%s\" in errors (%d):\n%s"),
+		*Term,
+		Errors.Errors.Num(),
+		*FString::Join(Errors.Errors, TEXT("\n"))
+	));
+	return false;
+}
+
+struct FMyStringAlias : FString
+{
+	VULFLD_TYPE(FMyStringAlias, "StringAlias");
+};
+
+template<>
+struct TVulFieldSerializer<FMyStringAlias>
+{
+	static bool Serialize(const FMyStringAlias& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
+	{
+		// Not used.
+		return true;
+	}
+
+	static bool Deserialize(const TSharedPtr<FJsonValue>& Data, FMyStringAlias& Out, FVulFieldDeserializationContext& Ctx)
+	{
+		// Not used.
+		return true;
+	}
+};
+
+template <>
+struct TVulFieldMeta<FMyStringAlias>
+{
+	static bool Describe(FVulFieldSerializationContext Ctx, TSharedPtr<FVulFieldDescription>& Desc)
+	{
+		Desc->String();
+		return true;
+	}
+};
+
+UCLASS()
+class UVulTestFieldReferencing : public UObject, public IVulFieldSetAware
+{
+	GENERATED_BODY()
+
+	VULFLD_TYPE(UVulTestFieldReferencing, "VulTestFieldReferencing")
+
+public:
+
+	FVulFieldSet VulFieldSet() const
+	{
+		FVulFieldSet Set;
+
+		Set.Add(FVulField::Create(Name), "name", true);
+
+		return Set;
+	}
+
+	FString Name;
+};
+
+UCLASS()
+class UVulTestFieldReferencingContainer1 : public UObject, public IVulFieldSetAware
+{
+	GENERATED_BODY()
+
+	VULFLD_TYPE(UVulTestFieldReferencingContainer1, "VulTestFieldReferencingContainer1")
+
+public:
+	UPROPERTY()
+	UVulTestFieldReferencing* Child;
+	
+	FVulFieldSet VulFieldSet() const
+	{
+		FVulFieldSet Set;
+
+		Set.Add(FVulField::Create(Child), "child");
+
+		return Set;
+	}
+};
+
+UCLASS()
+class UVulTestFieldReferencingContainer2 : public UObject, public IVulFieldSetAware
+{
+	GENERATED_BODY()
+
+	VULFLD_TYPE(UVulTestFieldReferencingContainer2, "VulTestFieldReferencingContainer2")
+
+public:
+	UPROPERTY()
+	UVulTestFieldReferencing* Child;
+	
+	FVulFieldSet VulFieldSet() const
+	{
+		FVulFieldSet Set;
+
+		Set.Add(FVulField::Create(Child), "child");
+
+		return Set;
 	}
 };

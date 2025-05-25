@@ -46,6 +46,36 @@ namespace VulTest
 			return TestInstance->TestEqual(FormatTestTitle("TOptional value check", Message), Actual.GetValue(), Expected.GetValue());
 		}
 
+		bool EqualNoWhitespace(const FString& Actual, const FString& Expected, const FString& Message = FString()) const
+		{
+			FString ActualStripped = Actual;
+			ActualStripped.ReplaceInline(TEXT(" "), TEXT(""));
+			ActualStripped.ReplaceInline(TEXT("\t"), TEXT(""));
+			ActualStripped.ReplaceInline(TEXT("\n"), TEXT(""));
+			ActualStripped.ReplaceInline(TEXT("\r"), TEXT(""));
+			
+			FString ExpectedStripped = Expected;
+			ExpectedStripped.ReplaceInline(TEXT(" "), TEXT(""));
+			ExpectedStripped.ReplaceInline(TEXT("\t"), TEXT(""));
+			ExpectedStripped.ReplaceInline(TEXT("\n"), TEXT(""));
+			ExpectedStripped.ReplaceInline(TEXT("\r"), TEXT(""));
+
+			if (ActualStripped != ExpectedStripped)
+			{
+				TestInstance->AddError(FormatTestTitle(
+					FString::Printf(
+						TEXT("Whitespace-stripped equality failed.\nActual:\n%s\nExpected:\n%s"),
+						*Actual,
+						*Expected
+					),
+					Message
+				));
+				return false;
+			}
+
+			return true;
+		}
+
 		/**
 		 * Asserts two TMap values are equal.
 		 */
@@ -104,6 +134,56 @@ namespace VulTest
 			}
 
 			return Ok;
+		}
+		
+		/**
+		 * Asserts that two JSON strings are equal, regardless formatting differences (e.g. whitespace).
+		 */
+		bool JsonObjectsEqual(const FString& ActualJson, const FString& ExpectedJson, const FString Message = FString()) const
+		{
+			TSharedPtr<FJsonObject> ActualJsonObject;
+			TSharedPtr<FJsonObject> ExpectedJsonObject;
+
+			TSharedRef<TJsonReader<>> ActualReader = TJsonReaderFactory<>::Create(ActualJson);
+			TSharedRef<TJsonReader<>> ExpectedReader = TJsonReaderFactory<>::Create(ExpectedJson);
+
+			if (!FJsonSerializer::Deserialize(ActualReader, ActualJsonObject) || !ActualJsonObject.IsValid())
+			{
+				TestInstance->AddError(FormatTestTitle(
+					Message,
+					FString::Printf(TEXT("Failed to parse actual JSON str. %s"), *Message)
+				));
+				return false;
+			}
+
+			if (!FJsonSerializer::Deserialize(ExpectedReader, ExpectedJsonObject) || !ExpectedJsonObject.IsValid())
+			{
+				TestInstance->AddError(FormatTestTitle(
+					Message,
+					FString::Printf(TEXT("Failed to parse expected JSON string. %s"), *Message)
+				));
+				return false;
+			}
+
+			FString NormalizedActual, NormalizedExpected;
+			TSharedRef<TJsonWriter<>> ActualWriter = TJsonWriterFactory<>::Create(&NormalizedActual);
+			TSharedRef<TJsonWriter<>> ExpectedWriter = TJsonWriterFactory<>::Create(&NormalizedExpected);
+			
+			FJsonSerializer::Serialize(ActualJsonObject.ToSharedRef(), ActualWriter);
+			FJsonSerializer::Serialize(ExpectedJsonObject.ToSharedRef(), ExpectedWriter);
+
+			if (NormalizedActual != NormalizedExpected)
+			{
+				TestInstance->AddError(FormatTestTitle(Message, FString::Printf(
+					TEXT("JSON does not match. %s\nActual: %s\nExpected: %s"),
+					*Message,
+					*NormalizedActual,
+					*NormalizedExpected
+				)));
+				return false;
+			}
+
+			return true;
 		}
 
 		template <typename Type>

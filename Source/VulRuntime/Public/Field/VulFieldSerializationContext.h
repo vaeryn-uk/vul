@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "VulFieldMeta.h"
 #include "VulFieldRefResolver.h"
 #include "VulFieldSerializationOptions.h"
 #include "VulFieldSerializer.h"
@@ -73,8 +74,6 @@ private:
 	VulRuntime::Field::FPath Stack;
 	FString PathStr() const;
 
-	static FString JsonTypeToString(EJson Type);
-
 	int MaxStackSize = 100;
 };
 
@@ -90,6 +89,7 @@ struct VULRUNTIME_API FVulFieldSerializationState
 {
 	FVulFieldSerializationMemory Memory;
 	FVulFieldSerializationErrors Errors;
+	TMap<FString, TSharedPtr<FVulFieldDescription>> TypeDescriptions;
 	
 	template <typename T>
 	bool ResolveRef(const T& From, TSharedPtr<FJsonValue>& Ref)
@@ -114,6 +114,11 @@ struct VULRUNTIME_API FVulFieldSerializationState
 template <typename T>
 concept SerializerHasSetup = requires { TVulFieldSerializer<T>::Setup(); };
 
+template <typename T>
+concept HasMetaDescribe = requires(FVulFieldSerializationContext& Ctx, TSharedPtr<FVulFieldDescription>& Description) {
+	{ TVulFieldMeta<T>::Describe(Ctx, Description) } -> std::same_as<bool>;
+};
+
 struct VULRUNTIME_API FVulFieldSerializationContext
 {
 	FVulFieldSerializationState State;
@@ -123,6 +128,87 @@ struct VULRUNTIME_API FVulFieldSerializationContext
 	 * When serializing floating points, how many decimal places should we include?
 	 */
 	int DefaultPrecision = 1;
+
+	/**
+	 * Registers the given description pointer with this context, returning true if no errors.
+	 *
+	 * Usually consumers don't need to worry about this and can just call Describe instead, but
+	 * there are rare situations where this registration needs to happen without full Description
+	 * recursion.
+	 */
+	template <typename T>
+	bool RegisterDescription(TSharedPtr<FVulFieldDescription>& Description, bool& AlreadyKnown)
+	{
+		if (State.TypeDescriptions.Contains(VulRuntime::Field::TypeId<T>()))
+		{
+			Description = State.TypeDescriptions[VulRuntime::Field::TypeId<T>()];
+			AlreadyKnown = true;
+			return true;
+		}
+
+		const auto TypeId = VulRuntime::Field::TypeId<T>(); 
+		if (IsKnownType(TypeId))
+		{
+			Description->BindToType<T>();
+				
+			if (!State.TypeDescriptions.Contains(TypeId))
+			{
+				State.TypeDescriptions.Add(TypeId, Description);
+			}
+				
+			if (!GenerateBaseTypeDescription(TypeId, Description))
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	template <typename T>
+	bool Describe(
+		TSharedPtr<FVulFieldDescription>& Description,
+		const TOptional<VulRuntime::Field::FPathItem>& IdentifierCtx = {}
+	) {
+		return State.Errors.WithIdentifierCtx(IdentifierCtx, [&]
+		{
+			const bool SupportsRef = Flags.SupportsReferencing<T>(State.Errors.GetPath());
+			
+			bool AlreadyKnown = false;
+			if (!RegisterDescription<T>(Description, AlreadyKnown))
+			{
+				return false;
+			}
+			
+			if (AlreadyKnown)
+			{
+				if (SupportsRef)
+				{
+					Description->MaybeRef();
+				}
+				
+				return true;
+			}
+
+			const auto Result = TVulFieldMeta<T>::Describe(*this, Description);
+			
+			if (SupportsRef)
+			{
+				Description->MaybeRef();
+			}
+
+			if (!Description->IsValid())
+			{
+				State.Errors.Add(
+					TEXT("TVulFieldMeta::Describe() did not produce a valid description. type info: %s"),
+					*VulRuntime::Field::TypeInfo<T>()
+				);
+				return false;
+			}
+
+			return Result;
+		});
+	}
 
 	template <typename T>
 	bool Serialize(
@@ -137,8 +223,7 @@ struct VULRUNTIME_API FVulFieldSerializationContext
 		
 		return State.Errors.WithIdentifierCtx(IdentifierCtx, [&]
 		{
-			constexpr bool TypeSupportsRef = TVulFieldRefResolver<T>::SupportsRef;
-			const bool SupportsRef = TypeSupportsRef && Flags.IsEnabled(VulFieldSerializationFlag_Referencing, State.Errors.GetPath());
+			const bool SupportsRef = Flags.SupportsReferencing<T>(State.Errors.GetPath());
 			
 			TSharedPtr<FJsonValue> Ref;
 
@@ -169,6 +254,18 @@ struct VULRUNTIME_API FVulFieldSerializationContext
 			return true;
 		});
 	}
+
+private:
+	bool IsKnownType(const FString& TypeId) const;
+
+	/**
+	 * Generate a description for a type if it's a base type with 1 or more subtypes.
+	 * 
+	 * A OneOf/union of all subtypes.
+	 *
+	 * Returns true if no error (not necessarily that a base type was generated). 
+	 */
+	bool GenerateBaseTypeDescription(const FString& TypeId, const TSharedPtr<FVulFieldDescription>& Description);
 };
 
 struct VULRUNTIME_API FVulFieldDeserializationContext
@@ -191,8 +288,7 @@ struct VULRUNTIME_API FVulFieldDeserializationContext
 		
 		return State.Errors.WithIdentifierCtx(IdentifierCtx, [&]
 		{
-			constexpr bool TypeSupportsRef = TVulFieldRefResolver<T>::SupportsRef;
-			const bool SupportsRef = TypeSupportsRef && Flags.IsEnabled(VulFieldSerializationFlag_Referencing, State.Errors.GetPath());
+			const bool SupportsRef = Flags.SupportsReferencing<T>(State.Errors.GetPath());
 			
 			if (SupportsRef)
 			{

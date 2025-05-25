@@ -95,3 +95,19 @@ struct TVulFieldSerializer<TVulCopyOnWritePtr<T>>
 		return false;
 	}
 };
+
+template <typename T>
+struct TVulFieldMeta<TVulCopyOnWritePtr<T>>
+{
+	static bool Describe(FVulFieldSerializationContext& Ctx, TSharedPtr<FVulFieldDescription>& Description)
+	{
+		if (!Ctx.Describe<T>(Description))
+		{
+			return false;
+		}
+		
+		Description->Nullable();
+
+		return true;
+	}
+};

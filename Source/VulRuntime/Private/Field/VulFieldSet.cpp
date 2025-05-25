@@ -1,11 +1,21 @@
 ﻿#include "Field/VulFieldSet.h"
-
+#include "Field/VulFieldMeta.h"
 #include "Field/VulFieldUtil.h"
 
 FVulFieldSet::FEntry& FVulFieldSet::FEntry::EvenIfEmpty(const bool IncludeIfEmpty)
 {
 	OmitIfEmpty = !IncludeIfEmpty;
 	return *this; 
+}
+
+TOptional<FString> FVulFieldSet::FEntry::GetTypeId() const
+{
+	if (TypeId.IsSet())
+	{
+		return TypeId;
+	}
+
+	return Field.GetTypeId();
 }
 
 FVulFieldSet::FEntry& FVulFieldSet::Add(const FVulField& Field, const FString& Identifier, const bool IsRef)
@@ -59,6 +69,11 @@ TSharedPtr<FJsonValue> FVulFieldSet::GetRef(FVulFieldSerializationState& State) 
 	}
 	
 	return nullptr;
+}
+
+bool FVulFieldSet::HasRef() const
+{
+	return RefField.IsSet();
 }
 
 bool FVulFieldSet::Serialize(TSharedPtr<FJsonValue>& Out) const
@@ -126,6 +141,34 @@ bool FVulFieldSet::Deserialize(const TSharedPtr<FJsonValue>& Data, FVulFieldDese
 		{
 			return false;
 		}
+	}
+
+	return true;
+}
+
+bool FVulFieldSet::Describe(FVulFieldSerializationContext& Ctx, TSharedPtr<FVulFieldDescription>& Description) const
+{
+	for (const auto Entry : Entries)
+	{
+		TSharedPtr<FVulFieldDescription> Field = MakeShared<FVulFieldDescription>();
+
+		const auto KeyAsPath = VulRuntime::Field::FPathItem(TInPlaceType<FString>(), Entry.Key);
+		
+		if (Entry.Value.Fn)
+		{
+			if (!Entry.Value.Describe(Ctx, Field, KeyAsPath))
+			{
+				return false;
+			}
+		} else
+		{
+			if (!Entry.Value.Field.Describe(Ctx, Field, KeyAsPath))
+			{
+				return false;
+			}
+		}
+
+		Description->Prop(Entry.Key, Field, !Entry.Value.OmitIfEmpty);
 	}
 
 	return true;

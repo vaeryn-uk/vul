@@ -2,6 +2,8 @@
 
 #include "CoreMinimal.h"
 #include "VulObjectWatches.h"
+#include "Field/VulFieldSet.h"
+#include "Field/VulFieldRegistry.h"
 #include "UObject/Object.h"
 
 /**
@@ -22,6 +24,8 @@ template <typename NumberType, typename ModificationId = FGuid, typename Default
 struct TVulNumberModification
 {
 	ModificationId Id;
+
+	VULFLD_TYPE(TVulNumberModification, "VulNumberModification")
 
 	bool operator==(const TVulNumberModification& Other) const
 	{
@@ -136,6 +140,8 @@ class TVulNumber
 public:
 	typedef TPair<TSharedPtr<TVulNumber>, TSharedPtr<TVulNumber>> FClamp;
 	using FModification = TVulNumberModification<NumberType, ModificationId, DefaultIdGenerator>;
+
+	VULFLD_TYPE(TVulNumber, "VulNumber")
 
 	/**
 	 * Helper to create a clamp definition where either boundary is optional and expressed

@@ -3,6 +3,11 @@
 #include "CoreMinimal.h"
 #include "UObject/Object.h"
 
+template <typename T>
+concept HasEnumToString = requires(T value) {
+	{ EnumToString(value) } -> std::same_as<FString>;
+};
+
 namespace VulRuntime::Field
 {
 	/**
@@ -46,4 +51,61 @@ namespace VulRuntime::Field
 	 * This match ignores case.
 	 */
 	VULRUNTIME_API bool PathMatch(const FPath& Path, const FString& Match);
+
+	/**
+	 * Helper to return the string representation of the given JSON type.
+	 */
+	VULRUNTIME_API FString JsonTypeToString(const EJson Type);
+
+	template <typename CharType = TCHAR, typename PrintPolicy = TCondensedJsonPrintPolicy<CharType>>
+	FString JsonToString(const TSharedPtr<FJsonValue>& Json)
+	{
+		// UE Json serialization doesn't support non-objects.
+		if (Json->Type == EJson::String)
+		{
+			return "\"" + Json->AsString() + "\"";
+		}
+		
+		FString Out;
+		auto Writer = TJsonWriterFactory<CharType, PrintPolicy>::Create(&Out);
+		if (!FJsonSerializer::Serialize(Json, "", Writer))
+		{
+			return "";
+		}
+
+		return Out;
+	}
+
+	/**
+	 * Helper returning a string indicating the type T.
+	 *
+	 * Based on compiler macros, avoiding typeid(); the output will not be clean.
+	 */
+	template <typename T>
+	FString TypeInfo()
+	{
+#if defined(__clang__) || defined(__GNUC__)
+		return ANSI_TO_TCHAR(__PRETTY_FUNCTION__);
+#elif defined(_MSC_VER)
+		return ANSI_TO_TCHAR(__FUNCSIG__);
+#else
+		checkf(false, "Compiler unable to infer typeinfo")
+#endif
+	}
+ 
+	/**
+	 * Returns a unique identifier string for the C++ type `T`.
+	 * 
+	 * This identifier is consistent within a single build and runtime,
+	 * and is used by the Vul reflection system for type registration and lookup.
+	 * It can also be used in diagnostics or error messages to reference types clearly.
+	 *
+	 * Note: This ID is not stable across builds and should not be used for persistent storage
+	 * or communication between different binaries.
+	 */
+	template <typename T>
+	FString TypeId()
+	{
+		return FMD5::HashAnsiString(*TypeInfo<T>());
+	}
 }

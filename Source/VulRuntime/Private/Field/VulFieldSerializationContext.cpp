@@ -2,6 +2,7 @@
 #include "VulRuntime.h"
 #include "VulRuntimeSettings.h"
 #include "Field/VulFieldUtil.h"
+#include "Field/VulFieldRegistry.h"
 
 bool FVulFieldSerializationErrors::IsSuccess() const
 {
@@ -17,7 +18,12 @@ bool FVulFieldSerializationErrors::RequireJsonType(const TSharedPtr<FJsonValue>&
 {
 	if (Value->Type != Type)
 	{
-		Add(TEXT("Required JSON type %s, but got %s"), *JsonTypeToString(Type), *JsonTypeToString(Value->Type));
+		Add(
+			TEXT("Required JSON type %s, but got %s"),
+			*VulRuntime::Field::JsonTypeToString(Type),
+			*VulRuntime::Field::JsonTypeToString(Value->Type)
+		);
+		
 		return false;
 	}
 
@@ -106,17 +112,51 @@ FString FVulFieldSerializationErrors::PathStr() const
 	return VulRuntime::Field::PathStr(Stack);
 }
 
-FString FVulFieldSerializationErrors::JsonTypeToString(EJson Type)
+bool FVulFieldSerializationContext::IsKnownType(const FString& TypeId) const
 {
-	switch (Type)
+	return FVulFieldRegistry::Get().Has(TypeId);
+}
+
+bool FVulFieldSerializationContext::GenerateBaseTypeDescription(
+	const FString& TypeId,
+	const TSharedPtr<FVulFieldDescription>& Description
+) {
+	TArray<TSharedPtr<FVulFieldDescription>> Subtypes;
+
+	const auto DiscField = FVulFieldRegistry::Get().GetType(TypeId)->DiscriminatorField;
+
+	for (const auto Entry : FVulFieldRegistry::Get().GetSubtypes(TypeId))
 	{
-	case EJson::None: return TEXT("None");
-	case EJson::Null: return TEXT("Null");
-	case EJson::String: return TEXT("String");
-	case EJson::Number: return TEXT("Number");
-	case EJson::Boolean: return TEXT("Boolean");
-	case EJson::Array: return TEXT("Array");
-	case EJson::Object: return TEXT("Object");
-	default: return TEXT("Unknown");
+		TSharedPtr<FVulFieldDescription> SubDesc = MakeShared<FVulFieldDescription>();
+
+		if (!Entry.DescribeFn(*this, SubDesc))
+		{
+			State.Errors.Add(TEXT("Failed to describe subtype %s"), *Entry.Name);
+			return false;
+		}
+
+		if (DiscField.IsSet() && Entry.DiscriminatorValue.IsSet())
+		{
+			if (const auto DiscriminatorDesc = SubDesc->GetProperty(DiscField.GetValue()))
+			{
+				const auto Discriminator = MakeShared<FVulFieldDescription>();
+
+				Discriminator->Const(
+					MakeShared<FJsonValueString>(Entry.DiscriminatorValue.GetValue()()),
+					DiscriminatorDesc
+				);
+
+				SubDesc->Prop(DiscField.GetValue(), Discriminator, true);
+			}
+		}
+
+		Subtypes.Add(SubDesc);
 	}
+
+	if (!Subtypes.IsEmpty())
+	{
+		Description->Union(Subtypes);
+	}
+
+	return true;
 }
