@@ -71,6 +71,11 @@ TSharedPtr<FJsonValue> FVulFieldSet::GetRef(FVulFieldSerializationState& State) 
 	return nullptr;
 }
 
+bool FVulFieldSet::HasRef() const
+{
+	return RefField.IsSet();
+}
+
 bool FVulFieldSet::Serialize(TSharedPtr<FJsonValue>& Out) const
 {
 	FVulFieldSerializationContext Ctx;

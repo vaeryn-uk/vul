@@ -100,6 +100,7 @@ struct VULRUNTIME_API FVulFieldSet
 	}
 
 	TSharedPtr<FJsonValue> GetRef(FVulFieldSerializationState& State) const;
+	bool HasRef() const;
 
 	bool Serialize(TSharedPtr<FJsonValue>& Out) const;
 	bool Serialize(TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx) const;
@@ -222,7 +223,22 @@ struct TVulFieldMeta<T>
 template<HasVulFieldSet T>
 struct TVulFieldRefResolver<T>
 {
-	static constexpr bool SupportsRef = true;
+	static bool SupportsRef()
+	{
+		FVulFieldSet Set;
+		
+		if constexpr (IsUObject<T>)
+		{
+			T* Default = NewObject<T>();
+			Set = Default->VulFieldSet();
+		} else
+		{
+			T Default;
+			Set = Default.VulFieldSet();
+		}
+
+		return Set.HasRef();
+	}
 	
 	static bool Resolve(
 		const T& Value,
@@ -231,6 +247,25 @@ struct TVulFieldRefResolver<T>
 	) {
 		Out = Value.VulFieldSet().GetRef(State);
 		return Out.IsValid();
+	}
+};
+
+template<>
+struct TVulFieldRefResolver<UObject>
+{
+	// Special case: UObject ref resolution needs to report itself as supported,
+	// even though actual UObjects cannot resolve references alone. This is
+	// required due to how TScriptInterface deserialization uses UObjects, then
+	// at runtime uses UE reflection to resolve to the correct derived UObject type.
+	
+	static bool SupportsRef() { return true; }
+	
+	static bool Resolve(
+		const UObject& Value,
+		TSharedPtr<FJsonValue>& Out,
+		FVulFieldSerializationState& State
+	) {
+		return false;
 	}
 };
 

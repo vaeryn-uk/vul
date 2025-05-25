@@ -384,5 +384,129 @@ export interface VulFieldTestUObject3 extends IVulFieldTestInterface1 {
 		}
 	});
 	
+	VulTest::Case(this, "Typescript definitions - referencing", [](VulTest::TC TC)
+	{
+		UVulTestFieldReferencing* UVulTestFieldReferencing = nullptr;
+		UVulTestFieldReferencingContainer1* UVulTestFieldReferencingContainer1 = nullptr;
+		UVulTestFieldReferencingContainer2* UVulTestFieldReferencingContainer2 = nullptr;
+
+		FVulFieldSet Set;
+		Set.Add(FVulField::Create(UVulTestFieldReferencing), "UVulTestFieldReferencing");
+		Set.Add(FVulField::Create(UVulTestFieldReferencingContainer1), "UVulTestFieldReferencingContainer1");
+		Set.Add(FVulField::Create(UVulTestFieldReferencingContainer2), "UVulTestFieldReferencingContainer2");
+
+		FVulFieldSerializationContext Ctx;
+		TSharedPtr<FVulFieldDescription> Desc = MakeShared<FVulFieldDescription>();
+		Ctx.Flags.Set(VulFieldSerializationFlag_Referencing, false, ".UVulTestFieldReferencingContainer2");
+		VTC_MUST_EQUAL(true, TestDescribe(TC, Set, Ctx, Desc), "");
+
+		{ // json schema
+			const auto Actual = VulRuntime::Field::JsonToString(Desc->JsonSchema());
+
+			const auto Expected = R"(
+{
+  "type": "object",
+  "properties": {
+    "UVulTestFieldReferencing": {
+      "oneOf": [
+        {
+          "$ref": "#definitions/VulTestFieldReferencing"
+        },
+        {
+          "$ref": "#definitions/VulFieldRef"
+        }
+      ]
+    },
+    "UVulTestFieldReferencingContainer1": {
+      "$ref": "#definitions/VulTestFieldReferencingContainer1"
+    },
+    "UVulTestFieldReferencingContainer2": {
+      "$ref": "#definitions/VulTestFieldReferencingContainer2"
+    }
+  },
+  "definitions": {
+    "VulTestFieldReferencing": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        }
+      },
+      "x-vul-typename": "VulTestFieldReferencing"
+    },
+    "VulTestFieldReferencingContainer1": {
+      "type": "object",
+      "properties": {
+        "child": {
+          "oneOf": [
+            {
+              "$ref": "#definitions/VulTestFieldReferencing"
+            },
+            {
+              "$ref": "#definitions/VulFieldRef"
+            }
+          ]
+        }
+      },
+      "x-vul-typename": "VulTestFieldReferencingContainer1"
+    },
+    "VulTestFieldReferencingContainer2": {
+      "type": "object",
+      "properties": {
+        "child": {
+          "oneOf": [
+            {
+              "$ref": "#definitions/VulTestFieldReferencing"
+            },
+            {
+              "$ref": "#definitions/VulFieldRef"
+            }
+          ]
+        }
+      },
+      "x-vul-typename": "VulTestFieldReferencingContainer2"
+    },
+    "VulFieldRef": {
+      "type": "string",
+      "description": "A string reference to another object in the graph."
+    }
+  }
+}
+)";
+
+			if (!TC.JsonObjectsEqual(Actual, Expected, "json schemas match"))
+			{
+				return;
+			}
+		}
+
+		{ // typescript.
+			const auto Expected = R"(
+// A string reference to an existing object of the given type
+// @ts-ignore
+export type VulFieldRef<T> = string;
+
+export interface VulTestFieldReferencing {
+	name: string;
+}
+
+export interface VulTestFieldReferencingContainer1 {
+	child: (VulTestFieldReferencing | VulFieldRef<VulTestFieldReferencing>);
+}
+
+export interface VulTestFieldReferencingContainer2 {
+	child: (VulTestFieldReferencing | VulFieldRef<VulTestFieldReferencing>);
+}
+)";
+
+			const auto Actual = Desc->TypeScriptDefinitions();
+
+			if (!TC.EqualNoWhitespace(Actual, Expected, "typescript definition match"))
+			{
+				return;
+			}
+		}
+	});
+	
 	return true;
 }

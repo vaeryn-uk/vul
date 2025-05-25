@@ -98,6 +98,16 @@ bool FVulFieldDescription::AreEquivalent(
 	return true;
 }
 
+TSharedPtr<FVulFieldDescription> FVulFieldDescription::CreateVulRef()
+{
+	TSharedPtr<FVulFieldDescription> Out = MakeShared<FVulFieldDescription>();
+
+	Out->String();
+	Out->Documentation = "A string reference to another object in the graph.";
+
+	return Out;
+}
+
 void FVulFieldDescription::Union(const TArray<TSharedPtr<FVulFieldDescription>>& Subtypes)
 {
 	TArray<FVulFieldDescription> UniqueTypes;
@@ -173,6 +183,11 @@ TSharedPtr<FJsonValue> FVulFieldDescription::JsonSchema() const
 	if (!Definitions->Values.IsEmpty())
 	{
 		Out->AsObject()->Values.Add("definitions", MakeShared<FJsonValueObject>(Definitions));
+
+		if (ContainsReference())
+		{
+			Definitions->Values.Add("VulFieldRef", CreateVulRef()->JsonSchema());
+		}
 	}
 
 	return Out;
@@ -196,6 +211,14 @@ FString FVulFieldDescription::TypeScriptDefinitions() const
 	const static FString LineEnding = "\n";
 
 	FString Out;
+
+	if (ContainsReference())
+	{
+		Out += "// A string reference to an existing object of the given type" + LineEnding;
+		Out += "// @ts-ignore" + LineEnding;
+		Out += "export type VulFieldRef<T> = string;" + LineEnding;
+		Out += LineEnding;
+	}
 	
 	GetNamedTypes(Descriptions);
 
@@ -283,35 +306,13 @@ FString FVulFieldDescription::TypeScriptDefinitions() const
 
 void FVulFieldDescription::GetNamedTypes(TMap<FString, TSharedPtr<FVulFieldDescription>>& Types) const
 {
-	if (TypeId.IsSet())
+	ForEach([&](const FVulFieldDescription& Desc)
 	{
-		if (Types.Contains(TypeId.GetValue()))
+		if (Desc.TypeId.IsSet())
 		{
-			return;
+			Types.Add(Desc.TypeId.GetValue(), MakeShared<FVulFieldDescription>(Desc));
 		}
-
-		Types.Add(TypeId.GetValue(), MakeShared<FVulFieldDescription>(*this));
-	}
-
-	for (const auto Prop : Properties)
-	{
-		Prop.Value->GetNamedTypes(Types);
-	}
-
-	for (const auto Subtype : UnionTypes)
-	{
-		Subtype->GetNamedTypes(Types);
-	}
-
-	if (Items.IsValid())
-	{
-		Items->GetNamedTypes(Types);
-	}
-
-	if (AdditionalProperties.IsValid())
-	{
-		AdditionalProperties->GetNamedTypes(Types);
-	}
+	});
 }
 
 TOptional<FString> FVulFieldDescription::GetTypeName() const
@@ -322,6 +323,64 @@ TOptional<FString> FVulFieldDescription::GetTypeName() const
 	}
 
 	return TOptional<FString>();
+}
+
+bool FVulFieldDescription::ContainsReference() const
+{
+	bool Found = false;
+	
+	ForEach([&Found](const FVulFieldDescription& Description)
+	{
+		if (Description.CanBeRef)
+		{
+			Found = true;
+		}
+	});
+
+	return Found;
+}
+
+void FVulFieldDescription::ForEach(const TFunction<void(const FVulFieldDescription&)> Fn) const
+{
+	TArray<const FVulFieldDescription*> Visited;
+	ForEach(Fn, Visited);
+}
+
+void FVulFieldDescription::ForEach(
+	const TFunction<void(const FVulFieldDescription&)> Fn,
+	TArray<const FVulFieldDescription*>& Visited
+) const {
+	if (Visited.Contains(this))
+	{
+		return;
+	}
+	
+	Visited.Add(this);
+	
+	if (IsValid())
+	{
+		Fn(*this);
+	}
+
+	for (const auto Prop : Properties)
+	{
+		Prop.Value->ForEach(Fn, Visited);
+	}
+
+	for (const auto Subtype : UnionTypes)
+	{
+		Subtype->ForEach(Fn, Visited);
+	}
+
+	if (Items.IsValid())
+	{
+		Items->ForEach(Fn, Visited);
+	}
+
+	if (AdditionalProperties.IsValid())
+	{
+		AdditionalProperties->ForEach(Fn, Visited);
+	}
 }
 
 TSharedPtr<FJsonValue> FVulFieldDescription::JsonSchema(const TSharedPtr<FJsonObject>& Definitions, const bool AddToDefinitions) const
@@ -343,7 +402,26 @@ TSharedPtr<FJsonValue> FVulFieldDescription::JsonSchema(const TSharedPtr<FJsonOb
 		
 		RefObject = MakeShared<FJsonValueObject>(MakeShared<FJsonObject>(TMap<FString, TSharedPtr<FJsonValue>>{
 			{"$ref", MakeShared<FJsonValueString>(FString::Printf(TEXT("#definitions/%s"), *TypeName.GetValue()))}
-		}));;
+		}));
+
+		if (CanBeRef)
+		{
+			TSharedPtr<FJsonObject> VulFieldRef = MakeShared<FJsonObject>(TMap<FString, TSharedPtr<FJsonValue>>{
+				{"$ref", MakeShared<FJsonValueString>("#definitions/VulFieldRef")}
+			});
+
+			TArray<TSharedPtr<FJsonValue>> OneOfs = {
+				RefObject,
+				MakeShared<FJsonValueObject>(VulFieldRef)
+			};
+			
+			RefObject = MakeShared<FJsonValueObject>(MakeShared<FJsonObject>(TMap<FString, TSharedPtr<FJsonValue>>{
+				{
+					"oneOf",
+					MakeShared<FJsonValueArray>(OneOfs),
+				}
+			}));
+		}
 
 		if (Definitions->Values.Contains(TypeName.GetValue()))
 		{
@@ -438,6 +516,11 @@ TSharedPtr<FJsonValue> FVulFieldDescription::JsonSchema(const TSharedPtr<FJsonOb
 		Out->Values.Add("x-vul-typename", MakeShared<FJsonValueString>(TypeName.GetValue()));
 	}
 
+	if (Documentation.IsSet())
+	{
+		Out->Values.Add("description", MakeShared<FJsonValueString>(Documentation.GetValue()));
+	}
+
 	if (RefObject.IsValid())
 	{
 		return RefObject;
@@ -451,6 +534,11 @@ FString FVulFieldDescription::TypeScriptType(const bool AllowRegisteredType) con
 	const auto KnownType = GetTypeName();
 	if (AllowRegisteredType && KnownType.IsSet())
 	{
+		if (CanBeRef)
+		{
+			return FString::Printf(TEXT("(%s | VulFieldRef<%s>)"), *KnownType.GetValue(), *KnownType.GetValue());
+		}
+		
 		return KnownType.GetValue();
 	}
 

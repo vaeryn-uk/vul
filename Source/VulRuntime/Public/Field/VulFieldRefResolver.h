@@ -20,13 +20,13 @@ struct TVulFieldRefResolver
 	/**
 	 * This indicates to the FVulField system whether to use the referencing system at all.
 	 *
-	 * When defining resolvers for your types, this must be set as true.
+	 * When defining resolvers for your types, this must return true.
 	 *
 	 * TODO: For deserialization, note your type must support copy assignment for now.
 	 *       I.e. std::is_copy_assignable_v<T>, which precludes TUniquePtr. Fix this
 	 *       in the future to support customized copying.
 	 */
-	static constexpr bool SupportsRef = false;
+	static bool SupportsRef() { return false; }
 	
 	/**
 	 * Resolves a ref for the given value. This must set a string-like JSON value,
@@ -47,7 +47,7 @@ struct TVulFieldRefResolver
 template <typename T>
 struct TVulFieldRefResolver<TSharedPtr<T>>
 {
-	static constexpr bool SupportsRef = true;
+	static bool SupportsRef() { return TVulFieldRefResolver<T>::SupportsRef(); }
 	
 	static bool Resolve(
 		const TSharedPtr<T>& Value,
@@ -66,7 +66,7 @@ struct TVulFieldRefResolver<TSharedPtr<T>>
 template <typename T>
 struct TVulFieldRefResolver<T*>
 {
-	static constexpr bool SupportsRef = true;
+	static bool SupportsRef() { return TVulFieldRefResolver<T>::SupportsRef(); }
 	
 	static bool Resolve(
 		const T* const& Value,
@@ -85,7 +85,7 @@ struct TVulFieldRefResolver<T*>
 template <typename T>
 struct TVulFieldRefResolver<TWeakObjectPtr<T>>
 {
-	static constexpr bool SupportsRef = true;
+	static bool SupportsRef() { return TVulFieldRefResolver<T>::SupportsRef(); }
 	
 	static bool Resolve(
 		const TWeakObjectPtr<T>& Value,

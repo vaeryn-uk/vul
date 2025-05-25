@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "VulFieldUtil.h"
+#include "VulFieldRefResolver.h"
 #include "VulRuntimeSettings.h"
 #include "UObject/Object.h"
 
@@ -39,6 +40,13 @@ struct VULRUNTIME_API FVulFieldSerializationFlags
 	void Set(const FString& Option, const bool Value = true, const FString& Path = "");
 
 	bool IsEnabled(const FString& Option, const VulRuntime::Field::FPath& Path) const;
+
+	template <typename T>
+	bool SupportsReferencing(const VulRuntime::Field::FPath& Path) const
+	{
+		const bool TypeSupportsRef = TVulFieldRefResolver<T>::SupportsRef();
+		return TypeSupportsRef && IsEnabled(VulFieldSerializationFlag_Referencing, Path);
+	}
 
 	static void RegisterDefault(const FString& Option, const bool Default)
 	{

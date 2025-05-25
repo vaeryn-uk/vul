@@ -24,6 +24,8 @@ _Highly experimental. Likely doesn't work for complex object structures not desc
   Where Event is our base type, and "type" is the discriminator field.
 * You must export types from your game code via `MYGAMEPROJECT_API` macros when using `VULFLD_` macros.
   This includes `DECLARE_ENUM_TO_STRING()`; should be `MYGAMEPROJECT_API DECLARE_ENUM_TO_STRING()`.
+* Referencing is supported in TS and JSON schemas. They will export a special type, `VulFieldRef`.
+* Unlike JSON schema Typescript will only export known types via `VULFLD_`. 
 
 ### TODOs
 

@@ -172,6 +172,8 @@ struct VULRUNTIME_API FVulFieldSerializationContext
 	) {
 		return State.Errors.WithIdentifierCtx(IdentifierCtx, [&]
 		{
+			const bool SupportsRef = Flags.SupportsReferencing<T>(State.Errors.GetPath());
+			
 			bool AlreadyKnown = false;
 			if (!RegisterDescription<T>(Description, AlreadyKnown))
 			{
@@ -180,10 +182,20 @@ struct VULRUNTIME_API FVulFieldSerializationContext
 			
 			if (AlreadyKnown)
 			{
+				if (SupportsRef)
+				{
+					Description->MaybeRef();
+				}
+				
 				return true;
 			}
 			
 			const auto Result = TVulFieldMeta<T>::Describe(*this, Description);
+			
+			if (SupportsRef)
+			{
+				Description->MaybeRef();
+			}
 
 			if (!Description->IsValid())
 			{
@@ -211,8 +223,7 @@ struct VULRUNTIME_API FVulFieldSerializationContext
 		
 		return State.Errors.WithIdentifierCtx(IdentifierCtx, [&]
 		{
-			constexpr bool TypeSupportsRef = TVulFieldRefResolver<T>::SupportsRef;
-			const bool SupportsRef = TypeSupportsRef && Flags.IsEnabled(VulFieldSerializationFlag_Referencing, State.Errors.GetPath());
+			const bool SupportsRef = Flags.SupportsReferencing<T>(State.Errors.GetPath());
 			
 			TSharedPtr<FJsonValue> Ref;
 
@@ -277,8 +288,7 @@ struct VULRUNTIME_API FVulFieldDeserializationContext
 		
 		return State.Errors.WithIdentifierCtx(IdentifierCtx, [&]
 		{
-			constexpr bool TypeSupportsRef = TVulFieldRefResolver<T>::SupportsRef;
-			const bool SupportsRef = TypeSupportsRef && Flags.IsEnabled(VulFieldSerializationFlag_Referencing, State.Errors.GetPath());
+			const bool SupportsRef = Flags.SupportsReferencing<T>(State.Errors.GetPath());
 			
 			if (SupportsRef)
 			{

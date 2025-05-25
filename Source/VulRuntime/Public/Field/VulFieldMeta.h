@@ -52,6 +52,8 @@ struct VULRUNTIME_API FVulFieldDescription
 	 */
 	void Nullable() { IsNullable = true; }
 
+	static TSharedPtr<FVulFieldDescription> CreateVulRef();
+
 	/**
 	 * For fields that can be one type or another (or more).
 	 *
@@ -60,6 +62,8 @@ struct VULRUNTIME_API FVulFieldDescription
 	 * if so.
 	 */
 	void Union(const TArray<TSharedPtr<FVulFieldDescription>>& Subtypes);
+
+	void MaybeRef() { CanBeRef = true; }
 
 	void Array(const TSharedPtr<FVulFieldDescription>& ItemsDescription);
 
@@ -92,8 +96,21 @@ struct VULRUNTIME_API FVulFieldDescription
 
 	TOptional<FString> GetTypeName() const;
 
+	/**
+	 * True if any of part of the field description contains a Vul field ref.
+	 */
+	bool ContainsReference() const;
+
+	/**
+	 * Applies Fn to each field description in this recursive structure.
+	 *
+	 * Applies Fn to each unique description once, with infinite recursion protection.
+	 */
+	void ForEach(const TFunction<void (const FVulFieldDescription&)> Fn) const;
+
 private:
 	TSharedPtr<FJsonValue> JsonSchema(const TSharedPtr<FJsonObject>& Definitions, const bool AddToDefinitions = true) const;
+	void ForEach(const TFunction<void (const FVulFieldDescription&)> Fn, TArray<const FVulFieldDescription*>& Visited) const;
 
 	FString TypeScriptType(const bool AllowRegisteredType = true) const;
 	
@@ -109,6 +126,7 @@ private:
 	TSharedPtr<FJsonValue> ConstValue = nullptr;
 	TSharedPtr<FVulFieldDescription> ConstOf = nullptr;
 	TOptional<FString> TypeId;
+	TOptional<FString> Documentation = {};
 };
 
 /**

@@ -344,3 +344,66 @@ struct TVulFieldMeta<FMyStringAlias>
 		return true;
 	}
 };
+
+UCLASS()
+class UVulTestFieldReferencing : public UObject, public IVulFieldSetAware
+{
+	GENERATED_BODY()
+
+	VULFLD_TYPE(UVulTestFieldReferencing, "VulTestFieldReferencing")
+
+public:
+
+	FVulFieldSet VulFieldSet() const
+	{
+		FVulFieldSet Set;
+
+		Set.Add(FVulField::Create(Name), "name", true);
+
+		return Set;
+	}
+
+	FString Name;
+};
+
+UCLASS()
+class UVulTestFieldReferencingContainer1 : public UObject, public IVulFieldSetAware
+{
+	GENERATED_BODY()
+
+	VULFLD_TYPE(UVulTestFieldReferencingContainer1, "VulTestFieldReferencingContainer1")
+
+public:
+	UPROPERTY()
+	UVulTestFieldReferencing* Child;
+	
+	FVulFieldSet VulFieldSet() const
+	{
+		FVulFieldSet Set;
+
+		Set.Add(FVulField::Create(Child), "child");
+
+		return Set;
+	}
+};
+
+UCLASS()
+class UVulTestFieldReferencingContainer2 : public UObject, public IVulFieldSetAware
+{
+	GENERATED_BODY()
+
+	VULFLD_TYPE(UVulTestFieldReferencingContainer2, "VulTestFieldReferencingContainer2")
+
+public:
+	UPROPERTY()
+	UVulTestFieldReferencing* Child;
+	
+	FVulFieldSet VulFieldSet() const
+	{
+		FVulFieldSet Set;
+
+		Set.Add(FVulField::Create(Child), "child");
+
+		return Set;
+	}
+};
