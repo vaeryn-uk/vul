@@ -98,6 +98,15 @@ Shared references provide two main features:
 This behavior is enabled by default but can be disabled using the
 `VulFieldSerializationFlag_Referencing` flag in the `FVulFieldSerializationFlags` context.
 
+This can be set for the entire serialization, or specific to certain paths:
+
+```c++
+	FVulFieldSerializationContext Ctx;
+	// Disable any referencing for objects in the path `.foo.bar.*` in your object graph.
+	// The path param is optional.
+	Ctx.Flags.Set(VulFieldSerializationFlag_Referencing, false, ".foo.bar.*");
+```
+
 Here's what serialized data might look like for an array of characters where we have the same
 character twice:
 
