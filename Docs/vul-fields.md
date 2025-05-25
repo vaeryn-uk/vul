@@ -2,6 +2,13 @@
 
 This requires the Unreal `Json` module. C++ `concept` compiler support is also required (C++20).
 
+This header provides a simplified entry point to the Vul Field system. Include it in external modules 
+for access to core functionality:
+
+```c++
+include "Field/VulFieldSystem.h";
+```
+
 The field system is designed to support automatic serialization and deserialization of C++
 classes outside the Unreal reflection system. This template-driven feature allows serialization
 of both your native C++ and Unreal C++ types (`USTRUCT`, `UOBJECT`, etc.) with minimal
@@ -346,7 +353,7 @@ struct MYGAMEPROJECT_API FMyGameProjectEvent
     {
         FVulFieldSet Set;
         // A "virtual" field, in that is doesn't directly map to a property (and is serialize-only, no deserialize).
-        Set.Add<EMyGameProjectEventType>([]{ return GetEventType(); }, "type");
+        Set.Add<EMyGameProjectEventType>([this]{ return GetEventType(); }, "type");
         return Set;
     }
     
