@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "VulObjectWatches.h"
+#include "Field/VulFieldSet.h"
 #include "Field/VulFieldRegistry.h"
 #include "UObject/Object.h"
 

@@ -1,6 +1,7 @@
 ﻿#include "TestCase.h"
 #include "TestVulFieldStructs.h"
 #include "Misc/AutomationTest.h"
+#include "Misc/VulNumber.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	TestVulFieldMeta,
@@ -306,32 +307,36 @@ bool TestVulFieldMeta::RunTest(const FString& Parameters)
 		VTC_MUST_EQUAL(true, TestDescribe(TC, Set, Ctx, Desc), "");
 
 		FString Expected = R"(
+// A string reference to an existing object of the given type
+// @ts-ignore
+export type VulFieldRef<T> = string;
+
 export interface VulFieldTestTreeBase {
-    type: VulFieldTestTreeNodeType;
-    children: VulFieldTestTreeBase[];
+	type: VulFieldTestTreeNodeType;
+	children: VulFieldTestTreeBase[];
 }
 
 export enum VulFieldTestTreeNodeType {
-    Base = "Base",
-    Node1 = "Node1",
-    Node2 = "Node2",
+	Base = "Base",
+	Node1 = "Node1",
+	Node2 = "Node2",
 }
 
-export interface VulFieldTestTreeNode1 extends VulFieldTestTreeBase  {
-    type: VulFieldTestTreeNodeType.Node1;
-    int: number;
+export interface VulFieldTestTreeNode1 extends VulFieldTestTreeBase {
+	type: VulFieldTestTreeNodeType.Node1;
+	int: number;
 }
 
-export interface VulFieldTestTreeNode2 extends VulFieldTestTreeBase  {
-    type: VulFieldTestTreeNodeType.Node2;
-    str: string;
+export interface VulFieldTestTreeNode2 extends VulFieldTestTreeBase {
+	type: VulFieldTestTreeNodeType.Node2;
+	str: string;
 }
 
 export type StringAlias = string;
 
 export interface VulFieldTestUObject1 {
 	str: string;
-	obj: VulFieldTestUObject2;
+	obj: (VulFieldTestUObject2 | VulFieldRef<VulFieldTestUObject2>);
 }
 
 export interface VulFieldTestUObject2 {
@@ -363,8 +368,11 @@ export type SingleFieldType = number;
 		VTC_MUST_EQUAL(true, TestDescribe(TC, Set, Ctx, Desc), "");
 
 		FString Expected = R"(
-export interface IVulFieldTestInterface1 {
+// A string reference to an existing object of the given type
+// @ts-ignore
+export type VulFieldRef<T> = string;
 
+export interface IVulFieldTestInterface1 {
 }
 
 export interface VulFieldTestUObject2 extends IVulFieldTestInterface1 {
@@ -505,6 +513,40 @@ export interface VulTestFieldReferencingContainer2 {
 			{
 				return;
 			}
+		}
+	});
+	
+	VulTest::Case(this, "Typescript definitions - TVulNumber", [](VulTest::TC TC)
+	{
+		using FVulTestNumber = TVulNumber<int>;
+
+		FVulFieldSerializationContext Ctx;
+		TSharedPtr<FVulFieldDescription> Desc = MakeShared<FVulFieldDescription>();
+		VTC_MUST_EQUAL(true, TestDescribe<FVulTestNumber>(TC, Ctx, Desc), "");
+
+		const auto Expected = R"(
+export interface VulNumber {
+	base: number;
+	clamp: VulNumber[];
+	modifications: VulNumberModification[];
+	value: number;
+}
+
+export interface VulNumberModification {
+	clamp: number[];
+	pct: number;
+	basePct: number;
+	flat: number;
+	set: number;
+	id: string;
+}
+)";
+
+		const auto Actual = Desc->TypeScriptDefinitions();
+
+		if (!TC.EqualNoWhitespace(Actual, Expected, "typescript definition match"))
+		{
+			return;
 		}
 	});
 	

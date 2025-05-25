@@ -306,13 +306,35 @@ FString FVulFieldDescription::TypeScriptDefinitions() const
 
 void FVulFieldDescription::GetNamedTypes(TMap<FString, TSharedPtr<FVulFieldDescription>>& Types) const
 {
-	ForEach([&](const FVulFieldDescription& Desc)
+	if (TypeId.IsSet())
 	{
-		if (Desc.TypeId.IsSet())
+		if (Types.Contains(TypeId.GetValue()))
 		{
-			Types.Add(Desc.TypeId.GetValue(), MakeShared<FVulFieldDescription>(Desc));
+			return;
 		}
-	});
+
+		Types.Add(TypeId.GetValue(), MakeShared<FVulFieldDescription>(*this));
+	}
+
+	for (const auto Prop : Properties)
+	{
+		Prop.Value->GetNamedTypes(Types);
+	}
+
+	for (const auto Subtype : UnionTypes)
+	{
+		Subtype->GetNamedTypes(Types);
+	}
+
+	if (Items.IsValid())
+	{
+		Items->GetNamedTypes(Types);
+	}
+
+	if (AdditionalProperties.IsValid())
+	{
+		AdditionalProperties->GetNamedTypes(Types);
+	}
 }
 
 TOptional<FString> FVulFieldDescription::GetTypeName() const
@@ -327,60 +349,18 @@ TOptional<FString> FVulFieldDescription::GetTypeName() const
 
 bool FVulFieldDescription::ContainsReference() const
 {
-	bool Found = false;
-	
-	ForEach([&Found](const FVulFieldDescription& Description)
+	TMap<FString, TSharedPtr<FVulFieldDescription>> Entries;
+	GetNamedTypes(Entries);
+
+	for (const auto Entry : Entries)
 	{
-		if (Description.CanBeRef)
+		if (Entry.Value->CanBeRef)
 		{
-			Found = true;
+			return true;
 		}
-	});
-
-	return Found;
-}
-
-void FVulFieldDescription::ForEach(const TFunction<void(const FVulFieldDescription&)> Fn) const
-{
-	TArray<const FVulFieldDescription*> Visited;
-	ForEach(Fn, Visited);
-}
-
-void FVulFieldDescription::ForEach(
-	const TFunction<void(const FVulFieldDescription&)> Fn,
-	TArray<const FVulFieldDescription*>& Visited
-) const {
-	if (Visited.Contains(this))
-	{
-		return;
-	}
-	
-	Visited.Add(this);
-	
-	if (IsValid())
-	{
-		Fn(*this);
 	}
 
-	for (const auto Prop : Properties)
-	{
-		Prop.Value->ForEach(Fn, Visited);
-	}
-
-	for (const auto Subtype : UnionTypes)
-	{
-		Subtype->ForEach(Fn, Visited);
-	}
-
-	if (Items.IsValid())
-	{
-		Items->ForEach(Fn, Visited);
-	}
-
-	if (AdditionalProperties.IsValid())
-	{
-		AdditionalProperties->ForEach(Fn, Visited);
-	}
+	return false;
 }
 
 TSharedPtr<FJsonValue> FVulFieldDescription::JsonSchema(const TSharedPtr<FJsonObject>& Definitions, const bool AddToDefinitions) const

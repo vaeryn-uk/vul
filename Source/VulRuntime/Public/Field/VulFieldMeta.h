@@ -101,16 +101,8 @@ struct VULRUNTIME_API FVulFieldDescription
 	 */
 	bool ContainsReference() const;
 
-	/**
-	 * Applies Fn to each field description in this recursive structure.
-	 *
-	 * Applies Fn to each unique description once, with infinite recursion protection.
-	 */
-	void ForEach(const TFunction<void (const FVulFieldDescription&)> Fn) const;
-
 private:
 	TSharedPtr<FJsonValue> JsonSchema(const TSharedPtr<FJsonObject>& Definitions, const bool AddToDefinitions = true) const;
-	void ForEach(const TFunction<void (const FVulFieldDescription&)> Fn, TArray<const FVulFieldDescription*>& Visited) const;
 
 	FString TypeScriptType(const bool AllowRegisteredType = true) const;
 	

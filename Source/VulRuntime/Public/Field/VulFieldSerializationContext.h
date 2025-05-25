@@ -189,7 +189,7 @@ struct VULRUNTIME_API FVulFieldSerializationContext
 				
 				return true;
 			}
-			
+
 			const auto Result = TVulFieldMeta<T>::Describe(*this, Description);
 			
 			if (SupportsRef)
