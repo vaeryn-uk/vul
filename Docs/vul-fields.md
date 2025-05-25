@@ -39,6 +39,7 @@ To plug your types into the system, serialization and deserialization template s
 based on `TVulFieldSerializer<T>` must exist. This can be done in several ways:
 
 * Implement `FVulFieldSet VulFieldSet() const` on your type to return object-based representations.
+  This is the recommended method and should handle most use-cases for object-like types.
 * Implement `FVulField VulField() const` for types that can be represented as a single field
   (e.g. a string).
 * Implement your own `TVulFieldSerializer<T>` specialization for your type to implement custom
@@ -55,13 +56,6 @@ inferred.
 Importantly, while the field system uses `FJsonValue` and associated types, it is not explicitly
 limited to JSON. `FJsonValue` is chosen as a portable, standard data representation target since
 it leverages existing Unreal Engine infrastructure.
-
-Features that might be worth adding in the future:
-
-* Integration with UE's reflection system to automatically serialize and deserialize UPROPERTY chains.
-* Enum support with integer representation for more efficient serialized output.
-
-References are resolved via `TVulFieldRefResolver`, which can be specialized for your types.
 
 #### Polymorphic types
 
@@ -107,12 +101,29 @@ This behavior is enabled by default but can be disabled using the
 Here's what serialized data might look like for an array of characters where we have the same
 character twice:
 
-```
+```json
 [
-  { name: "Thor", health: 13, strength: 5, weapon: "hammer" },
+  { "name": "Thor", "health": 13, "strength": 5, "weapon": "hammer" },
   "Thor" // referenced.
 ]
 ```
+
+`FVulFieldSet` can have a field added as an identifier. This becomes the string reference that's
+used when an object is repeated. For example:
+
+```c++
+	virtual FVulFieldSet VulFieldSet() const 
+	{
+		FVulFieldSet Set;
+		Set.Add(FVulField::Create(&Name), "str", true); // This is the value that'll be used as a reference.
+		Set.Add(FVulField::Create(&Health), "health");
+		Set.Add(FVulField::Create(&Weapon), "weapon");
+		Set.Add(FVulField::Create(&Strength), "strength");
+		return Set;
+	}
+```
+
+If needed, you can implement a custom `TVulFieldRefResolver`, which can be specialized for your types.
 
 ## Metadata & Schemas
 
@@ -134,14 +145,18 @@ generation is triggered via:
 
 ```c++
 FVulFieldSerializationContext Context;
-TSharedPtr<FVulFieldDescription> Description = Context.Describe();
+TSharedPtr<FVulFieldDescription> Description = MakeShared<FVulFieldDescription>();
+
+if (!Context.Describe<MyType>(Description)) {
+    UE_LOG(LogTemp, Display, TEXT("Metadata generation failed"));
+}
 ```
 
 Which can then be output:
 ```c++
 // JSON schema.
 TSharedPtr<FJsonValue> Schema = Description->JsonSchema();
-FString Schema = VulRuntime::Field::JsonToString();
+FString Schema = VulRuntime::Field::JsonToString(Schema);
 
 // Typescript definitions.
 FString Definitions = Description->TypescriptDefinitions();
@@ -150,11 +165,15 @@ FString Definitions = Description->TypescriptDefinitions();
 The context must be configured similarly to how it would be for actual serialization, as schema
 generation respects context-specific flags and options.
 
+While `VulFieldSet()` can technically include runtime logic, this is discouraged because the metadata 
+system relies on default-constructed instances, where such logic may not be safe or meaningful.
+
 For non-`FVulFieldSet` types, metadata must be explicitly defined by specializing
 `TVulMeta::Describe<T>()`. The plugin includes default implementations for:
 
 * Primitive types (e.g. `int`, `FString`)
 * Common Unreal Engine types & containers (`FGuid`, `TArray`, `TMap`, `TOptional`, `TSharedPtr`)
+* Other Vul types, such as `TVulDataPtr` and `TVulCopyOnWritePtr`
 
 Custom types not based on `FVulFieldSet` must have a corresponding `TVulMeta::Describe`
 specialization to be compatible.
@@ -299,9 +318,12 @@ UENUM()
 enum class EMyGameProjectEventType : uint8
 {
     None,
-    PlayedJoined,
+    PlayerJoined,
     DamageDone,
 }
+
+// Note MYGAMEPROJECT_API is important here otherwise the Vul module won't link properly.
+MYGAMEPROJECT_API DECLARE_ENUM_TO_STRING(EMyGameProjectEventType); // And corresponding DEFINE_ENUM_TO_STRING in the .cpp file 
 
 USTRUCT()
 struct MYGAMEPROJECT_API FMyGameProjectEvent
@@ -314,7 +336,8 @@ struct MYGAMEPROJECT_API FMyGameProjectEvent
     FVulFieldSet VulFieldSet() const
     {
         FVulFieldSet Set;
-        Set.Add<EMyProjectEventType>([]{ return GetEventType(); }, "type");
+        // A "virtual" field, in that is doesn't directly map to a property (and is serialize-only, no deserialize).
+        Set.Add<EMyGameProjectEventType>([]{ return GetEventType(); }, "type");
         return Set;
     }
     
@@ -346,8 +369,8 @@ struct MYGAMEPROJECT_API FMyGameProjectPlayerJoinedEvent : public FMyGameProject
 {
     GENERATED_BODY()
     
-    VULFLD_DERIVED_TYPE(FMyGameProjectPlayedJoinedEvent, "MyGameProjectPlayedJoinedEvent", FMyGameProjectEvent)
-    VULFLD_DERIVED_DISCRIMINATOR(FMyGameProjectPlayedJoinedEvent, EMyGameProjectEventType::PlayedJoined)
+    VULFLD_DERIVED_TYPE(FMyGameProjectPlayerJoinedEvent, "MyGameProjectPlayerJoinedEvent", FMyGameProjectEvent)
+    VULFLD_DERIVED_DISCRIMINATOR(FMyGameProjectPlayerJoinedEvent, EMyGameProjectEventType::PlayerJoined)
     
     FVulFieldSet VulFieldSet() const
     {
@@ -358,7 +381,7 @@ struct MYGAMEPROJECT_API FMyGameProjectPlayerJoinedEvent : public FMyGameProject
     
     FString PlayerName;
     
-    virtual EMyGameProjectEventType GetEventType() const override { return EMyGameProjectEventType::PlayedJoined; } 
+    virtual EMyGameProjectEventType GetEventType() const override { return EMyGameProjectEventType::PlayerJoined; } 
 }
 ```
 
@@ -374,6 +397,8 @@ deserialization behaviors where objects are shared or cyclic.
 * JSON Schema export may be verbose due to nested objects and limited flattening.
 * Highly dynamic types or runtime-polymorphic behaviors may not produce meaningful schemas.
 
-### TODOs
+## TODOs
 
 * Use the new metadata system to automatically deserialize based on the discriminator.
+* Integration with UE's reflection system to automatically serialize and deserialize UPROPERTY chains.
+* Enum support with integer representation for more efficient serialized output.
