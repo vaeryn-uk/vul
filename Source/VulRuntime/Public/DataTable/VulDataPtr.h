@@ -357,8 +357,8 @@ struct TVulFieldSerializer<TVulDataPtr<T>>
 	}
 };
 
-template <typename T>
-struct TVulFieldMeta<TVulDataPtr<T>>
+template <>
+struct TVulFieldMeta<FVulDataPtr>
 {
 	static bool Describe(FVulFieldSerializationContext& Ctx, TSharedPtr<FVulFieldDescription>& Description)
 	{
@@ -368,8 +368,17 @@ struct TVulFieldMeta<TVulDataPtr<T>>
 			return true;
 		}
 
-		Ctx.State.Errors.Add(TEXT("Descriptions of TVulDataPtr<> are not supported with VulDataPtr_SerializationFlag_Short disabled"));
+		Ctx.State.Errors.Add(TEXT("Descriptions of FVulDataPtr are not supported with VulDataPtr_SerializationFlag_Short disabled"));
 
 		return false;
+	}
+};
+
+template <typename T>
+struct TVulFieldMeta<TVulDataPtr<T>>
+{
+	static bool Describe(FVulFieldSerializationContext& Ctx, TSharedPtr<FVulFieldDescription>& Description)
+	{
+		return TVulFieldMeta<FVulDataPtr>::Describe(Ctx, Description);
 	}
 };

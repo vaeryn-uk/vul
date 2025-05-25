@@ -323,7 +323,7 @@ struct TVulFieldMeta<TScriptInterface<T>>
 {
 	static bool Describe(FVulFieldSerializationContext& Ctx, TSharedPtr<FVulFieldDescription>& Description)
 	{
-		// We don't expect any field integration with interfaces beyond they're registered
+		// We don't expect any field integration with interfaces beyond their registered
 		// types so the rest of the meta system can describe their concrete implementations.
 		if (!FVulFieldRegistry::Get().Has<T>())
 		{
