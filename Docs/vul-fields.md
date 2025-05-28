@@ -141,6 +141,40 @@ used when an object is repeated. For example:
 
 If needed, you can implement a custom `TVulFieldRefResolver`, which can be specialized for your types.
 
+**Extracting References**
+
+An `FVulSerializationContext` can have its `ExtractReferences` property set to true ahead of serialization
+to extract all references to a known location. This will change root of the serialization output:
+
+```
+{
+  "refs": {
+    // ref => object map of things that are referenced.
+  },
+  "data": {
+    // your serialized data, with references back to "refs"
+  }
+```
+
+The example above would become:
+
+```json
+{
+  "refs": {
+    "Thor": { "name": "Thor", "health": 13, "strength": 5, "weapon": "hammer" }
+  },
+  "data": [
+    "Thor", // referenced.
+    "Thor"  // referenced.
+  ]
+}
+```
+
+The advantage of this approach is that consumers of serialized output know where they will
+always find the real data which simplifies resolving references.
+
+Note that deserialization support for extracted references is not yet implemented.
+
 ## Metadata & Schemas
 
 *This subsystem is experimental and subject to change. It currently handles simple and

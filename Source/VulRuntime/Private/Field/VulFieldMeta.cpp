@@ -60,7 +60,7 @@ bool FVulFieldDescription::AreEquivalent(
 	if (A->TypeId != B->TypeId) return false;
 	if (A->Type != B->Type) return false;
 	if (A->IsNullable != B->IsNullable) return false;
-	if (A->CanBeRef != B->CanBeRef) return false;
+	if (A->Referencing != B->Referencing) return false;
 	if (!AreEquivalent(A->Items, B->Items)) return false;
 	if (!AreEquivalent(A->AdditionalProperties, B->AdditionalProperties)) return false;
 	if (!AreEquivalent(A->ConstOf, B->ConstOf)) return false;
@@ -174,13 +174,13 @@ bool FVulFieldDescription::Map(
 	return true;
 }
 
-TSharedPtr<FJsonValue> FVulFieldDescription::JsonSchema(const bool ExtractRefs) const
+TSharedPtr<FJsonValue> FVulFieldDescription::JsonSchema() const
 {
 	TSharedPtr<FJsonObject> Definitions = MakeShared<FJsonObject>();
 
-	TSharedPtr<FJsonValue> Out = JsonSchema(Definitions, ExtractRefs, true);
+	TSharedPtr<FJsonValue> Out = JsonSchema(Definitions, true);
 
-	if (ExtractRefs)
+	if (ContainsReference(EReferencing::Reference))
 	{
 		TSharedPtr<FJsonValue> Refs = MakeShared<FJsonValueObject>(MakeShared<FJsonObject>(TMap<FString, TSharedPtr<FJsonValue>>{
 			{"type", MakeShared<FJsonValueString>("object")},
@@ -201,7 +201,7 @@ TSharedPtr<FJsonValue> FVulFieldDescription::JsonSchema(const bool ExtractRefs) 
 	{
 		Out->AsObject()->Values.Add("definitions", MakeShared<FJsonValueObject>(Definitions));
 
-		if (ContainsReference())
+		if (MayContainReference())
 		{
 			Definitions->Values.Add("VulFieldRef", CreateVulRef()->JsonSchema());
 		}
@@ -220,7 +220,7 @@ bool FVulFieldDescription::operator==(const FVulFieldDescription& Other) const
 	return AreEquivalent(MakeShared<FVulFieldDescription>(*this), MakeShared<FVulFieldDescription>(Other));
 }
 
-FString FVulFieldDescription::TypeScriptDefinitions(const bool ExtractRefs) const
+FString FVulFieldDescription::TypeScriptDefinitions() const
 {
 	TMap<FString, TSharedPtr<FVulFieldDescription>> Descriptions;
 
@@ -229,7 +229,7 @@ FString FVulFieldDescription::TypeScriptDefinitions(const bool ExtractRefs) cons
 
 	FString Out;
 
-	if (ContainsReference())
+	if (MayContainReference())
 	{
 		Out += "// A string reference to an existing object of the given type" + LineEnding;
 		Out += "// @ts-ignore" + LineEnding;
@@ -237,7 +237,7 @@ FString FVulFieldDescription::TypeScriptDefinitions(const bool ExtractRefs) cons
 		Out += LineEnding;
 	}
 
-	if (ExtractRefs)
+	if (ContainsReference(EReferencing::Reference))
 	{
 		Out += "export type VulRefs = Record<VulFieldRef<any>, any>;" + LineEnding;
 		Out += LineEnding;
@@ -305,7 +305,7 @@ FString FVulFieldDescription::TypeScriptDefinitions(const bool ExtractRefs) cons
 				}
 
 				const auto Separator = PropertyEntry.Value->IsPropertyRequired(PropertyEntry.Key) ? ": " : "?: ";
-				Out += Indent + PropertyEntry.Key + Separator + PropertyEntry.Value->TypeScriptType(ExtractRefs) + ";";
+				Out += Indent + PropertyEntry.Key + Separator + PropertyEntry.Value->TypeScriptType() + ";";
 				Out += LineEnding;
 			}
 
@@ -318,7 +318,7 @@ FString FVulFieldDescription::TypeScriptDefinitions(const bool ExtractRefs) cons
 			Out += FString::Printf(
 				TEXT("export type %s = %s;"),
 				*Entry.Value->GetTypeName().GetValue(),
-				*Entry.Value->TypeScriptType(ExtractRefs, false)
+				*Entry.Value->TypeScriptType(false)
 			);
 			Out += LineEnding;
 			Out += LineEnding;
@@ -361,6 +361,38 @@ void FVulFieldDescription::GetNamedTypes(TMap<FString, TSharedPtr<FVulFieldDescr
 	}
 }
 
+void FVulFieldDescription::UniqueDescriptions(
+	const FVulFieldDescription* Description,
+	TArray<const FVulFieldDescription*>& Descriptions
+) {
+	if (Descriptions.Contains(Description))
+	{
+		return;
+	}
+
+	Descriptions.Add(Description);
+
+	for (const auto Prop : Description->Properties)
+	{
+		UniqueDescriptions(Prop.Value.Get(), Descriptions);
+	}
+
+	for (const auto Subtype : Description->UnionTypes)
+	{
+		UniqueDescriptions(Subtype.Get(), Descriptions);
+	}
+
+	if (Description->Items.IsValid())
+	{
+		UniqueDescriptions(Description->Items.Get(), Descriptions);
+	}
+
+	if (Description->AdditionalProperties.IsValid())
+	{
+		UniqueDescriptions(Description->AdditionalProperties.Get(), Descriptions);
+	}
+}
+
 TOptional<FString> FVulFieldDescription::GetTypeName() const
 {
 	if (TypeId.IsSet())
@@ -371,14 +403,30 @@ TOptional<FString> FVulFieldDescription::GetTypeName() const
 	return TOptional<FString>();
 }
 
-bool FVulFieldDescription::ContainsReference() const
+bool FVulFieldDescription::ContainsReference(const EReferencing Ref) const
 {
-	TMap<FString, TSharedPtr<FVulFieldDescription>> Entries;
-	GetNamedTypes(Entries);
+	TArray<const FVulFieldDescription*> Entries;
+	UniqueDescriptions(this, Entries);
 
 	for (const auto Entry : Entries)
 	{
-		if (Entry.Value->CanBeRef)
+		if (Entry->Referencing == Ref)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool FVulFieldDescription::MayContainReference() const
+{
+	TArray<const FVulFieldDescription*> Entries;
+	UniqueDescriptions(this, Entries);
+
+	for (const auto Entry : Entries)
+	{
+		if (Entry->Referencing != EReferencing::None)
 		{
 			return true;
 		}
@@ -394,7 +442,6 @@ bool FVulFieldDescription::IsPropertyRequired(const FString& Prop) const
 
 TSharedPtr<FJsonValue> FVulFieldDescription::JsonSchema(
 	const TSharedPtr<FJsonObject>& Definitions,
-	const bool ExtractRefs,
 	const bool AddToDefinitions
 ) const {
 	if (!IsValid())
@@ -416,13 +463,13 @@ TSharedPtr<FJsonValue> FVulFieldDescription::JsonSchema(
 			{"$ref", MakeShared<FJsonValueString>(FString::Printf(TEXT("#definitions/%s"), *TypeName.GetValue()))}
 		}));
 
-		if (CanBeRef)
+		if (Referencing != EReferencing::None)
 		{
 			TSharedPtr<FJsonObject> VulFieldRef = MakeShared<FJsonObject>(TMap<FString, TSharedPtr<FJsonValue>>{
 				{"$ref", MakeShared<FJsonValueString>("#definitions/VulFieldRef")}
 			});
 
-			if (!ExtractRefs)
+			if (Referencing == EReferencing::Possible)
 			{
 				TArray<TSharedPtr<FJsonValue>> OneOfs = {
 					RefObject,
@@ -435,7 +482,7 @@ TSharedPtr<FJsonValue> FVulFieldDescription::JsonSchema(
 						MakeShared<FJsonValueArray>(OneOfs),
 					}
 				}));
-			} else
+			} else if (Referencing == EReferencing::Reference)
 			{
 				RefObject = MakeShared<FJsonValueObject>(VulFieldRef);
 			}
@@ -480,7 +527,7 @@ TSharedPtr<FJsonValue> FVulFieldDescription::JsonSchema(
 		
 		for (const auto Child : Properties)
 		{
-			ChildProperties->Values.Add(Child.Key, Child.Value->JsonSchema(Definitions, ExtractRefs));
+			ChildProperties->Values.Add(Child.Key, Child.Value->JsonSchema(Definitions));
 		}
 		
 		Out->Values.Add("properties", MakeShared<FJsonValueObject>(ChildProperties));
@@ -499,12 +546,12 @@ TSharedPtr<FJsonValue> FVulFieldDescription::JsonSchema(
 
 	if (Items.IsValid())
 	{
-		Out->Values.Add("items", Items->JsonSchema(Definitions, ExtractRefs));
+		Out->Values.Add("items", Items->JsonSchema(Definitions));
 	}
 
 	if (AdditionalProperties.IsValid())
 	{
-		Out->Values.Add("additionalProperties", AdditionalProperties->JsonSchema(Definitions, ExtractRefs));
+		Out->Values.Add("additionalProperties", AdditionalProperties->JsonSchema(Definitions));
 	}
 
 	if (!UnionTypes.IsEmpty())
@@ -513,7 +560,7 @@ TSharedPtr<FJsonValue> FVulFieldDescription::JsonSchema(
 		
 		for (const auto Subtype : UnionTypes)
 		{
-			OneOf.Add(Subtype->JsonSchema(Definitions, ExtractRefs));
+			OneOf.Add(Subtype->JsonSchema(Definitions));
 		}
 		
 		Out->Values.Add("oneOf", MakeShared<FJsonValueArray>(OneOf));
@@ -547,18 +594,18 @@ TSharedPtr<FJsonValue> FVulFieldDescription::JsonSchema(
 	return MakeShared<FJsonValueObject>(Out);
 }
 
-FString FVulFieldDescription::TypeScriptType(const bool ExtractRefs, const bool AllowRegisteredType) const
+FString FVulFieldDescription::TypeScriptType(const bool AllowRegisteredType) const
 {
 	const auto KnownType = GetTypeName();
 	if (AllowRegisteredType && KnownType.IsSet())
 	{
-		if (CanBeRef)
+		if (Referencing == EReferencing::Possible)
 		{
-			if (!ExtractRefs)
-			{
-				return FString::Printf(TEXT("(%s | VulFieldRef<%s>)"), *KnownType.GetValue(), *KnownType.GetValue());
-			}
+			return FString::Printf(TEXT("(%s | VulFieldRef<%s>)"), *KnownType.GetValue(), *KnownType.GetValue());
+		}
 
+		if (Referencing == EReferencing::Reference)
+		{
 			return FString::Printf(TEXT("VulFieldRef<%s>"), *KnownType.GetValue());
 		}
 		
@@ -577,7 +624,7 @@ FString FVulFieldDescription::TypeScriptType(const bool ExtractRefs, const bool 
 
 	if (AdditionalProperties.IsValid())
 	{
-		return "Record<string, " + AdditionalProperties->TypeScriptType(ExtractRefs) + ">";
+		return "Record<string, " + AdditionalProperties->TypeScriptType() + ">";
 	}
 
 	if (Type == EJson::String)
@@ -597,7 +644,7 @@ FString FVulFieldDescription::TypeScriptType(const bool ExtractRefs, const bool 
 
 	if (Items.IsValid())
 	{
-		return Items->TypeScriptType(ExtractRefs) + "[]";
+		return Items->TypeScriptType() + "[]";
 	}
 
 	return "any";

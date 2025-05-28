@@ -195,7 +195,11 @@ struct VULRUNTIME_API FVulFieldSerializationContext
 			{
 				if (SupportsRef)
 				{
-					Description->MaybeRef();
+					Description->Reference(
+						ExtractReferences
+							? FVulFieldDescription::EReferencing::Reference
+							: FVulFieldDescription::EReferencing::Possible
+					);
 				}
 				
 				return true;
@@ -205,7 +209,11 @@ struct VULRUNTIME_API FVulFieldSerializationContext
 			
 			if (SupportsRef)
 			{
-				Description->MaybeRef();
+				Description->Reference(
+					ExtractReferences
+						? FVulFieldDescription::EReferencing::Reference
+						: FVulFieldDescription::EReferencing::Possible
+				);
 			}
 
 			if (!Description->IsValid())

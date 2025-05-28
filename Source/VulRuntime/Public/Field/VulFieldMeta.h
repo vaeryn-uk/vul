@@ -63,7 +63,14 @@ struct VULRUNTIME_API FVulFieldDescription
 	 */
 	void Union(const TArray<TSharedPtr<FVulFieldDescription>>& Subtypes);
 
-	void MaybeRef() { CanBeRef = true; }
+	enum class EReferencing : uint8
+	{
+		None,
+		Possible,
+		Reference,
+	};
+
+	void Reference(const EReferencing Ref) { Referencing = Ref; }
 
 	void Array(const TSharedPtr<FVulFieldDescription>& ItemsDescription);
 
@@ -79,7 +86,7 @@ struct VULRUNTIME_API FVulFieldDescription
 		const TSharedPtr<FVulFieldDescription>& ValuesDescription
 	);
 
-	TSharedPtr<FJsonValue> JsonSchema(const bool ExtractRefs = false) const;
+	TSharedPtr<FJsonValue> JsonSchema() const;
 
 	bool IsValid() const;
 
@@ -87,37 +94,40 @@ struct VULRUNTIME_API FVulFieldDescription
 
 	TOptional<FString> GetTypeId() const { return TypeId; }
 
-	FString TypeScriptDefinitions(const bool ExtractRefs = false) const;
+	FString TypeScriptDefinitions() const;
 
 	/**
 	 * Extracts all descriptions that are named types, i.e. registered with FVulFieldRegistry.
 	 */
 	void GetNamedTypes(TMap<FString, TSharedPtr<FVulFieldDescription>>& Types) const;
+	
+	static void UniqueDescriptions(const FVulFieldDescription* Description, TArray<const FVulFieldDescription*>& Descriptions);
 
 	TOptional<FString> GetTypeName() const;
 
 	/**
-	 * True if any of part of the field description contains a Vul field ref.
+	 * True if any of part of the field description might contain a Vul field ref as per
+	 * the strictness provided.
 	 */
-	bool ContainsReference() const;
+	bool ContainsReference(const EReferencing Ref) const;
+	bool MayContainReference() const;
 
 	bool IsPropertyRequired(const FString& Prop) const;
 
 private:
 	TSharedPtr<FJsonValue> JsonSchema(
 		const TSharedPtr<FJsonObject>& Definitions,
-		const bool ExtractRefs,
 		const bool AddToDefinitions = true
 	) const;
 
-	FString TypeScriptType(const bool ExtractRefs, const bool AllowRegisteredType = true) const;
+	FString TypeScriptType(const bool AllowRegisteredType = true) const;
 	
 	EJson Type = EJson::None;
 	TSharedPtr<FVulFieldDescription> Items;
 	TMap<FString, TSharedPtr<FVulFieldDescription>> Properties;
 	TSharedPtr<FVulFieldDescription> AdditionalProperties;
 	TArray<FString> RequiredProperties;
-	bool CanBeRef = false;
+	EReferencing Referencing = EReferencing::None;
 	TArray<TSharedPtr<FJsonValue>> EnumValues;
 	bool IsNullable = false;
 	TArray<TSharedPtr<FVulFieldDescription>> UnionTypes = {};

@@ -535,10 +535,11 @@ export interface VulTestFieldReferencingContainer2 {
 		FVulFieldSerializationContext Ctx;
 		TSharedPtr<FVulFieldDescription> Desc = MakeShared<FVulFieldDescription>();
 		Ctx.Flags.Set(VulFieldSerializationFlag_Referencing, false, ".UVulTestFieldReferencingContainer2");
+		Ctx.ExtractReferences = true;
 		VTC_MUST_EQUAL(true, TestDescribe(TC, Set, Ctx, Desc), "");
 
 		{ // json schema
-			const auto Actual = VulRuntime::Field::JsonToString(Desc->JsonSchema(true));
+			const auto Actual = VulRuntime::Field::JsonToString(Desc->JsonSchema());
 
 			const auto Expected = R"(
 {
@@ -630,7 +631,7 @@ export interface VulTestFieldReferencingContainer2 {
 }
 )";
 
-			const auto Actual = Desc->TypeScriptDefinitions(true);
+			const auto Actual = Desc->TypeScriptDefinitions();
 
 			if (!TC.EqualNoWhitespace(Actual, Expected, "typescript definition match"))
 			{
