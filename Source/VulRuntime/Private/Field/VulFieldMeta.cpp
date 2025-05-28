@@ -174,11 +174,28 @@ bool FVulFieldDescription::Map(
 	return true;
 }
 
-TSharedPtr<FJsonValue> FVulFieldDescription::JsonSchema() const
+TSharedPtr<FJsonValue> FVulFieldDescription::JsonSchema(const bool ExtractRefs) const
 {
 	TSharedPtr<FJsonObject> Definitions = MakeShared<FJsonObject>();
 
-	auto Out = JsonSchema(Definitions, true);
+	TSharedPtr<FJsonValue> Out = JsonSchema(Definitions, ExtractRefs, true);
+
+	if (ExtractRefs)
+	{
+		TSharedPtr<FJsonValue> Refs = MakeShared<FJsonValueObject>(MakeShared<FJsonObject>(TMap<FString, TSharedPtr<FJsonValue>>{
+			{"type", MakeShared<FJsonValueString>("object")},
+		}));
+		
+		Out = MakeShared<FJsonValueObject>(MakeShared<FJsonObject>(TMap<FString, TSharedPtr<FJsonValue>>{
+			{"refs", Refs},
+			{"data", Out},
+		}));
+
+		Out = MakeShared<FJsonValueObject>(MakeShared<FJsonObject>(TMap<FString, TSharedPtr<FJsonValue>>{
+			{"type", MakeShared<FJsonValueString>("object")},
+			{"properties", Out},
+		}));
+	}
 
 	if (!Definitions->Values.IsEmpty())
 	{
@@ -203,7 +220,7 @@ bool FVulFieldDescription::operator==(const FVulFieldDescription& Other) const
 	return AreEquivalent(MakeShared<FVulFieldDescription>(*this), MakeShared<FVulFieldDescription>(Other));
 }
 
-FString FVulFieldDescription::TypeScriptDefinitions() const
+FString FVulFieldDescription::TypeScriptDefinitions(const bool ExtractRefs) const
 {
 	TMap<FString, TSharedPtr<FVulFieldDescription>> Descriptions;
 
@@ -217,6 +234,12 @@ FString FVulFieldDescription::TypeScriptDefinitions() const
 		Out += "// A string reference to an existing object of the given type" + LineEnding;
 		Out += "// @ts-ignore" + LineEnding;
 		Out += "export type VulFieldRef<T> = string;" + LineEnding;
+		Out += LineEnding;
+	}
+
+	if (ExtractRefs)
+	{
+		Out += "export type VulRefs = Record<VulFieldRef<any>, any>;" + LineEnding;
 		Out += LineEnding;
 	}
 	
@@ -281,7 +304,7 @@ FString FVulFieldDescription::TypeScriptDefinitions() const
 					}
 				}
 				
-				Out += Indent + PropertyEntry.Key + ": " + PropertyEntry.Value->TypeScriptType() + ";";
+				Out += Indent + PropertyEntry.Key + ": " + PropertyEntry.Value->TypeScriptType(ExtractRefs) + ";";
 				Out += LineEnding;
 			}
 
@@ -294,7 +317,7 @@ FString FVulFieldDescription::TypeScriptDefinitions() const
 			Out += FString::Printf(
 				TEXT("export type %s = %s;"),
 				*Entry.Value->GetTypeName().GetValue(),
-				*Entry.Value->TypeScriptType(false)
+				*Entry.Value->TypeScriptType(ExtractRefs, false)
 			);
 			Out += LineEnding;
 			Out += LineEnding;
@@ -363,8 +386,11 @@ bool FVulFieldDescription::ContainsReference() const
 	return false;
 }
 
-TSharedPtr<FJsonValue> FVulFieldDescription::JsonSchema(const TSharedPtr<FJsonObject>& Definitions, const bool AddToDefinitions) const
-{
+TSharedPtr<FJsonValue> FVulFieldDescription::JsonSchema(
+	const TSharedPtr<FJsonObject>& Definitions,
+	const bool ExtractRefs,
+	const bool AddToDefinitions
+) const {
 	if (!IsValid())
 	{
 		// If no useful description has been provided, we want to match
@@ -390,17 +416,23 @@ TSharedPtr<FJsonValue> FVulFieldDescription::JsonSchema(const TSharedPtr<FJsonOb
 				{"$ref", MakeShared<FJsonValueString>("#definitions/VulFieldRef")}
 			});
 
-			TArray<TSharedPtr<FJsonValue>> OneOfs = {
-				RefObject,
-				MakeShared<FJsonValueObject>(VulFieldRef)
-			};
-			
-			RefObject = MakeShared<FJsonValueObject>(MakeShared<FJsonObject>(TMap<FString, TSharedPtr<FJsonValue>>{
-				{
-					"oneOf",
-					MakeShared<FJsonValueArray>(OneOfs),
-				}
-			}));
+			if (!ExtractRefs)
+			{
+				TArray<TSharedPtr<FJsonValue>> OneOfs = {
+					RefObject,
+					MakeShared<FJsonValueObject>(VulFieldRef)
+				};
+				
+				RefObject = MakeShared<FJsonValueObject>(MakeShared<FJsonObject>(TMap<FString, TSharedPtr<FJsonValue>>{
+					{
+						"oneOf",
+						MakeShared<FJsonValueArray>(OneOfs),
+					}
+				}));
+			} else
+			{
+				RefObject = MakeShared<FJsonValueObject>(VulFieldRef);
+			}
 		}
 
 		if (Definitions->Values.Contains(TypeName.GetValue()))
@@ -442,7 +474,7 @@ TSharedPtr<FJsonValue> FVulFieldDescription::JsonSchema(const TSharedPtr<FJsonOb
 		
 		for (const auto Child : Properties)
 		{
-			ChildProperties->Values.Add(Child.Key, Child.Value->JsonSchema(Definitions));
+			ChildProperties->Values.Add(Child.Key, Child.Value->JsonSchema(Definitions, ExtractRefs));
 		}
 		
 		Out->Values.Add("properties", MakeShared<FJsonValueObject>(ChildProperties));
@@ -461,12 +493,12 @@ TSharedPtr<FJsonValue> FVulFieldDescription::JsonSchema(const TSharedPtr<FJsonOb
 
 	if (Items.IsValid())
 	{
-		Out->Values.Add("items", Items->JsonSchema(Definitions));
+		Out->Values.Add("items", Items->JsonSchema(Definitions, ExtractRefs));
 	}
 
 	if (AdditionalProperties.IsValid())
 	{
-		Out->Values.Add("additionalProperties", AdditionalProperties->JsonSchema(Definitions));
+		Out->Values.Add("additionalProperties", AdditionalProperties->JsonSchema(Definitions, ExtractRefs));
 	}
 
 	if (!UnionTypes.IsEmpty())
@@ -475,7 +507,7 @@ TSharedPtr<FJsonValue> FVulFieldDescription::JsonSchema(const TSharedPtr<FJsonOb
 		
 		for (const auto Subtype : UnionTypes)
 		{
-			OneOf.Add(Subtype->JsonSchema(Definitions));
+			OneOf.Add(Subtype->JsonSchema(Definitions, ExtractRefs));
 		}
 		
 		Out->Values.Add("oneOf", MakeShared<FJsonValueArray>(OneOf));
@@ -509,14 +541,19 @@ TSharedPtr<FJsonValue> FVulFieldDescription::JsonSchema(const TSharedPtr<FJsonOb
 	return MakeShared<FJsonValueObject>(Out);
 }
 
-FString FVulFieldDescription::TypeScriptType(const bool AllowRegisteredType) const
+FString FVulFieldDescription::TypeScriptType(const bool ExtractRefs, const bool AllowRegisteredType) const
 {
 	const auto KnownType = GetTypeName();
 	if (AllowRegisteredType && KnownType.IsSet())
 	{
 		if (CanBeRef)
 		{
-			return FString::Printf(TEXT("(%s | VulFieldRef<%s>)"), *KnownType.GetValue(), *KnownType.GetValue());
+			if (!ExtractRefs)
+			{
+				return FString::Printf(TEXT("(%s | VulFieldRef<%s>)"), *KnownType.GetValue(), *KnownType.GetValue());
+			}
+
+			return FString::Printf(TEXT("VulFieldRef<%s>"), *KnownType.GetValue());
 		}
 		
 		return KnownType.GetValue();
@@ -534,7 +571,7 @@ FString FVulFieldDescription::TypeScriptType(const bool AllowRegisteredType) con
 
 	if (AdditionalProperties.IsValid())
 	{
-		return "Record<string, " + AdditionalProperties->TypeScriptType() + ">";
+		return "Record<string, " + AdditionalProperties->TypeScriptType(ExtractRefs) + ">";
 	}
 
 	if (Type == EJson::String)
@@ -554,7 +591,7 @@ FString FVulFieldDescription::TypeScriptType(const bool AllowRegisteredType) con
 
 	if (Items.IsValid())
 	{
-		return Items->TypeScriptType() + "[]";
+		return Items->TypeScriptType(ExtractRefs) + "[]";
 	}
 
 	return "any";

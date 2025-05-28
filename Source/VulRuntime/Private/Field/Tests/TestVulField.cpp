@@ -297,6 +297,52 @@ bool TestVulField::RunTest(const FString& Parameters)
 		VTC_MUST_EQUAL(*Actual, Expected, "serialize correctly")
 	});
 	
+	VulTest::Case(this, "extracted references", [](VulTest::TC TC)
+	{
+		TMap<FString, TSharedPtr<FVulFieldTestSingleInstance>> Instances;
+
+		const auto Inst1 = MakeShared<FVulFieldTestSingleInstance>();
+		Inst1->Int = 13;
+		Inst1->Str = "foobar";
+
+		const auto Inst2 = MakeShared<FVulFieldTestSingleInstance>();
+		Inst2->Int = 14;
+		Inst2->Str = "barbaz";
+
+		Instances.Add("one", Inst1);
+		Instances.Add("two", Inst1);
+		Instances.Add("three", Inst2);
+
+		FVulFieldSerializationContext Ctx;
+		Ctx.ExtractReferences = true;
+		TSharedPtr<FJsonValue> Actual;
+		Ctx.Flags.Set(VulFieldSerializationFlag_Referencing, false, ".instanceArray[*]");
+		Ctx.Flags.Set(VulFieldSerializationFlag_Referencing, false, ".instanceMap.*");
+		VTC_MUST_EQUAL(Ctx.Serialize(Instances, Actual), true, "Serialize data");
+		
+		const auto Expected = R"(
+{
+	"refs": {
+		"foobar": {
+			"int": 13,
+			"str": "foobar"
+		},
+		"barbaz": {
+			"int": 14,
+			"str": "barbaz"
+		}
+	},
+	"data": {
+		"one": "foobar",
+		"two": "foobar",
+		"three": "barbaz"
+	}
+}
+)";
+
+		TC.JsonObjectsEqual(VulRuntime::Field::JsonToString(Actual), Expected);
+	});
+	
 	VulTest::Case(this, "UObject", [](VulTest::TC TC)
 	{
 		UObject* Outer = NewObject<AActor>();

@@ -65,9 +65,26 @@ namespace VulRuntime::Field
 		{
 			return "\"" + Json->AsString() + "\"";
 		}
-		
+
+		// Handles number, bool (no quotes needed).
+		FString AsStr; 
+		if (Json->TryGetString(AsStr))
+		{
+			return AsStr;
+		}
+
 		FString Out;
 		auto Writer = TJsonWriterFactory<CharType, PrintPolicy>::Create(&Out);
+		if (TArray<TSharedPtr<FJsonValue>>* AsArray; Json->TryGetArray(AsArray))
+		{
+			if (!FJsonSerializer::Serialize(*AsArray, Writer))
+			{
+				return "";
+			}
+
+			return Out;
+		}
+		
 		if (!FJsonSerializer::Serialize(Json, "", Writer))
 		{
 			return "";

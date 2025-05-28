@@ -79,7 +79,7 @@ struct VULRUNTIME_API FVulFieldDescription
 		const TSharedPtr<FVulFieldDescription>& ValuesDescription
 	);
 
-	TSharedPtr<FJsonValue> JsonSchema() const;
+	TSharedPtr<FJsonValue> JsonSchema(const bool ExtractRefs = false) const;
 
 	bool IsValid() const;
 
@@ -87,7 +87,7 @@ struct VULRUNTIME_API FVulFieldDescription
 
 	TOptional<FString> GetTypeId() const { return TypeId; }
 
-	FString TypeScriptDefinitions() const;
+	FString TypeScriptDefinitions(const bool ExtractRefs = false) const;
 
 	/**
 	 * Extracts all descriptions that are named types, i.e. registered with FVulFieldRegistry.
@@ -102,9 +102,13 @@ struct VULRUNTIME_API FVulFieldDescription
 	bool ContainsReference() const;
 
 private:
-	TSharedPtr<FJsonValue> JsonSchema(const TSharedPtr<FJsonObject>& Definitions, const bool AddToDefinitions = true) const;
+	TSharedPtr<FJsonValue> JsonSchema(
+		const TSharedPtr<FJsonObject>& Definitions,
+		const bool ExtractRefs,
+		const bool AddToDefinitions = true
+	) const;
 
-	FString TypeScriptType(const bool AllowRegisteredType = true) const;
+	FString TypeScriptType(const bool ExtractRefs, const bool AllowRegisteredType = true) const;
 	
 	EJson Type = EJson::None;
 	TSharedPtr<FVulFieldDescription> Items;

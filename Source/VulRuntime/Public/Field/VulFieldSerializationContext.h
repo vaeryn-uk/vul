@@ -80,6 +80,8 @@ private:
 struct VULRUNTIME_API FVulFieldSerializationMemory
 {
 	TMap<FString, void*> Store;
+	
+	TSharedPtr<FJsonObject> Refs;
 };
 
 /**
@@ -123,11 +125,20 @@ struct VULRUNTIME_API FVulFieldSerializationContext
 {
 	FVulFieldSerializationState State;
 	FVulFieldSerializationFlags Flags;
-
+	
 	/**
 	 * When serializing floating points, how many decimal places should we include?
 	 */
 	int DefaultPrecision = 1;
+
+	/**
+	 * If set, when serialized, references will be separated out in to their own property
+	 * and all occurrences will be a reference to that central place.
+	 *
+	 * These are extracted to a special "__vul_refs" property in serialized output, and
+	 * the data itself will be included in a sibling "__vul_data" property.
+	 */
+	bool ExtractReferences = false;
 
 	/**
 	 * Registers the given description pointer with this context, returning true if no errors.
@@ -224,6 +235,13 @@ struct VULRUNTIME_API FVulFieldSerializationContext
 		return State.Errors.WithIdentifierCtx(IdentifierCtx, [&]
 		{
 			const bool SupportsRef = Flags.SupportsReferencing<T>(State.Errors.GetPath());
+
+			bool IsOuterObject = false;
+			if (ExtractReferences && !State.Memory.Refs.IsValid())
+			{
+				IsOuterObject = true;
+				State.Memory.Refs = MakeShared<FJsonObject>();
+			}
 			
 			TSharedPtr<FJsonValue> Ref;
 
@@ -249,6 +267,22 @@ struct VULRUNTIME_API FVulFieldSerializationContext
 			if (Ref.IsValid())
 			{
 				State.Memory.Store.Add(Ref->AsString(), &Out);
+				
+				if (State.Memory.Refs.IsValid() && !State.Memory.Refs->Values.Contains(Ref->AsString()))
+				{
+					// If extracting refs, we always output just the ref here, after capturing the full
+					// serialized form.
+					State.Memory.Refs->Values.Add(Ref->AsString(), Out);
+					Out = Ref;
+				}
+			}
+
+			if (IsOuterObject)
+			{
+				TSharedPtr<FJsonObject> Return = MakeShared<FJsonObject>();
+				Return->Values.Add("refs", MakeShared<FJsonValueObject>(State.Memory.Refs));
+				Return->Values.Add("data", Out);
+				Out = MakeShared<FJsonValueObject>(Return);
 			}
 			
 			return true;
