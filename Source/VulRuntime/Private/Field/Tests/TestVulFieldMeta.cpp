@@ -312,8 +312,8 @@ bool TestVulFieldMeta::RunTest(const FString& Parameters)
 export type VulFieldRef<T> = string;
 
 export interface VulFieldTestTreeBase {
-	type: VulFieldTestTreeNodeType;
-	children: VulFieldTestTreeBase[];
+	type?: VulFieldTestTreeNodeType;
+	children?: VulFieldTestTreeBase[];
 }
 
 export enum VulFieldTestTreeNodeType {
@@ -323,24 +323,24 @@ export enum VulFieldTestTreeNodeType {
 }
 
 export interface VulFieldTestTreeNode1 extends VulFieldTestTreeBase {
-	type: VulFieldTestTreeNodeType.Node1;
-	int: number;
+	type?: VulFieldTestTreeNodeType.Node1;
+	int?: number;
 }
 
 export interface VulFieldTestTreeNode2 extends VulFieldTestTreeBase {
-	type: VulFieldTestTreeNodeType.Node2;
-	str: string;
+	type?: VulFieldTestTreeNodeType.Node2;
+	str?: string;
 }
 
 export type StringAlias = string;
 
 export interface VulFieldTestUObject1 {
-	str: string;
-	obj: (VulFieldTestUObject2 | VulFieldRef<VulFieldTestUObject2>);
+	str?: string;
+	obj?: (VulFieldTestUObject2 | VulFieldRef<VulFieldTestUObject2>);
 }
 
 export interface VulFieldTestUObject2 {
-	str: string;
+	str?: string;
 }
 
 export type SingleFieldType = number;
@@ -361,7 +361,7 @@ export type SingleFieldType = number;
 		TScriptInterface<IVulFieldTestInterface1> Interface;
 		
 		FVulFieldSet Set;
-		Set.Add(FVulField::Create(&Interface), "uInterface");
+		Set.Add(FVulField::Create(&Interface), "uInterface").EvenIfEmpty();
 		
 		FVulFieldSerializationContext Ctx;
 		TSharedPtr<FVulFieldDescription> Desc = MakeShared<FVulFieldDescription>();
@@ -376,11 +376,11 @@ export interface IVulFieldTestInterface1 {
 }
 
 export interface VulFieldTestUObject2 extends IVulFieldTestInterface1 {
-	str: string;
+	str?: string;
 }
 
 export interface VulFieldTestUObject3 extends IVulFieldTestInterface1 {
-	bool: boolean;
+	bool?: boolean;
 }
 )";
 
@@ -399,9 +399,9 @@ export interface VulFieldTestUObject3 extends IVulFieldTestInterface1 {
 		UVulTestFieldReferencingContainer2* UVulTestFieldReferencingContainer2 = nullptr;
 
 		FVulFieldSet Set;
-		Set.Add(FVulField::Create(UVulTestFieldReferencing), "UVulTestFieldReferencing");
-		Set.Add(FVulField::Create(UVulTestFieldReferencingContainer1), "UVulTestFieldReferencingContainer1");
-		Set.Add(FVulField::Create(UVulTestFieldReferencingContainer2), "UVulTestFieldReferencingContainer2");
+		Set.Add(FVulField::Create(UVulTestFieldReferencing), "UVulTestFieldReferencing").EvenIfEmpty();
+		Set.Add(FVulField::Create(UVulTestFieldReferencingContainer1), "UVulTestFieldReferencingContainer1").EvenIfEmpty();
+		Set.Add(FVulField::Create(UVulTestFieldReferencingContainer2), "UVulTestFieldReferencingContainer2").EvenIfEmpty();
 
 		FVulFieldSerializationContext Ctx;
 		TSharedPtr<FVulFieldDescription> Desc = MakeShared<FVulFieldDescription>();
@@ -432,6 +432,11 @@ export interface VulFieldTestUObject3 extends IVulFieldTestInterface1 {
       "$ref": "#definitions/VulTestFieldReferencingContainer2"
     }
   },
+  "required": [
+    "UVulTestFieldReferencing",
+    "UVulTestFieldReferencingContainer1",
+    "UVulTestFieldReferencingContainer2"
+  ],
   "definitions": {
     "VulTestFieldReferencing": {
       "type": "object",
@@ -495,15 +500,15 @@ export interface VulFieldTestUObject3 extends IVulFieldTestInterface1 {
 export type VulFieldRef<T> = string;
 
 export interface VulTestFieldReferencing {
-	name: string;
+	name?: string;
 }
 
 export interface VulTestFieldReferencingContainer1 {
-	child: (VulTestFieldReferencing | VulFieldRef<VulTestFieldReferencing>);
+	child?: (VulTestFieldReferencing | VulFieldRef<VulTestFieldReferencing>);
 }
 
 export interface VulTestFieldReferencingContainer2 {
-	child: (VulTestFieldReferencing | VulFieldRef<VulTestFieldReferencing>);
+	child?: (VulTestFieldReferencing | VulFieldRef<VulTestFieldReferencing>);
 }
 )";
 
@@ -523,9 +528,9 @@ export interface VulTestFieldReferencingContainer2 {
 		UVulTestFieldReferencingContainer2* UVulTestFieldReferencingContainer2 = nullptr;
 
 		FVulFieldSet Set;
-		Set.Add(FVulField::Create(UVulTestFieldReferencing), "UVulTestFieldReferencing");
-		Set.Add(FVulField::Create(UVulTestFieldReferencingContainer1), "UVulTestFieldReferencingContainer1");
-		Set.Add(FVulField::Create(UVulTestFieldReferencingContainer2), "UVulTestFieldReferencingContainer2");
+		Set.Add(FVulField::Create(UVulTestFieldReferencing), "UVulTestFieldReferencing").EvenIfEmpty();
+		Set.Add(FVulField::Create(UVulTestFieldReferencingContainer1), "UVulTestFieldReferencingContainer1").EvenIfEmpty();
+		Set.Add(FVulField::Create(UVulTestFieldReferencingContainer2), "UVulTestFieldReferencingContainer2").EvenIfEmpty();
 
 		FVulFieldSerializationContext Ctx;
 		TSharedPtr<FVulFieldDescription> Desc = MakeShared<FVulFieldDescription>();
@@ -554,7 +559,12 @@ export interface VulTestFieldReferencingContainer2 {
         "UVulTestFieldReferencingContainer2": {
           "$ref": "#definitions/VulTestFieldReferencingContainer2"
         }
-      }
+      },
+      "required": [
+        "UVulTestFieldReferencing",
+        "UVulTestFieldReferencingContainer1",
+        "UVulTestFieldReferencingContainer2"
+      ]
     }
   },
   "definitions": {
@@ -608,15 +618,15 @@ export type VulFieldRef<T> = string;
 export type VulRefs = Record<VulFieldRef<any>, any>;
 
 export interface VulTestFieldReferencing {
-    name: string;
+    name?: string;
 }
 
 export interface VulTestFieldReferencingContainer1 {
-    child: VulFieldRef<VulTestFieldReferencing>;
+    child?: VulFieldRef<VulTestFieldReferencing>;
 }
 
 export interface VulTestFieldReferencingContainer2 {
-    child: VulFieldRef<VulTestFieldReferencing>;
+    child?: VulFieldRef<VulTestFieldReferencing>;
 }
 )";
 
@@ -639,19 +649,19 @@ export interface VulTestFieldReferencingContainer2 {
 
 		const auto Expected = R"(
 export interface VulNumber {
-	base: number;
-	clamp: VulNumber[];
-	modifications: VulNumberModification[];
-	value: number;
+	base?: number;
+	clamp?: VulNumber[];
+	modifications?: VulNumberModification[];
+	value?: number;
 }
 
 export interface VulNumberModification {
-	clamp: number[];
-	pct: number;
-	basePct: number;
-	flat: number;
-	set: number;
-	id: string;
+	clamp?: number[];
+	pct?: number;
+	basePct?: number;
+	flat?: number;
+	set?: number;
+	id?: string;
 }
 )";
 

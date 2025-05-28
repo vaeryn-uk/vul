@@ -418,3 +418,4 @@ deserialization behaviors where objects are shared or cyclic.
 * Use the new metadata system to automatically deserialize based on the discriminator.
 * Integration with UE's reflection system to automatically serialize and deserialize UPROPERTY chains.
 * Enum support with integer representation for more efficient serialized output.
+* Deserialization support for extracted refs.

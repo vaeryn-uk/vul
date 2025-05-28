@@ -303,8 +303,9 @@ FString FVulFieldDescription::TypeScriptDefinitions(const bool ExtractRefs) cons
 						continue;
 					}
 				}
-				
-				Out += Indent + PropertyEntry.Key + ": " + PropertyEntry.Value->TypeScriptType(ExtractRefs) + ";";
+
+				const auto Separator = PropertyEntry.Value->IsPropertyRequired(PropertyEntry.Key) ? ": " : "?: ";
+				Out += Indent + PropertyEntry.Key + Separator + PropertyEntry.Value->TypeScriptType(ExtractRefs) + ";";
 				Out += LineEnding;
 			}
 
@@ -384,6 +385,11 @@ bool FVulFieldDescription::ContainsReference() const
 	}
 
 	return false;
+}
+
+bool FVulFieldDescription::IsPropertyRequired(const FString& Prop) const
+{
+	return RequiredProperties.Contains(Prop);
 }
 
 TSharedPtr<FJsonValue> FVulFieldDescription::JsonSchema(

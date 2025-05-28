@@ -101,6 +101,8 @@ struct VULRUNTIME_API FVulFieldDescription
 	 */
 	bool ContainsReference() const;
 
+	bool IsPropertyRequired(const FString& Prop) const;
+
 private:
 	TSharedPtr<FJsonValue> JsonSchema(
 		const TSharedPtr<FJsonObject>& Definitions,
