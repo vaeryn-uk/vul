@@ -264,6 +264,11 @@ struct TVulDataPtr
 	{
 		return DataPtr;
 	}
+	
+	FVulDataPtr& Data()
+	{
+		return DataPtr;
+	}
 
 	/**
 	 * Converts an array of untyped to typed pointers.
@@ -327,25 +332,31 @@ TVulDataPtr<T> FVulDataPtr::GetAsDataPtr() const
 
 const static FString VulDataPtr_SerializationFlag_Short = "vul.dataptr.short";
 
-template <typename T>
-struct TVulFieldSerializer<TVulDataPtr<T>>
+template <>
+struct TVulFieldSerializer<FVulDataPtr>
 {
 	static void Setup()
 	{
 		FVulFieldSerializationFlags::RegisterDefault(VulDataPtr_SerializationFlag_Short, false);
 	}
 	
-	static bool Serialize(const TVulDataPtr<T>& Value, TSharedPtr<FJsonValue>& Out, struct FVulFieldSerializationContext& Ctx)
+	static bool Serialize(const FVulDataPtr& Value, TSharedPtr<FJsonValue>& Out, struct FVulFieldSerializationContext& Ctx)
 	{
+		if (!Value.IsSet())
+		{
+			Out = MakeShared<FJsonValueNull>();
+			return true;
+		}
+		
 		if (Ctx.Flags.IsEnabled(VulDataPtr_SerializationFlag_Short, Ctx.State.Errors.GetPath()))
 		{
-			return Ctx.Serialize(Value.Data().GetRowName(), Out);
+			return Ctx.Serialize(Value.GetRowName(), Out);
 		}
 		
 		return Value.VulFieldSet().Serialize(Out, Ctx);
 	}
 
-	static bool Deserialize(const TSharedPtr<FJsonValue>& Data, TVulDataPtr<T>& Out, struct FVulFieldDeserializationContext& Ctx)
+	static bool Deserialize(const TSharedPtr<FJsonValue>& Data, FVulDataPtr& Out, struct FVulFieldDeserializationContext& Ctx)
 	{
 		if (Ctx.Flags.IsEnabled(VulDataPtr_SerializationFlag_Short, Ctx.State.Errors.GetPath()))
 		{
@@ -354,6 +365,20 @@ struct TVulFieldSerializer<TVulDataPtr<T>>
 		}
 
 		return Out.VulFieldSet().Deserialize(Data, Ctx);
+	}
+};
+
+template <typename T>
+struct TVulFieldSerializer<TVulDataPtr<T>>
+{
+	static bool Serialize(const TVulDataPtr<T>& Value, TSharedPtr<FJsonValue>& Out, struct FVulFieldSerializationContext& Ctx)
+	{
+		return TVulFieldSerializer<FVulDataPtr>::Serialize(Value.Data(), Out, Ctx);
+	}
+
+	static bool Deserialize(const TSharedPtr<FJsonValue>& Data, TVulDataPtr<T>& Out, struct FVulFieldDeserializationContext& Ctx)
+	{
+		return TVulFieldSerializer<FVulDataPtr>::Deserialize(Data, Out.Data(), Ctx);
 	}
 };
 
