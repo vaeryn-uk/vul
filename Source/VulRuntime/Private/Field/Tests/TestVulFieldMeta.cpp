@@ -311,15 +311,13 @@ bool TestVulFieldMeta::RunTest(const FString& Parameters)
 // @ts-ignore
 export type VulFieldRef<T> = string;
 
+export type SingleFieldType = number;
+
+export type StringAlias = string;
+
 export interface VulFieldTestTreeBase {
 	type?: VulFieldTestTreeNodeType;
 	children?: VulFieldTestTreeBase[];
-}
-
-export enum VulFieldTestTreeNodeType {
-	Base = "Base",
-	Node1 = "Node1",
-	Node2 = "Node2",
 }
 
 export interface VulFieldTestTreeNode1 extends VulFieldTestTreeBase {
@@ -332,7 +330,11 @@ export interface VulFieldTestTreeNode2 extends VulFieldTestTreeBase {
 	str?: string;
 }
 
-export type StringAlias = string;
+export enum VulFieldTestTreeNodeType {
+	Base = "Base",
+	Node1 = "Node1",
+	Node2 = "Node2",
+}
 
 export interface VulFieldTestUObject1 {
 	str?: string;
@@ -342,8 +344,6 @@ export interface VulFieldTestUObject1 {
 export interface VulFieldTestUObject2 {
 	str?: string;
 }
-
-export type SingleFieldType = number;
 )";
 
 		const auto Actual = Desc->TypeScriptDefinitions();

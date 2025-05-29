@@ -245,6 +245,12 @@ FString FVulFieldDescription::TypeScriptDefinitions() const
 	
 	GetNamedTypes(Descriptions);
 
+	// Deterministic order: alphabetical on type name.
+	Descriptions.ValueSort([](const TSharedPtr<FVulFieldDescription>& A, const TSharedPtr<FVulFieldDescription>& B)
+	{
+		return A->GetTypeName().Get("") < B->GetTypeName().Get("");
+	});
+
 	for (const auto Entry : Descriptions)
 	{
 		const auto Description = Entry.Value;
