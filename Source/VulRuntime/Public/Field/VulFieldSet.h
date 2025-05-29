@@ -102,6 +102,20 @@ struct VULRUNTIME_API FVulFieldSet
 	TSharedPtr<FJsonValue> GetRef(FVulFieldSerializationState& State) const;
 	bool HasRef() const;
 
+	/**
+	 * Defines a validity function for this field set. This Fn must return
+	 * true to indicate the field set's data and should be serialized as normal.
+	 * False indicates the data is invalid and should be serialized as null
+	 * (and then omitted, if the outer field's OmitIfEmpty is true).
+	 *
+	 * If no ValidityFn is defined, the default behaviour is that field sets are always
+	 * valid (not nullable).
+	 */
+	void ValidityFn(const TFunction<bool ()>& Fn);
+	
+	bool IsValid() const;
+	bool CanBeInvalid() const;
+
 	bool Serialize(TSharedPtr<FJsonValue>& Out) const;
 	bool Serialize(TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx) const;
 	bool Deserialize(const TSharedPtr<FJsonValue>& Data);
@@ -151,6 +165,7 @@ struct VULRUNTIME_API FVulFieldSet
 private:
 	TMap<FString, FEntry> Entries;
 	TOptional<FString> RefField = {};
+	TFunction<bool ()> IsValidFn = nullptr;
 };
 
 
@@ -214,6 +229,11 @@ struct TVulFieldMeta<T>
 		{
 			T Default;
 			Set = Default.VulFieldSet();
+		}
+
+		if (Set.CanBeInvalid())
+		{
+			Description->Nullable();
 		}
 
 		return Set.Describe(Ctx, Description);

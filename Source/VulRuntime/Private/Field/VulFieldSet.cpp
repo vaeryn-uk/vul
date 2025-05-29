@@ -32,6 +32,11 @@ FVulFieldSet::FEntry& FVulFieldSet::Add(const FVulField& Field, const FString& I
 	return Entries.Add(Identifier, Created);
 }
 
+void FVulFieldSet::ValidityFn(const TFunction<bool()>& Fn)
+{
+	IsValidFn = Fn;
+}
+
 TSharedPtr<FJsonValue> FVulFieldSet::GetRef(FVulFieldSerializationState& State) const
 {
 	if (!RefField.IsSet())
@@ -76,6 +81,22 @@ bool FVulFieldSet::HasRef() const
 	return RefField.IsSet();
 }
 
+bool FVulFieldSet::IsValid() const
+{
+	if (IsValidFn == nullptr)
+	{
+		// Default true if not specified.
+		return true;
+	}
+
+	return IsValidFn();
+}
+
+bool FVulFieldSet::CanBeInvalid() const
+{
+	return IsValidFn != nullptr;
+}
+
 bool FVulFieldSet::Serialize(TSharedPtr<FJsonValue>& Out) const
 {
 	FVulFieldSerializationContext Ctx;
@@ -84,6 +105,12 @@ bool FVulFieldSet::Serialize(TSharedPtr<FJsonValue>& Out) const
 
 bool FVulFieldSet::Serialize(TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx) const
 {
+	if (!IsValid())
+	{
+		Out = MakeShared<FJsonValueNull>();
+		return true;
+	}
+	
 	auto Obj = MakeShared<FJsonObject>();
 	
 	for (const auto Entry : Entries)
