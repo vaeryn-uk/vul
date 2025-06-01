@@ -134,6 +134,37 @@ struct TVulFieldMeta<FName>
 	}
 };
 
+template<>
+struct TVulFieldSerializer<FText>
+{
+	static bool Serialize(const FText& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
+	{
+		Out = MakeShared<FJsonValueString>(Value.ToString());
+		return true;
+	}
+	
+	static bool Deserialize(const TSharedPtr<FJsonValue>& Data, FText& Out, FVulFieldDeserializationContext& Ctx)
+	{
+		if (!Ctx.State.Errors.RequireJsonType(Data, EJson::String))
+		{
+			return false;
+		}
+
+		Out = FText::FromString(Data->AsString());
+		return true;
+	}
+};
+
+template<>
+struct TVulFieldMeta<FText>
+{
+	static bool Describe(FVulFieldSerializationContext& Ctx, TSharedPtr<FVulFieldDescription>& Description)
+	{
+		Description->String();
+		return true;
+	}
+};
+
 template<typename V>
 struct TVulFieldSerializer<TArray<V>>
 {

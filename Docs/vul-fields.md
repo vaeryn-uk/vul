@@ -94,6 +94,18 @@ Enums are serialized and deserialized as their string form. Your enums must impl
 `EnumToString` to be compatible with the provided serializer. Use the `DECLARE_ENUM_TO_STRING`
 and `DEFINE_ENUM_TO_STRING` macros provided by UE for this purpose.
 
+#### FVulDataPtr
+
+`FVulDataPtr` and `TVulDataPtr` are pointers to `UDataTable` data. Accordingly, we serialized these
+down with the necessary information to describe & reconstitute these pointers by default, including
+the row name, table & repository they belong to. This behaviour can be altered with the following
+serialization flags:
+
+* `VulDataPtr_SerializationFlag_Short` - only exports a pointer's row name as a single string.
+* `VulDataPtr_SerializationFlag_Data` - for serialization, will output the actual row data pointed
+  to. This is only supported for typed pointers (`TVulDataPtr`) and requires the row type to
+  implemented `FVulFieldSet VulFieldSet() const`.
+
 #### Shared references
 
 Shared references provide two main features:

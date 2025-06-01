@@ -330,7 +330,19 @@ TVulDataPtr<T> FVulDataPtr::GetAsDataPtr() const
 	return Cast<T>(*this);
 }
 
+/**
+ * If set, FVulDataPtrs will be serialized as their row name only as a single string.
+ */
 const static FString VulDataPtr_SerializationFlag_Short = "vul.dataptr.short";
+
+/**
+ * If set, TVulDataPtrs will defer to the types internal VulFieldSet() if they have it
+ * when serializing. This exports the actual data of the row.
+ *
+ * Note this is only supported for our typed TVulDataPtrs. FVulDataPtrs will always
+ * export as a generic data pointer.
+ */
+const static FString VulDataPtr_SerializationFlag_Data = "vul.dataptr.data";
 
 template <>
 struct TVulFieldSerializer<FVulDataPtr>
@@ -371,8 +383,21 @@ struct TVulFieldSerializer<FVulDataPtr>
 template <typename T>
 struct TVulFieldSerializer<TVulDataPtr<T>>
 {
+	static void Setup()
+	{
+		FVulFieldSerializationFlags::RegisterDefault(VulDataPtr_SerializationFlag_Data, false);
+	}
+	
 	static bool Serialize(const TVulDataPtr<T>& Value, TSharedPtr<FJsonValue>& Out, struct FVulFieldSerializationContext& Ctx)
 	{
+		if constexpr (HasVulFieldSet<T>)
+		{
+			if (Ctx.Flags.IsEnabled(VulDataPtr_SerializationFlag_Data, Ctx.State.Errors.GetPath()))
+			{
+				return Ctx.Serialize<T>(*Value.Get(), Out);
+			}
+		}
+		
 		return TVulFieldSerializer<FVulDataPtr>::Serialize(Value.Data(), Out, Ctx);
 	}
 
