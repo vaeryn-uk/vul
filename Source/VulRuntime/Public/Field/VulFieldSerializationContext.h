@@ -135,8 +135,8 @@ struct VULRUNTIME_API FVulFieldSerializationContext
 	 * If set, when serialized, references will be separated out in to their own property
 	 * and all occurrences will be a reference to that central place.
 	 *
-	 * These are extracted to a special "__vul_refs" property in serialized output, and
-	 * the data itself will be included in a sibling "__vul_data" property.
+	 * These are extracted to a special "refs" property in serialized output, and
+	 * the data itself will be included in a sibling "data" property.
 	 */
 	bool ExtractReferences = false;
 
@@ -158,7 +158,7 @@ struct VULRUNTIME_API FVulFieldSerializationContext
 		}
 
 		const auto TypeId = VulRuntime::Field::TypeId<T>(); 
-		if (IsKnownType(TypeId))
+		if (KnownTypeName(TypeId).IsSet())
 		{
 			Description->BindToType<T>();
 				
@@ -272,6 +272,16 @@ struct VULRUNTIME_API FVulFieldSerializationContext
 				return false;
 			}
 
+			TSharedPtr<FJsonObject>* Obj;
+			if (Out->TryGetObject(Obj) && Flags.IsEnabled(VulFieldSerializationFlag_AnnotateTypes, State.Errors.GetPath()))
+			{
+				const auto Known = KnownTypeName(VulRuntime::Field::TypeId<T>());
+				if (Known.IsSet())
+				{
+					Obj->Get()->Values.Add("VulType", MakeShared<FJsonValueString>(Known.GetValue()));
+				}
+			}
+
 			if (Ref.IsValid())
 			{
 				State.Memory.Store.Add(Ref->AsString(), &Out);
@@ -298,7 +308,7 @@ struct VULRUNTIME_API FVulFieldSerializationContext
 	}
 
 private:
-	bool IsKnownType(const FString& TypeId) const;
+	static TOptional<FString> KnownTypeName(const FString& TypeId);
 
 	/**
 	 * Generate a description for a type if it's a base type with 1 or more subtypes.

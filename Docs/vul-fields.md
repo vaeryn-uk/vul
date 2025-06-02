@@ -350,6 +350,13 @@ If your types live in a module (such as a game project), use the appropriate exp
 (`MYGAMEPROJECT_API`) to expose them as the template system will need to access them from
 the Vul plugin module.
 
+#### Type annotations
+
+When serializing, enabling the `VulFieldSerializationFlag_AnnotateTypes` (default: off) will add
+a `VulType` property to serialized objects, which contains the registered name of the type (if any).
+This can be useful for consumers of serialized output to quickly identify known types within the
+data.
+
 ### Inheritance Support
 
 Base & derived types are supported using discriminator fields. For example, consider a project

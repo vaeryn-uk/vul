@@ -28,6 +28,12 @@ const static FString VulFieldSerializationFlag_Referencing = "vul.referencing";
  */
 const static FString VulFieldSerializationFlag_AssetReferencing = "vul.asset-referencing";
 
+/**
+ * If set, serialization of objects will be annotated with a "VulType" property within which
+ * tags that object as being of that VULFLD-registered type.
+ */
+const static FString VulFieldSerializationFlag_AnnotateTypes = "vul.annotate-types";
+
 struct VULRUNTIME_API FVulFieldSerializationFlags
 {
 	/**

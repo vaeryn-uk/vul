@@ -112,9 +112,16 @@ FString FVulFieldSerializationErrors::PathStr() const
 	return VulRuntime::Field::PathStr(Stack);
 }
 
-bool FVulFieldSerializationContext::IsKnownType(const FString& TypeId) const
+TOptional<FString> FVulFieldSerializationContext::KnownTypeName(const FString& TypeId)
 {
-	return FVulFieldRegistry::Get().Has(TypeId);
+	const auto Entry = FVulFieldRegistry::Get().GetType(TypeId);
+
+	if (Entry.IsSet())
+	{
+		return Entry->Name;
+	}
+
+	return {};
 }
 
 bool FVulFieldSerializationContext::GenerateBaseTypeDescription(
