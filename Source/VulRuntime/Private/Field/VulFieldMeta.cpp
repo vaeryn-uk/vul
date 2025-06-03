@@ -129,6 +129,11 @@ void FVulFieldDescription::Union(const TArray<TSharedPtr<FVulFieldDescription>>&
 	UnionTypes = Subtypes;
 }
 
+bool FVulFieldDescription::IsObject() const
+{
+	return Type == EJson::Object;
+}
+
 void FVulFieldDescription::Array(const TSharedPtr<FVulFieldDescription>& ItemsDescription)
 {
 	ensureMsgf(Type == EJson::Array || Type == EJson::None, TEXT("should not define items as is already non-array type"));
@@ -310,7 +315,7 @@ FString FVulFieldDescription::TypeScriptDefinitions() const
 					}
 				}
 
-				const auto Separator = PropertyEntry.Value->IsPropertyRequired(PropertyEntry.Key) ? ": " : "?: ";
+				const auto Separator = Description->IsPropertyRequired(PropertyEntry.Key) ? ": " : "?: ";
 				Out += Indent + PropertyEntry.Key + Separator + PropertyEntry.Value->TypeScriptType() + ";";
 				Out += LineEnding;
 			}

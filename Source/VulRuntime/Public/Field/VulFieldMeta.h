@@ -35,7 +35,7 @@ struct VULRUNTIME_API FVulFieldDescription
 	 *
 	 * Of specifies the type that this value belongs to. Often an enum description.
 	 */
-	bool Const(const TSharedPtr<FJsonValue>& Value, const TSharedPtr<FVulFieldDescription>& Of);
+	bool Const(const TSharedPtr<FJsonValue>& Value, const TSharedPtr<FVulFieldDescription>& Of = nullptr);
 
 	bool static AreEquivalent(const TSharedPtr<FVulFieldDescription>& A, const TSharedPtr<FVulFieldDescription>& B);
 
@@ -62,6 +62,8 @@ struct VULRUNTIME_API FVulFieldDescription
 	 * if so.
 	 */
 	void Union(const TArray<TSharedPtr<FVulFieldDescription>>& Subtypes);
+
+	bool IsObject() const;
 
 	enum class EReferencing : uint8
 	{

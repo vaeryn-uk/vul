@@ -206,6 +206,15 @@ struct VULRUNTIME_API FVulFieldSerializationContext
 			}
 
 			const auto Result = TVulFieldMeta<T>::Describe(*this, Description);
+
+			if (!Description->IsValid())
+			{
+				State.Errors.Add(
+					TEXT("TVulFieldMeta::Describe() did not produce a valid description. type info: %s"),
+					*VulRuntime::Field::TypeInfo<T>()
+				);
+				return false;
+			}
 			
 			if (SupportsRef)
 			{
@@ -216,13 +225,14 @@ struct VULRUNTIME_API FVulFieldSerializationContext
 				);
 			}
 
-			if (!Description->IsValid())
+			if (Description->IsObject() && Flags.IsEnabled(VulFieldSerializationFlag_AnnotateTypes, State.Errors.GetPath()))
 			{
-				State.Errors.Add(
-					TEXT("TVulFieldMeta::Describe() did not produce a valid description. type info: %s"),
-					*VulRuntime::Field::TypeInfo<T>()
-				);
-				return false;
+				if (const auto KnownType = KnownTypeName(VulRuntime::Field::TypeId<T>()); KnownType.IsSet())
+				{
+					const auto Desc = MakeShared<FVulFieldDescription>();
+					Desc->Const(MakeShared<FJsonValueString>(KnownType.GetValue()));
+					Description->Prop("VulType", Desc, true);
+				}
 			}
 
 			return Result;
@@ -275,8 +285,7 @@ struct VULRUNTIME_API FVulFieldSerializationContext
 			TSharedPtr<FJsonObject>* Obj;
 			if (Out->TryGetObject(Obj) && Flags.IsEnabled(VulFieldSerializationFlag_AnnotateTypes, State.Errors.GetPath()))
 			{
-				const auto Known = KnownTypeName(VulRuntime::Field::TypeId<T>());
-				if (Known.IsSet())
+				if (const auto Known = KnownTypeName(VulRuntime::Field::TypeId<T>()); Known.IsSet())
 				{
 					Obj->Get()->Values.Add("VulType", MakeShared<FJsonValueString>(Known.GetValue()));
 				}

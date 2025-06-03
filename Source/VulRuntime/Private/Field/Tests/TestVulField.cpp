@@ -174,7 +174,6 @@ bool TestVulField::RunTest(const FString& Parameters)
 		TC.Equal(FVulField::Create(Struct.Str1).DeserializeFromJson("\"somestr\""), false, "direct deserialize fails");
 	});
 	
-	
 	VulTest::Case(this, "Tree structure", [](VulTest::TC TC)
 	{
 		TSharedPtr<FVulFieldTestTreeBase> Root = MakeShared<FVulFieldTestTreeBase>();
@@ -210,6 +209,55 @@ bool TestVulField::RunTest(const FString& Parameters)
 		VTC_MUST_EQUAL(FVulField::Create(&Root).SerializeToJson(JsonStr2), true, "serialize again")
 	
 		TC.Equal(*JsonStr2, *JsonStr, "serialize");
+	});
+	
+	VulTest::Case(this, "Serialization with type annotations", [](VulTest::TC TC)
+	{
+		TSharedPtr<FVulFieldTestTreeBase> Root = MakeShared<FVulFieldTestTreeBase>();
+		TSharedPtr<FVulFieldTestTreeNode1> NodeA = MakeShared<FVulFieldTestTreeNode1>();
+		NodeA->Int = 13;
+		TSharedPtr<FVulFieldTestTreeNode2> NodeB = MakeShared<FVulFieldTestTreeNode2>();
+		NodeB->String = "foo";
+		TSharedPtr<FVulFieldTestTreeNode1> NodeC = MakeShared<FVulFieldTestTreeNode1>();
+		NodeC->Int = -5;
+	
+		NodeB->Children.Add(NodeC);
+		Root->Children.Add(NodeB);
+		Root->Children.Add(NodeA);
+	
+		FString JsonStr;
+		TSharedPtr<FJsonValue> Obj;
+		
+		FVulFieldSerializationContext Ctx;
+		Ctx.Flags.Set(VulFieldSerializationFlag_AnnotateTypes);
+		VTC_MUST_EQUAL(Ctx.Serialize(Root, Obj), true, "serialize")
+
+		const auto Expected = R"(
+{
+  "type": "Base",
+  "children": [
+    {
+      "type": "Node2",
+      "children": [
+        {
+          "type": "Node1",
+          "int": -5
+        }
+      ],
+      "str": "foo"
+    },
+    {
+      "type": "Node1",
+      "int": 13
+    }
+  ]
+}
+)";
+
+		if (!TC.JsonObjectsEqual(VulRuntime::Field::JsonToString(Obj), Expected))
+		{
+			return;
+		}
 	});
 	
 	VulTest::Case(this, "Deserialize references: TSharedPtr", [](VulTest::TC TC)

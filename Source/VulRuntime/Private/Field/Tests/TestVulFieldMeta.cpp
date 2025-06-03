@@ -321,12 +321,12 @@ export interface VulFieldTestTreeBase {
 }
 
 export interface VulFieldTestTreeNode1 extends VulFieldTestTreeBase {
-	type?: VulFieldTestTreeNodeType.Node1;
+	type: VulFieldTestTreeNodeType.Node1;
 	int?: number;
 }
 
 export interface VulFieldTestTreeNode2 extends VulFieldTestTreeBase {
-	type?: VulFieldTestTreeNodeType.Node2;
+	type: VulFieldTestTreeNodeType.Node2;
 	str?: string;
 }
 
@@ -640,11 +640,12 @@ export interface VulTestFieldReferencingContainer2 {
 		}
 	});
 	
-	VulTest::Case(this, "Typescript definitions - TVulNumber", [](VulTest::TC TC)
+	VulTest::Case(this, "Typescript definitions - TVulNumber (+ type annotations)", [](VulTest::TC TC)
 	{
 		using FVulTestNumber = TVulNumber<int>;
 
 		FVulFieldSerializationContext Ctx;
+		Ctx.Flags.Set(VulFieldSerializationFlag_AnnotateTypes);
 		TSharedPtr<FVulFieldDescription> Desc = MakeShared<FVulFieldDescription>();
 		VTC_MUST_EQUAL(true, TestDescribe<FVulTestNumber>(TC, Ctx, Desc), "");
 
@@ -654,6 +655,7 @@ export interface VulNumber {
 	clamp?: VulNumber[];
 	modifications?: VulNumberModification[];
 	value?: number;
+	VulType: "VulNumber";
 }
 
 export interface VulNumberModification {
@@ -663,6 +665,7 @@ export interface VulNumberModification {
 	flat?: number;
 	set?: number;
 	id?: string;
+	VulType: "VulNumberModification";
 }
 )";
 
