@@ -230,7 +230,17 @@ struct VULRUNTIME_API FVulFieldSerializationContext
 				if (const auto KnownType = KnownTypeName(VulRuntime::Field::TypeId<T>()); KnownType.IsSet())
 				{
 					const auto Desc = MakeShared<FVulFieldDescription>();
-					Desc->Const(MakeShared<FJsonValueString>(KnownType.GetValue()));
+
+					if (IsBaseType(VulRuntime::Field::TypeId<T>()))
+					{
+						// To satisfy inheritance constraints, based types report their VulType as a
+						// string. Only in derived types do we concrete this to a specific value.
+						Desc->String();
+					} else
+					{
+						Desc->Const(MakeShared<FJsonValueString>(KnownType.GetValue()));
+					}
+					
 					Description->Prop("VulType", Desc, true);
 				}
 			}
@@ -318,6 +328,7 @@ struct VULRUNTIME_API FVulFieldSerializationContext
 
 private:
 	static TOptional<FString> KnownTypeName(const FString& TypeId);
+	static bool IsBaseType(const FString& TypeId);
 
 	/**
 	 * Generate a description for a type if it's a base type with 1 or more subtypes.

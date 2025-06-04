@@ -124,6 +124,11 @@ TOptional<FString> FVulFieldSerializationContext::KnownTypeName(const FString& T
 	return {};
 }
 
+bool FVulFieldSerializationContext::IsBaseType(const FString& TypeId)
+{
+	return FVulFieldRegistry::Get().GetSubtypes(TypeId).Num() > 0;
+}
+
 bool FVulFieldSerializationContext::GenerateBaseTypeDescription(
 	const FString& TypeId,
 	const TSharedPtr<FVulFieldDescription>& Description
