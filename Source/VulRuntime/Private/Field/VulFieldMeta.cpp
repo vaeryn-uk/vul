@@ -225,7 +225,7 @@ bool FVulFieldDescription::operator==(const FVulFieldDescription& Other) const
 	return AreEquivalent(MakeShared<FVulFieldDescription>(*this), MakeShared<FVulFieldDescription>(Other));
 }
 
-FString FVulFieldDescription::TypeScriptDefinitions() const
+FString FVulFieldDescription::TypeScriptDefinitions(const FVulFieldTypeScriptOptions& Options) const
 {
 	TMap<FString, TSharedPtr<FVulFieldDescription>> Descriptions;
 
@@ -300,6 +300,7 @@ FString FVulFieldDescription::TypeScriptDefinitions() const
 			{
 				Out += FString::Printf(TEXT("export interface %s {"), *TypeName);
 			}
+			
 			Out += LineEnding;
 
 			for (const auto PropertyEntry : Description->Properties)
@@ -323,6 +324,36 @@ FString FVulFieldDescription::TypeScriptDefinitions() const
 			Out += "}";
 			Out += LineEnding;
 			Out += LineEnding;
+
+			if (BaseType.IsSet() && Options.DiscriminatorTypeGuardFunctions)
+			{
+				const auto RegistryEntry = FVulFieldRegistry::Get().GetType(Entry.Key);
+				
+				if (
+					RegistryEntry.IsSet() &&
+					BaseType->DiscriminatorField.IsSet() &&
+					RegistryEntry->DiscriminatorValue.IsSet()
+				) {
+					const auto DiscriminatorField = BaseType->DiscriminatorField.GetValue();
+					const auto DiscriminatorValue = RegistryEntry->DiscriminatorValue.GetValue()();
+
+					Out += FString::Printf(
+						TEXT("export function is%s(object: any): object is %s {"),
+						*TypeName,
+						*TypeName
+					);
+					Out += LineEnding;
+					Out += Indent + FString::Printf(
+						TEXT("return object.%s === \"%s\";"),
+						*DiscriminatorField,
+						*DiscriminatorValue
+					);
+					Out += LineEnding;
+					Out += "}";
+					Out += LineEnding;
+					Out += LineEnding;
+				}
+			}
 		} else if (TArray{EJson::String, EJson::Number, EJson::Boolean}.Contains(Entry.Value->Type))
 		{
 			// Simple type alias.

@@ -460,6 +460,20 @@ If reference tracking is enabled, exported schemas (both TypeScript and JSON) wi
 support for shared instances via the `VulFieldRef` type. This ensures compatibility with
 deserialization behaviors where objects are shared or cyclic.
 
+### TypeScript Options
+
+TypeScript definitions can be customised when calling `TypeScriptDefinitions()`
+via `FVulFieldTypeScriptOptions`.
+
+`DiscriminatorTypeGuardFunctions`. When enabled, derived types that use a discriminator 
+field include an exported type guard function:
+
+```ts
+export function isMyVulFieldType(object: any): object is MyVulFieldType {
+    return object.MyVulDiscriminatorField === MyVulDiscriminatorFieldEnum.MyVulDiscriminatorFieldValue;
+}
+```
+
 ### Limitations
 
 * TypeScript export only includes known types registered via `VULFLD_` macros.
