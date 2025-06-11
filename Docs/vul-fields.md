@@ -465,13 +465,12 @@ deserialization behaviors where objects are shared or cyclic.
 TypeScript definitions can be customised when calling `TypeScriptDefinitions()`
 via `FVulFieldTypeScriptOptions`.
 
-The first available option is `GenerateTypeGuardFunctions`. When enabled,
-derived types that use a discriminator field include an exported type guard
-function:
+`DiscriminatorTypeGuardFunctions`. When enabled, derived types that use a discriminator 
+field include an exported type guard function:
 
 ```ts
-export function is<DerivedTypeName>(object: any): object is <DerivedTypeName> {
-    return object.<DiscriminatorField> === <DiscriminatorValue>;
+export function isMyVulFieldType(object: any): object is MyVulFieldType {
+    return object.MyVulDiscriminatorField === MyVulDiscriminatorFieldEnum.MyVulDiscriminatorFieldValue;
 }
 ```
 
