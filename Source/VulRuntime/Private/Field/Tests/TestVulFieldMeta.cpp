@@ -289,8 +289,8 @@ bool TestVulFieldMeta::RunTest(const FString& Parameters)
 		(void)TC.JsonObjectsEqual(JsonSchema, Expected);
 	});
 	
-	VulTest::Case(this, "Typescript definitions", [](VulTest::TC TC)
-	{
+        VulTest::Case(this, "Typescript definitions", [](VulTest::TC TC)
+        {
 		TSharedPtr<FVulFieldTestTreeBase> Base;
 		FMyStringAlias StrAlias;
 		UVulFieldTestUObject1* Obj;
@@ -346,13 +346,89 @@ export interface VulFieldTestUObject2 {
 }
 )";
 
-		const auto Actual = Desc->TypeScriptDefinitions();
+                const auto Actual = Desc->TypeScriptDefinitions();
 
 		if (!TC.EqualNoWhitespace(Actual, Expected, "typescript definition match"))
 		{
 			return;
 		}
-	});
+        });
+
+        VulTest::Case(this, "Typescript definitions - type guard functions", [](VulTest::TC TC)
+        {
+                TSharedPtr<FVulFieldTestTreeBase> Base;
+                FMyStringAlias StrAlias;
+                UVulFieldTestUObject1* Obj;
+                FVulSingleFieldType SingleFieldType;
+
+                FVulFieldSet Set;
+                Set.Add(FVulField::Create(&Base), "base");
+                Set.Add(FVulField::Create(&StrAlias), "strAlias");
+                Set.Add(FVulField::Create(&Obj), "uObject");
+                Set.Add(FVulField::Create(&SingleFieldType), "singleField");
+
+                FVulFieldSerializationContext Ctx;
+                TSharedPtr<FVulFieldDescription> Desc = MakeShared<FVulFieldDescription>();
+                VTC_MUST_EQUAL(true, TestDescribe(TC, Set, Ctx, Desc), "");
+
+                FVulFieldTypeScriptOptions Opts;
+                Opts.GenerateTypeGuardFunctions = true;
+
+                FString Expected = R"(
+// A string reference to an existing object of the given type
+// @ts-ignore
+export type VulFieldRef<T> = string;
+
+export type SingleFieldType = number;
+
+export type StringAlias = string;
+
+export interface VulFieldTestTreeBase {
+type?: VulFieldTestTreeNodeType;
+children?: VulFieldTestTreeBase[];
+}
+
+export interface VulFieldTestTreeNode1 extends VulFieldTestTreeBase {
+type: VulFieldTestTreeNodeType.Node1;
+int?: number;
+}
+
+export function isVulFieldTestTreeNode1(object: any): object is VulFieldTestTreeNode1 {
+return object.type === "Node1";
+}
+
+export interface VulFieldTestTreeNode2 extends VulFieldTestTreeBase {
+type: VulFieldTestTreeNodeType.Node2;
+str?: string;
+}
+
+export function isVulFieldTestTreeNode2(object: any): object is VulFieldTestTreeNode2 {
+return object.type === "Node2";
+}
+
+export enum VulFieldTestTreeNodeType {
+Base = "Base",
+Node1 = "Node1",
+Node2 = "Node2",
+}
+
+export interface VulFieldTestUObject1 {
+str?: string;
+obj?: (VulFieldTestUObject2 | VulFieldRef<VulFieldTestUObject2>);
+}
+
+export interface VulFieldTestUObject2 {
+str?: string;
+}
+)";
+
+                const auto Actual = Desc->TypeScriptDefinitions(Opts);
+
+                if (!TC.EqualNoWhitespace(Actual, Expected, "typescript definition match"))
+                {
+                        return;
+                }
+        });
 	
 	VulTest::Case(this, "Typescript definitions - UINTERFACES", [](VulTest::TC TC)
 	{

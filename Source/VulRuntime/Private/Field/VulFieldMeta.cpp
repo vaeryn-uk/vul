@@ -225,7 +225,7 @@ bool FVulFieldDescription::operator==(const FVulFieldDescription& Other) const
 	return AreEquivalent(MakeShared<FVulFieldDescription>(*this), MakeShared<FVulFieldDescription>(Other));
 }
 
-FString FVulFieldDescription::TypeScriptDefinitions() const
+FString FVulFieldDescription::TypeScriptDefinitions(const FVulFieldTypeScriptOptions& Options) const
 {
 	TMap<FString, TSharedPtr<FVulFieldDescription>> Descriptions;
 
@@ -320,12 +320,34 @@ FString FVulFieldDescription::TypeScriptDefinitions() const
 				Out += LineEnding;
 			}
 
-			Out += "}";
-			Out += LineEnding;
-			Out += LineEnding;
-		} else if (TArray{EJson::String, EJson::Number, EJson::Boolean}.Contains(Entry.Value->Type))
-		{
-			// Simple type alias.
+                        Out += "}";
+                        Out += LineEnding;
+                        Out += LineEnding;
+
+                        if (Options.GenerateTypeGuardFunctions)
+                        {
+                                const auto RegistryEntry = FVulFieldRegistry::Get().GetType(Entry.Key);
+                                if (
+                                        RegistryEntry.IsSet() &&
+                                        RegistryEntry->DiscriminatorField.IsSet() &&
+                                        RegistryEntry->DiscriminatorValue.IsSet()
+                                )
+                                {
+                                        const FString DiscriminatorField = RegistryEntry->DiscriminatorField.GetValue();
+                                        const FString DiscriminatorValue = RegistryEntry->DiscriminatorValue.GetValue()();
+
+                                        Out += FString::Printf(TEXT("export function is%s(object: any): object is %s {"), *TypeName, *TypeName);
+                                        Out += LineEnding;
+                                        Out += Indent + FString::Printf(TEXT("return object.%s === \"%s\";"), *DiscriminatorField, *DiscriminatorValue);
+                                        Out += LineEnding;
+                                        Out += "}";
+                                        Out += LineEnding;
+                                        Out += LineEnding;
+                                }
+                        }
+                } else if (TArray{EJson::String, EJson::Number, EJson::Boolean}.Contains(Entry.Value->Type))
+                {
+                        // Simple type alias.
 			Out += FString::Printf(
 				TEXT("export type %s = %s;"),
 				*Entry.Value->GetTypeName().GetValue(),

@@ -2,6 +2,7 @@
 
 #include "Field/VulFieldUtil.h"
 #include "VulFieldSerializationContext.h"
+#include "VulFieldTypeScriptOptions.h"
 
 /**
  * Describes a Vul serializable field.
@@ -96,7 +97,7 @@ struct VULRUNTIME_API FVulFieldDescription
 
 	TOptional<FString> GetTypeId() const { return TypeId; }
 
-	FString TypeScriptDefinitions() const;
+       FString TypeScriptDefinitions(const FVulFieldTypeScriptOptions& Options = FVulFieldTypeScriptOptions()) const;
 
 	/**
 	 * Extracts all descriptions that are named types, i.e. registered with FVulFieldRegistry.
