@@ -92,6 +92,7 @@ struct TVulMeasure
 	void ModifyMax(const NumberType Delta, const float CurrentMultiplier = 0)
 	{
 		Max->ModifyBase(Delta);
+		SetCurrentClamp();
 		ModifyCurrent(Delta * CurrentMultiplier);
 	}
 
@@ -204,6 +205,11 @@ private:
 		Max = MakeShared<TVulNumber<NumberType>>(InMax);
 		auto Zero = MakeShared<TVulNumber<NumberType>>(0);
 		Current = MakeShared<TVulNumber<NumberType>>(InCurrent, TVulNumber<NumberType>::FClamp({Zero, Max}));
+	}
+
+	void SetCurrentClamp()
+	{
+		Current->ChangeClamp(TVulNumber<NumberType>::FClamp({MakeShared<TVulNumber<NumberType>>(0), Max}));
 	}
 
 	void ModifyCurrent(const NumberType Amount)

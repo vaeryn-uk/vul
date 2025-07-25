@@ -353,6 +353,11 @@ public:
 		return Watches;
 	}
 
+	void ChangeClamp(const FClamp& New)
+	{
+		Clamp = New;
+	}
+
 private:
 	NumberType Calculate(TArray<FModificationInfo>* ModificationInfo = nullptr) const
 	{
