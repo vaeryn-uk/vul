@@ -83,6 +83,19 @@ struct TVulMeasure
 	}
 
 	/**
+	 * Modifies the maximum value of this measure, also optionally applying a proportion
+	 * of this increase to the current.
+	 *
+	 * CurrentMultiplier=1, increase current by the same as max.
+	 * CurrentMultiplier=0, do not increase current.
+	 */
+	void ModifyMax(const NumberType Delta, const float CurrentMultiplier = 0)
+	{
+		Max->ModifyBase(Delta);
+		ModifyCurrent(Delta * CurrentMultiplier);
+	}
+
+	/**
 	 * Modifies the current value of this measure, returning true if there was a change in the current value.
 	 */
 	bool Change(const NumberType Delta)

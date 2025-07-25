@@ -55,5 +55,21 @@ bool TestMeasure::RunTest(const FString& Parameters)
 		TestEqual("assignment: Original measure is not changed", M1.CurrentValue(), 10.f);
 	}
 
+	{ // Modify max.
+		FTestMeasure M1(10.f);
+
+		M1.ModifyMax(2);
+		TestEqual("modifymax 2,0: maximum", M1.MaxValue(), 12.f);
+		TestEqual("modifymax 2,0: current", M1.CurrentValue(), 10.f);
+
+		M1.ModifyMax(2, 1);
+		TestEqual("modifymax 2,1: maximum", M1.MaxValue(), 14.f);
+		TestEqual("modifymax 2,1: current", M1.CurrentValue(), 12.f);
+
+		M1.ModifyMax(4, .5);
+		TestEqual("modifymax 4,.5: maximum", M1.MaxValue(), 18.f);
+		TestEqual("modifymax 4,.5: current", M1.CurrentValue(), 14.f);
+	}
+
 	return !HasAnyErrors();
 }
