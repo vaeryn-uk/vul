@@ -58,17 +58,26 @@ bool TestMeasure::RunTest(const FString& Parameters)
 	{ // Modify max.
 		FTestMeasure M1(10.f);
 
-		M1.ModifyMax(2);
+		M1.ModifyMax(FTestMeasure::FMaxNumberModification::MakeFlat(2));
 		TestEqual("modifymax 2,0: maximum", M1.MaxValue(), 12.f);
 		TestEqual("modifymax 2,0: current", M1.CurrentValue(), 10.f);
 
-		M1.ModifyMax(2, 1);
+		M1.ModifyMax(FTestMeasure::FMaxNumberModification::MakeFlat(2), 1);
 		TestEqual("modifymax 2,1: maximum", M1.MaxValue(), 14.f);
 		TestEqual("modifymax 2,1: current", M1.CurrentValue(), 12.f);
 
-		M1.ModifyMax(4, .5);
+		M1.ModifyMax(FTestMeasure::FMaxNumberModification::MakeFlat(4), .5);
 		TestEqual("modifymax 4,.5: maximum", M1.MaxValue(), 18.f);
 		TestEqual("modifymax 4,.5: current", M1.CurrentValue(), 14.f);
+
+		const auto ModificationId = FGuid::NewGuid();
+		M1.ModifyMax(FTestMeasure::FMaxNumberModification::MakeFlat(20, ModificationId), 1);
+		TestEqual("modifymax 20,1: maximum", M1.MaxValue(), 38.f);
+		TestEqual("modifymax 20,1: current", M1.CurrentValue(), 34.f);
+
+		M1.RemoveMax(ModificationId);
+		TestEqual("removemax: maximum", M1.MaxValue(), 18.f);
+		TestEqual("removemax: current", M1.CurrentValue(), 18.f);
 	}
 
 	return !HasAnyErrors();

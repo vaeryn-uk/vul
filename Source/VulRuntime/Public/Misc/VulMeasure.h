@@ -8,11 +8,19 @@
  * A measure is an amount of some resource, between 0 and some fixed max. Example: HP.
  *
  * Template parameter must be a numeric type that supports standard arithmetic operators.
+ *
+ * The maximum supports VulNumber modification tracking, so changes can be bucketed and later removed.
+ * Current does not support this, given its fluid clamping to max etc. In the use-case of a health
+ * bar, it's reasonable to track sources of max HP changes, but current HP will be changed frequently
+ * and detailed tracking here has less use.
  */
-template <typename NumberType>
+template <typename NumberType, typename ModificationId = FGuid, typename DefaultIdGenerator = TVulNumberDefaultIdStrategy>
 struct TVulMeasure
 {
 	VULFLD_TYPE(TVulMeasure, "VulMeasure")
+
+	using FMaxNumber = TVulNumber<NumberType, ModificationId, DefaultIdGenerator>;
+	using FMaxNumberModification = typename TVulNumber<NumberType, ModificationId, DefaultIdGenerator>::FModification;
 	
 	TVulMeasure()
 	{
@@ -32,7 +40,7 @@ struct TVulMeasure
 	TVulMeasure(const TVulMeasure& Other)
 	{
 		Current = MakeShared<TVulNumber<NumberType>>(*Other.Current);
-		Max = MakeShared<TVulNumber<NumberType>>(*Other.Max);
+		Max = MakeShared<FMaxNumber>(*Other.Max);
 	}
 
 	TVulMeasure& operator=(const TVulMeasure& Other)
@@ -89,11 +97,30 @@ struct TVulMeasure
 	 * CurrentMultiplier=1, increase current by the same as max.
 	 * CurrentMultiplier=0, do not increase current.
 	 */
-	void ModifyMax(const NumberType Delta, const float CurrentMultiplier = 0)
-	{
-		Max->ModifyBase(Delta);
+	typename FMaxNumber::FModificationResult ModifyMax(
+		const FMaxNumberModification& Modification,
+		const float CurrentMultiplier = 0
+	) {
+		auto Previous = GetMax().Value();
+		auto Out = Max->Modify(Modification);
+		
 		SetCurrentClamp();
-		ModifyCurrent(Delta * CurrentMultiplier);
+
+		if (const auto Diff = GetMax().Value() - Previous; Diff != 0 && CurrentMultiplier != 0)
+		{
+			ModifyCurrent(Diff * CurrentMultiplier);
+		}
+
+		return Out;
+	}
+
+	/**
+	 * Removes a previously applied modification to Max.
+	 */
+	void RemoveMax(const ModificationId& Id)
+	{
+		Max->Remove(Id);
+		SetCurrentClamp();
 	}
 
 	/**
@@ -194,22 +221,29 @@ struct TVulMeasure
 		return *Current;
 	}
 
-	const TVulNumber<NumberType>& GetMax() const
+	const FMaxNumber& GetMax() const
 	{
 		return *Max;
 	}
+	
 
 private:
 	void Init(const NumberType InCurrent, const NumberType InMax)
 	{
-		Max = MakeShared<TVulNumber<NumberType>>(InMax);
-		auto Zero = MakeShared<TVulNumber<NumberType>>(0);
-		Current = MakeShared<TVulNumber<NumberType>>(InCurrent, TVulNumber<NumberType>::FClamp({Zero, Max}));
+		Max = MakeShared<FMaxNumber>(InMax);
+
+		Current = MakeShared<TVulNumber<NumberType>>(InCurrent, TVulNumber<NumberType>::FClamp({
+			MakeShared<TVulNumber<NumberType>>(0),
+			MakeShared<TVulNumber<NumberType>>(Max->Value())
+		}));
 	}
 
 	void SetCurrentClamp()
 	{
-		Current->ChangeClamp(TVulNumber<NumberType>::FClamp({MakeShared<TVulNumber<NumberType>>(0), Max}));
+		Current->ChangeClamp(TVulNumber<NumberType>::FClamp({
+			MakeShared<TVulNumber<NumberType>>(0),
+			MakeShared<TVulNumber<NumberType>>(Max->Value())
+		}));
 	}
 
 	void ModifyCurrent(const NumberType Amount)
@@ -218,5 +252,5 @@ private:
 	}
 
 	TSharedPtr<TVulNumber<NumberType>> Current;
-	TSharedPtr<TVulNumber<NumberType>> Max;
+	TSharedPtr<FMaxNumber> Max;
 };
