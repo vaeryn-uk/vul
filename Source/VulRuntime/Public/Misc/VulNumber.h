@@ -39,6 +39,19 @@ struct TVulNumberModification
 	}
 
 	/**
+	 * Marks a modification as incrementing. When a bucket already has a value,
+	 * incrementing modifications are added to the existing modification in that
+	 * bucket, rather than overwriting it.
+	 */
+	TVulNumberModification& Increment(const bool InIsIncrement = true)
+	{
+		IsIncrement = InIsIncrement;
+		return *this;
+	}
+
+	bool GetIsIncrementing() const { return IsIncrement; }
+
+	/**
 	 * Modifies a number by a percentage. E.g. 1.1 increases a value by 10%.
 	 */
 	static TVulNumberModification MakePercent(const float InPercent, const ModificationId& Id = DefaultIdGenerator::Get())
@@ -100,6 +113,20 @@ struct TVulNumberModification
 		return *this;
 	}
 
+	TVulNumberModification Merge(const TVulNumberModification& Other) const
+	{
+		TVulNumberModification Out = *this;
+
+		if (Other.Flat.IsSet() && Out.Flat.IsSet())
+		{
+			Out.Flat = Other.Flat.GetValue() + Out.Flat.GetValue();
+		}
+		
+		// TODO: More merging.
+
+		return Out;
+	}
+
 	FVulFieldSet VulFieldSet() const
 	{
 		FVulFieldSet FieldSet;
@@ -110,6 +137,7 @@ struct TVulNumberModification
 		FieldSet.Add(FVulField::Create(&Flat), "flat");
 		FieldSet.Add(FVulField::Create(&Set), "set");
 		FieldSet.Add(FVulField::Create(&Id), "id");
+		FieldSet.Add(FVulField::Create(&IsIncrement), "isIncrement");
 		
 		return FieldSet;
 	}
@@ -119,6 +147,9 @@ struct TVulNumberModification
 	TOptional<float> BasePercent;
 	TOptional<NumberType> Flat;
 	TOptional<NumberType> Set;
+
+private:
+	bool IsIncrement = false;
 };
 
 /**
@@ -256,7 +287,7 @@ public:
 	/**
 	 * Applies a modification that can later be revoked.
 	 */
-	FModificationResult Modify(const FModification& Modification)
+	FModificationResult Modify(FModification Modification)
 	{
 		const auto ExistingIndex = Modifications.IndexOfByPredicate([&](
 				const FModification& Candidate
@@ -266,8 +297,14 @@ public:
 			}
 		);
 
+		// Perform a merge of a modification if its incrementing.
+		if (ExistingIndex != INDEX_NONE && Modification.GetIsIncrementing())
+		{
+			Modification = Modification.Merge(Modifications[ExistingIndex]);
+		}
+
 		// Short-circuit if the modification we're overriding is identical to the existing one.
-		if (ExistingIndex != INDEX_NONE && Modification == Modifications[ExistingIndex])
+		if (!Modification.GetIsIncrementing() && ExistingIndex != INDEX_NONE && Modification == Modifications[ExistingIndex])
 		{
 			return {
 				.Id = Modification.Id,

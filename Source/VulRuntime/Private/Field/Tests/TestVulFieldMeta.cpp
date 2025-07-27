@@ -735,6 +735,7 @@ export interface VulNumberModification {
 	flat?: number;
 	set?: number;
 	id?: string;
+	isIncrement?: boolean;
 	VulType: "VulNumberModification";
 }
 )";

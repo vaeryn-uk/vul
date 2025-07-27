@@ -201,6 +201,21 @@ bool TestNumber::RunTest(const FString& Parameters)
 		}
 	}
 
+	{ // Increment.
+		TestType M1(10);
+
+		FGuid ModId = FGuid::NewGuid();
+
+		M1.Modify(TestType::FModification::MakeFlat(2, ModId));
+		TestEqual("increment #1", M1.Value(), 12);
+
+		M1.Modify(TestType::FModification::MakeFlat(2, ModId).Increment());
+		TestEqual("increment #2", M1.Value(), 14);
+
+		M1.Modify(TestType::FModification::MakeFlat(2, ModId));
+		TestEqual("increment #3", M1.Value(), 12);
+	}
+
 	// Make the test pass by returning true, or fail by returning false.
 	return true;
 }
