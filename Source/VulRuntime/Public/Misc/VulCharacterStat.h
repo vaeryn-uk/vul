@@ -86,6 +86,7 @@ public:
 				return false;
 			}
 
+			Base = N;
 			return true;
 		}
 

@@ -30,6 +30,10 @@ bool TestCharacterStat::RunTest(const FString& Parameters)
 		TestEqual("Bucket2 set with clamp: return value", TestStat.Value(), 38);
 
 		TestEqual("Buckets: base value unchanged", TestStat.GetBase(), 30);
+
+		TestStat.Set(10);
+		TestEqual("Buckets: base value changed #1", TestStat.GetBase(), 10);
+		TestEqual("Buckets: base value changed #2", TestStat.Value(), 18);
 	}
 	
 	return true;
