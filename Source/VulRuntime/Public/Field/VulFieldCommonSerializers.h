@@ -41,8 +41,7 @@ struct TVulFieldSerializer<T>
 {
 	static bool Serialize(const T& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
 	{
-		constexpr bool IsFP = std::is_floating_point_v<T>;
-		if (IsFP)
+		if constexpr (std::is_floating_point_v<T>)
 		{
 			Out = MakeShared<FJsonValueNumberString>(FString::Printf(TEXT("%.*f"), Ctx.DefaultPrecision, Value));
 		} else

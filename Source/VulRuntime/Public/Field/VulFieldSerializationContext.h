@@ -19,10 +19,10 @@ struct VULRUNTIME_API FVulFieldSerializationErrors
 	 */
 	void SetMaxStack(int N);
 	
-	template <typename FmtType, typename... Types>
-	void Add(const FmtType& Fmt, Types&&... Args)
-	{
-		Errors.Add(PathStr() + ": " + FString::Printf(Fmt, Forward<Types>(Args)...));
+	template <typename... Types>
+	void Add(UE::Core::TCheckedFormatString<FString::FmtCharType, Types...> Fmt, Types... Args)
+    {
+		Errors.Add(PathStr() + TEXT(": ") + FString::Printf(Fmt, Forward<Types>(Args)...));
 	}
 	
 	void Add(const FVulFieldSerializationErrors& Other)
@@ -33,8 +33,8 @@ struct VULRUNTIME_API FVulFieldSerializationErrors
 		}
 	}
 	
-	template <typename FmtType, typename... Types>
-	bool AddIfNot(const bool Condition, const FmtType& Fmt, Types&&... Args)
+	template <typename... Types>
+	bool AddIfNot(const bool Condition, UE::Core::TCheckedFormatString<FString::FmtCharType, Types...> Fmt, Types&&... Args)
 	{
 		if (!Condition)
 		{

@@ -29,7 +29,7 @@ FVulHexVector FVulHexAddr::Diff(const FVulHexAddr& Other) const
 
 FVulHexVector FVulHexAddr::Vector() const
 {
-	return FVulHexVector({Q, R});
+	return FVulHexVector(Q, R);
 }
 
 TArray<FVulHexAddr> FVulHexAddr::Adjacent() const
