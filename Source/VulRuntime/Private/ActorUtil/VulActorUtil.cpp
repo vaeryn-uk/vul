@@ -5,9 +5,10 @@ UActorComponent* FVulActorUtil::SpawnDynamicComponent(
 	AActor* Owner,
 	const FName& Name,
 	USceneComponent* Parent,
-	UActorComponent* Template)
-{
-	auto Spawned = NewObject<UActorComponent>(Owner, ComponentClass.Get(), Name, RF_NoFlags, Template);
+	UActorComponent* Template,
+	const EObjectFlags Flags
+) {
+	auto Spawned = NewObject<UActorComponent>(Owner, ComponentClass.Get(), Name, Flags, Template);
 
 	if (Parent == nullptr)
 	{

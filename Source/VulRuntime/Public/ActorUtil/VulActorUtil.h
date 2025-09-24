@@ -23,9 +23,10 @@ public:
 		AActor* Owner,
 		const FName& Name,
 		USceneComponent* Parent   = nullptr,
-		UActorComponent* Template = nullptr)
-	{
-		return Cast<T>(SpawnDynamicComponent(T::StaticClass(), Owner, Name, Parent, Template));
+		UActorComponent* Template = nullptr,
+		const EObjectFlags Flags = RF_NoFlags
+	) {
+		return Cast<T>(SpawnDynamicComponent(T::StaticClass(), Owner, Name, Parent, Template, Flags));
 	}
 
 	/**
@@ -38,7 +39,8 @@ public:
 		AActor* Owner,
 		const FName& Name,
 		USceneComponent* Parent   = nullptr,
-		UActorComponent* Template = nullptr
+		UActorComponent* Template = nullptr,
+		const EObjectFlags Flags = RF_NoFlags
 	);
 
 	/**
