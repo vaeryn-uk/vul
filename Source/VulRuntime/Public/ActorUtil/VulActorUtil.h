@@ -165,6 +165,22 @@ public:
 		return true;
 	}
 
+	template <typename ComponentClass>
+	static ComponentClass* GetComponentByName(const AActor* Actor, const FName& Name)
+	{
+		TArray<ComponentClass*> Components;
+		Actor->GetComponents(Components);
+		for (auto Component : Components)
+		{
+			if (Component->GetFName() == Name)
+			{
+				return Component;
+			}
+		}
+
+		return nullptr;
+	}
+
 	/**
 	 * Returns an actor's bound box as an FBox.
 	 */
