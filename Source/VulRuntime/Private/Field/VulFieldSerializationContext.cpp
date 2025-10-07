@@ -101,7 +101,7 @@ bool FVulFieldSerializationErrors::WithIdentifierCtx(
 
 void FVulFieldSerializationErrors::Log()
 {
-	for (const auto Message : Errors)
+	for (const auto& Message : Errors)
 	{
 		UE_LOG(LogVul, Error, TEXT("FVulField de/serialization error: %s"), *Message);
 	}
@@ -137,7 +137,7 @@ bool FVulFieldSerializationContext::GenerateBaseTypeDescription(
 
 	const auto DiscField = FVulFieldRegistry::Get().GetType(TypeId)->DiscriminatorField;
 
-	for (const auto Entry : FVulFieldRegistry::Get().GetSubtypes(TypeId))
+	for (const auto& Entry : FVulFieldRegistry::Get().GetSubtypes(TypeId))
 	{
 		TSharedPtr<FVulFieldDescription> SubDesc = MakeShared<FVulFieldDescription>();
 

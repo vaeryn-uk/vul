@@ -297,7 +297,7 @@ struct FVulSingleFieldType
 
 inline bool CtxContainsError(VulTest::TC TC, const FVulFieldSerializationErrors& Errors, const FString& Term)
 {
-	for (const auto Err : Errors.Errors)
+	for (const auto& Err : Errors.Errors)
 	{
 		if (Err.Contains(Term))
 		{

@@ -66,7 +66,7 @@ bool FVulFieldDescription::AreEquivalent(
 	if (!AreEquivalent(A->ConstOf, B->ConstOf)) return false;
 
 	if (A->Properties.Num() != B->Properties.Num()) return false;
-	for (const auto Prop : A->Properties)
+	for (const auto& Prop : A->Properties)
 	{
 		if (!B->Properties.Contains(Prop.Key) || !AreEquivalent(Prop.Value, B->Properties[Prop.Key]))
 		{
@@ -112,7 +112,7 @@ void FVulFieldDescription::Union(const TArray<TSharedPtr<FVulFieldDescription>>&
 {
 	TArray<FVulFieldDescription> UniqueTypes;
 	
-	for (const auto Subtype : Subtypes)
+	for (const auto& Subtype : Subtypes)
 	{
 		if (!UniqueTypes.Contains(*Subtype.Get()))
 		{
@@ -151,7 +151,7 @@ void FVulFieldDescription::Enum(const FString& Item)
 
 bool FVulFieldDescription::HasEnumValue(const FString& Item) const
 {
-	for (const auto Value : EnumValues)
+	for (const auto& Value : EnumValues)
 	{
 		if (Value->AsString() == Item)
 		{
@@ -256,7 +256,7 @@ FString FVulFieldDescription::TypeScriptDefinitions(const FVulFieldTypeScriptOpt
 		return A->GetTypeName().Get("") < B->GetTypeName().Get("");
 	});
 
-	for (const auto Entry : Descriptions)
+	for (const auto& Entry : Descriptions)
 	{
 		const auto Description = Entry.Value;
 		const auto TypeName = Description->GetTypeName().GetValue();
@@ -266,7 +266,7 @@ FString FVulFieldDescription::TypeScriptDefinitions(const FVulFieldTypeScriptOpt
 			Out += FString::Printf(TEXT("export enum %s {"), *TypeName);
 			Out += LineEnding;
 
-			for (const auto Value : Description->EnumValues)
+			for (const auto& Value : Description->EnumValues)
 			{
 				if (!ensureAlwaysMsgf(Value->Type == EJson::String, TEXT("Only string enum values are supported (%s)"), *TypeName))
 				{
@@ -303,7 +303,7 @@ FString FVulFieldDescription::TypeScriptDefinitions(const FVulFieldTypeScriptOpt
 			
 			Out += LineEnding;
 
-			for (const auto PropertyEntry : Description->Properties)
+			for (const auto& PropertyEntry : Description->Properties)
 			{
 				if (BaseDesc.IsValid())
 				{
@@ -382,12 +382,12 @@ void FVulFieldDescription::GetNamedTypes(TMap<FString, TSharedPtr<FVulFieldDescr
 		Types.Add(TypeId.GetValue(), MakeShared<FVulFieldDescription>(*this));
 	}
 
-	for (const auto Prop : Properties)
+	for (const auto& Prop : Properties)
 	{
 		Prop.Value->GetNamedTypes(Types);
 	}
 
-	for (const auto Subtype : UnionTypes)
+	for (const auto& Subtype : UnionTypes)
 	{
 		Subtype->GetNamedTypes(Types);
 	}
@@ -414,12 +414,12 @@ void FVulFieldDescription::UniqueDescriptions(
 
 	Descriptions.Add(Description);
 
-	for (const auto Prop : Description->Properties)
+	for (const auto& Prop : Description->Properties)
 	{
 		UniqueDescriptions(Prop.Value.Get(), Descriptions);
 	}
 
-	for (const auto Subtype : Description->UnionTypes)
+	for (const auto& Subtype : Description->UnionTypes)
 	{
 		UniqueDescriptions(Subtype.Get(), Descriptions);
 	}
@@ -450,7 +450,7 @@ bool FVulFieldDescription::ContainsReference(const EReferencing Ref) const
 	TArray<const FVulFieldDescription*> Entries;
 	UniqueDescriptions(this, Entries);
 
-	for (const auto Entry : Entries)
+	for (const auto& Entry : Entries)
 	{
 		if (Entry->Referencing == Ref)
 		{
@@ -466,7 +466,7 @@ bool FVulFieldDescription::MayContainReference() const
 	TArray<const FVulFieldDescription*> Entries;
 	UniqueDescriptions(this, Entries);
 
-	for (const auto Entry : Entries)
+	for (const auto& Entry : Entries)
 	{
 		if (Entry->Referencing != EReferencing::None)
 		{
@@ -567,7 +567,7 @@ TSharedPtr<FJsonValue> FVulFieldDescription::JsonSchema(
 		
 		TSharedPtr<FJsonObject> ChildProperties = MakeShared<FJsonObject>();
 		
-		for (const auto Child : Properties)
+		for (const auto& Child : Properties)
 		{
 			ChildProperties->Values.Add(Child.Key, Child.Value->JsonSchema(Definitions));
 		}
@@ -575,7 +575,7 @@ TSharedPtr<FJsonValue> FVulFieldDescription::JsonSchema(
 		Out->Values.Add("properties", MakeShared<FJsonValueObject>(ChildProperties));
 		
 		TArray<TSharedPtr<FJsonValue>> RequiredProps;
-		for (const auto Prop : RequiredProperties)
+		for (const auto& Prop : RequiredProperties)
 		{
 			RequiredProps.Add(MakeShared<FJsonValueString>(Prop));
 		}
@@ -600,7 +600,7 @@ TSharedPtr<FJsonValue> FVulFieldDescription::JsonSchema(
 	{
 		TArray<TSharedPtr<FJsonValue>> OneOf;
 		
-		for (const auto Subtype : UnionTypes)
+		for (const auto& Subtype : UnionTypes)
 		{
 			OneOf.Add(Subtype->JsonSchema(Definitions));
 		}

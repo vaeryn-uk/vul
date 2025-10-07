@@ -642,7 +642,7 @@ bool TestVulField::RunTest(const FString& Parameters)
 			
 			VTC_MUST_EQUAL(Data.Field.DeserializeFromJson(Data.Json, Ctx), false, "trees fails")
 			
-			for (const auto Err : Data.ExpectedErrors)
+			for (const auto& Err : Data.ExpectedErrors)
 			{
 				CtxContainsError(TC, Ctx.State.Errors, Err);
 			}

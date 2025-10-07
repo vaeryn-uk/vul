@@ -20,7 +20,7 @@ bool TestNumber::RunTest(const FString& Parameters)
 		{
 			auto Number = TestType(Data.Base, Data.Clamp);
 
-			for (const auto Modification : Data.Modifications)
+			for (const auto& Modification : Data.Modifications)
 			{
 				Number.Modify(Modification);
 			}

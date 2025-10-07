@@ -7,6 +7,7 @@
 
 template <typename RowType>
 struct TVulDataPtr;
+class UVulDataRepository;
 
 /**
  * A lightweight pointer to data retrieved from a data repository.
@@ -277,7 +278,7 @@ struct TVulDataPtr
 	{
 		TArray<TVulDataPtr> Out;
 
-		for (const auto Item : Array)
+		for (const auto& Item : Array)
 		{
 			Out.Add(Item);
 		}

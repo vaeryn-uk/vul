@@ -23,7 +23,7 @@ bool FVulFieldSerializationFlags::IsEnabled(const FString& Option, const VulRunt
 
 bool FVulFieldSerializationFlags::Resolve(const FString& Option, const VulRuntime::Field::FPath& Path) const
 {
-	for (const auto Entry : PathFlags)
+	for (const auto& Entry : PathFlags)
 	{
 		if (Entry.Key == "")
 		{

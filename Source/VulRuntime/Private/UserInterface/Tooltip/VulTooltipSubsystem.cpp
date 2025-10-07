@@ -101,7 +101,12 @@ void UVulTooltipSubsystem::Show(
 
 		Widget->AddToPlayerScreen(VulRuntime::Settings()->TooltipZOrder);
 	}
+	
 
+#if PLATFORM_ANDROID
+	UE_LOG(LogVul, Error, TEXT("dynamic_cast usage invalid on Android - no RTTI. Vul needs fixing"))
+	return;
+#else
 	const auto AsVulWidget = dynamic_cast<IVulTooltipWidget*>(Widget.Get());
 	checkf(AsVulWidget, TEXT("Widget class does not implement IVulTooltipWidget"))
 	AsVulWidget->Show(Data);
@@ -121,6 +126,7 @@ void UVulTooltipSubsystem::Show(
 	Anchor = InAnchor;
 
 	OnDataShown.Broadcast(Data, Widget.Get());
+#endif
 }
 
 void UVulTooltipSubsystem::Hide(const FString& Context, const APlayerController* Controller) const

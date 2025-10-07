@@ -27,8 +27,12 @@ struct TVulFieldSerializer
 	 */
 	static bool Serialize(const T& Value, TSharedPtr<FJsonValue>& Out, struct FVulFieldSerializationContext& Ctx)
 	{
+#if defined(_MSC_VER)
 		static_assert(sizeof(T) == -1, "Error: " __FUNCSIG__ " is not defined.");
-		return nullptr;
+#else
+		static_assert(sizeof(T) == -1, "Error: function is not defined.");
+#endif
+		return false;
 	}
 
 	/**
@@ -40,7 +44,11 @@ struct TVulFieldSerializer
 	 */
 	static bool Deserialize(const TSharedPtr<FJsonValue>& Data, T& Out, struct FVulFieldDeserializationContext& Ctx)
 	{
+#if defined(_MSC_VER)
 		static_assert(sizeof(T) == -1, "Error: " __FUNCSIG__ " is not defined.");
+#else
+		static_assert(sizeof(T) == -1, "Error: function is not defined.");
+#endif
 		return false;
 	}
 };

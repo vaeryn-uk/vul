@@ -47,9 +47,14 @@ protected:
 	template <typename DataType, typename = TEnableIf<TIsDerivedFrom<DataType, FVulTooltipData>::Value>>
 	const DataType* GetData() const
 	{
+#if !PLATFORM_ANDROID
 		const auto Ret = dynamic_cast<const DataType*>(TooltipData.Get());
 		checkf(Ret, TEXT("Could not convert tooltip data to requested type"))
 		return Ret;
+#else
+		UE_LOG(LogVul, Error, TEXT("dynamic_cast usage invalid on Android - no RTTI. Vul needs fixing"))
+		return nullptr;
+#endif
 	}
 
 	virtual void RenderTooltip() PURE_VIRTUAL();

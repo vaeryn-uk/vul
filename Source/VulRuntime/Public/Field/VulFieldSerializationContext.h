@@ -27,7 +27,7 @@ struct VULRUNTIME_API FVulFieldSerializationErrors
 	
 	void Add(const FVulFieldSerializationErrors& Other)
 	{
-		for (const auto Error : Other.Errors)
+		for (const auto& Error : Other.Errors)
 		{
 			Errors.Add(Error);
 		}

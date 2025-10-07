@@ -602,7 +602,7 @@ private:
 	}
 };
 
-template <typename TileData, typename CostType = int>
+template <typename TileData, typename CostType>
 TArray<TPair<typename TVulHexgrid<TileData, CostType>::FVulTile, float>> TVulHexgrid<TileData, CostType>::ScoreTiles(
 	const TFunction<TOptional<float>(const FVulTile&)>& ScoreFn,
 	const bool Ascending

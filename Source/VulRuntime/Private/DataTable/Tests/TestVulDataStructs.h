@@ -39,6 +39,11 @@ struct FCircDepIncluder
 	FVulDataPtr CircularProperty;
 };
 
+FORCEINLINE uint32 GetTypeHash(const FCircDepIncluder& Value)
+{
+	return GetTypeHash(Value.SomeValue);
+}
+
 USTRUCT()
 struct FCircDep : public FTableRowBase
 {
@@ -59,6 +64,11 @@ struct FCircDep : public FTableRowBase
 	UPROPERTY(meta=(VulDataTable="CircTable"))
 	TMap<FString, FCircDepIncluder> CircularMap;
 };
+
+FORCEINLINE uint32 GetTypeHash(const FCircDep& Value)
+{
+	return GetTypeHash(Value.Value);
+}
 
 USTRUCT()
 struct FVulTestBaseStruct : public FTableRowBase
