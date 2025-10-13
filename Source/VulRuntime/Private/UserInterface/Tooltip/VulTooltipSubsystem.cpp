@@ -103,8 +103,8 @@ void UVulTooltipSubsystem::Show(
 	}
 	
 
-#if PLATFORM_ANDROID
-	UE_LOG(LogVul, Error, TEXT("dynamic_cast usage invalid on Android - no RTTI. Vul needs fixing"))
+#if !USE_RTTI
+	UE_LOG(LogVul, Error, TEXT("dynamic_cast usage invalid with no RTTI. Vul needs fixing for Android/Linux"))
 	return;
 #else
 	const auto AsVulWidget = dynamic_cast<IVulTooltipWidget*>(Widget.Get());

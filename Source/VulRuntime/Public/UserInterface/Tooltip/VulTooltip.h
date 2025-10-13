@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "VulRuntime.h"
 #include "UObject/Object.h"
 #include "VulTooltip.generated.h"
 
@@ -47,12 +48,12 @@ protected:
 	template <typename DataType, typename = TEnableIf<TIsDerivedFrom<DataType, FVulTooltipData>::Value>>
 	const DataType* GetData() const
 	{
-#if !PLATFORM_ANDROID
+#if USE_RTTI
 		const auto Ret = dynamic_cast<const DataType*>(TooltipData.Get());
 		checkf(Ret, TEXT("Could not convert tooltip data to requested type"))
 		return Ret;
 #else
-		UE_LOG(LogVul, Error, TEXT("dynamic_cast usage invalid on Android - no RTTI. Vul needs fixing"))
+		UE_LOG(LogVul, Error, TEXT("dynamic_cast usage invalid with no RTTI. Vul needs fixing for Android/Linux"))
 		return nullptr;
 #endif
 	}

@@ -51,6 +51,11 @@ Name = Load; \
 return Name.IsValid(); \
 }
 
+#if defined(__INTELLISENSE__) || defined(__JETBRAINS_IDE__)
+	#ifndef USE_RTTI
+		#define USE_RTTI 1  // In reality, this'll vary based on build platform, but useful for IDE to show Windows code.
+	#endif
+#endif
 
 #define VUL_CONCAT_IMPL(x, y) x##y
 #define VUL_CONCAT(x, y) VUL_CONCAT_IMPL(x, y)

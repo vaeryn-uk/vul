@@ -57,7 +57,7 @@ void IVulAutoSizedInlineWidget::ApplyAutoSizing(
 	const FTextRunInfo& RunInfo,
 	const FTextBlockStyle& TextStyle
 ) {
-#if !PLATFORM_ANDROID
+#if USE_RTTI
 	const auto AutoSized = dynamic_cast<IVulAutoSizedInlineWidget*>(Widget);
 	if (AutoSized == nullptr)
 	{
@@ -97,7 +97,7 @@ void IVulAutoSizedInlineWidget::ApplyAutoSizing(
 		}
 	}
 #else
-	UE_LOG(LogVul, Error, TEXT("dynamic_cast usage invalid on Android - no RTTI. Vul needs fixing"))
+	UE_LOG(LogVul, Error, TEXT("dynamic_cast usage invalid with no RTTI. Vul needs fixing for Android/Linux"))
 	return;
 #endif
 }
