@@ -23,6 +23,9 @@ struct FVulLevelSettings
 	UPROPERTY(EditAnywhere)
 	TMap<FName, TSubclassOf<UVulLevelData>> LevelData;
 
+	UPROPERTY(EditAnywhere)
+	TSoftObjectPtr<UWorld> RootLevel;
+
 	/**
 	 * The name of the level in the level data that has a special designation as the
 	 * loading level. That is, one that is shown whilst our levels are loading in and out.
@@ -38,6 +41,14 @@ struct FVulLevelSettings
 	 */
 	UPROPERTY(EditAnywhere)
 	FName StartingLevelName = NAME_None;
+
+	/**
+	 * Optionally specifies a different level for dedicated servers to start on.
+	 *
+	 * Note clients acting as a server do not count, only headless servers respect this.
+	 */
+	UPROPERTY(EditAnywhere)
+	FName ServerStartingLevelName = NAME_None;
 
 	/**
 	 * If showing the load screen, this is the minimum amount of time it will be displayed.
@@ -56,6 +67,10 @@ struct FVulLevelSettings
 	TOptional<TPair<FName, UVulLevelData*>> FindLevel(UWorld* World) const;
 
 	bool IsValid() const;
+
+	FString Summary(const bool IsDedicatedServer) const;
+	
+	FName GetStartingLevelName(const bool IsDedicatedServer) const;
 };
 
 /**
@@ -145,8 +160,10 @@ public:
 	 *
 	 * If LevelName is already loaded, this will force a reload, destroying the
 	 * existing level and streaming it in again fresh.
+	 *
+	 * Returns true if the LoadLevel request was accepted & queued.
 	 */
-	void LoadLevel(const FName& LevelName, FVulLevelDelegate::FDelegate OnComplete = FVulLevelDelegate::FDelegate());
+	bool LoadLevel(const FName& LevelName, FVulLevelDelegate::FDelegate OnComplete = FVulLevelDelegate::FDelegate());
 
 	/**
 	 * Loads a level by an enum value.
@@ -245,8 +262,10 @@ private:
 	 * Initializes the level manager with the provided settings in normal operation.
 	 *
 	 * Will immediately load the first level, as per settings.
+	 *
+	 * Returns true if the level manager successfully initialized in streaming mode.
 	 */
-	void InitLevelManager(const FVulLevelSettings& InSettings, UWorld* World);
+	bool InitLevelManager(const FVulLevelSettings& InSettings, UWorld* World);
 
 	/**
 	 * Generates a unique action info input required for streaming levels. Required for the level streaming API.
@@ -356,6 +375,10 @@ private:
 	void SetSpawnParams(FActorSpawnParameters& Param);
 
 	EVulLevelManagerState State = EVulLevelManagerState::Idle;
+
+	bool IsServer() const;
+	
+	bool IsDedicatedServer() const;
 };
 
 template <typename WidgetType>
@@ -381,3 +404,21 @@ namespace VulRuntime
 {
 	VULRUNTIME_API UVulLevelManager* LevelManager(UWorld* WorldCtx);
 }
+
+#define VUL_LEVEL_MANAGER_LOG(Verbosity, Format, ...) \
+do { \
+	const UWorld* _World = GetWorld(); \
+	const ENetMode _NetMode = _World ? _World->GetNetMode() : NM_Standalone; \
+	const TCHAR* _NetModeStr = TEXT("Unknown"); \
+	switch (_NetMode) { \
+		case NM_Client:          _NetModeStr = TEXT("Client"); break; \
+		case NM_ListenServer:    _NetModeStr = TEXT("ListenServer"); break; \
+		case NM_DedicatedServer: _NetModeStr = TEXT("Server"); break; \
+		case NM_Standalone:      _NetModeStr = TEXT("Standalone"); break; \
+		default: break; \
+	} \
+	FString _WorldId = _World ? FString::FromInt(_World->GetUniqueID()) : FString(TEXT("unknown")); \
+	FString _WorldName = _World ? _World->GetName() : FString(TEXT("unknown")); \
+	FString _MapName = _World ? _World->GetMapName() : FString(TEXT("unknown")); \
+	UE_LOG(LogVul, Verbosity, TEXT("[%s, WorldID: %s, %s - %s] VulLevelManager: ") Format, _NetModeStr, *_WorldId, *_WorldName, *_MapName, ##__VA_ARGS__); \
+} while (0);

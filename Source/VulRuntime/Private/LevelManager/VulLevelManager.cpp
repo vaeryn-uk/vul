@@ -23,7 +23,28 @@ TOptional<TPair<FName, UVulLevelData*>> FVulLevelSettings::FindLevel(UWorld* Wor
 
 bool FVulLevelSettings::IsValid() const
 {
-	return !LevelData.IsEmpty() && !StartingLevelName.IsNone();
+	return !LevelData.IsEmpty() && !StartingLevelName.IsNone() && RootLevel.IsValid();
+}
+
+FString FVulLevelSettings::Summary(const bool IsDedicatedServer) const
+{
+	return FString::Printf(
+		TEXT("Level count: %d, Root: %s, StartLevel: %s, LoadLevel: %s"),
+		LevelData.Num(),
+		*(RootLevel.IsValid() ? RootLevel.GetAssetName() : "none"),
+		*GetStartingLevelName(IsDedicatedServer).ToString(),
+		*LoadingLevelName.ToString()
+	);
+}
+
+FName FVulLevelSettings::GetStartingLevelName(const bool IsDedicatedServer) const
+{
+	if (IsDedicatedServer && !ServerStartingLevelName.IsNone())
+	{
+		return ServerStartingLevelName;
+	}
+
+	return StartingLevelName;
 }
 
 void UVulLevelManager::Initialize(FSubsystemCollectionBase& Collection)
@@ -38,7 +59,7 @@ void UVulLevelManager::Initialize(FSubsystemCollectionBase& Collection)
 
 	if (!VulRuntime::Settings()->LevelSettings.IsValid())
 	{
-		UE_LOG(LogVul, Display, TEXT("Skipping UVulLevelManager initialization is no LevelSettings configured."))
+		VUL_LEVEL_MANAGER_LOG(Display, TEXT("Skipping initialization as no valid LevelSettings configured."))
 		return;
 	}
 
@@ -55,13 +76,31 @@ void UVulLevelManager::Initialize(FSubsystemCollectionBase& Collection)
 				return;
 			}
 
-			UE_LOG(LogVul, Display, TEXT("Initializing UVulLevelManager with configured LevelSettings."))
-			InitLevelManager(VulRuntime::Settings()->LevelSettings, World);
-
-			ensureAlwaysMsgf(
-				FWorldDelegates::OnWorldTickStart.Remove(WorldInitDelegateHandle),
-				TEXT("Could not remove UVulRuntimeSubsystem world change delegate")
+			VUL_LEVEL_MANAGER_LOG(
+				Verbose,
+				TEXT("Initializing with configured LevelSettings: %s"),
+				*VulRuntime::Settings()->LevelSettings.Summary(IsDedicatedServer())
 			);
+			
+			if (InitLevelManager(VulRuntime::Settings()->LevelSettings, World))
+			{
+				ensureAlwaysMsgf(
+					FWorldDelegates::OnWorldTickStart.Remove(WorldInitDelegateHandle),
+					TEXT("Could not remove UVulRuntimeSubsystem world change delegate")
+				);
+				
+				VUL_LEVEL_MANAGER_LOG(
+					Display,
+					TEXT("Initialized with configured LevelSettings: %s"),
+					*VulRuntime::Settings()->LevelSettings.Summary(IsDedicatedServer())
+				);
+			} else
+			{
+				VUL_LEVEL_MANAGER_LOG(
+					Verbose,
+					TEXT("Streaming initialization failed. Listening for further world starts to try again...")
+				);
+			}
 		}
 	);
 }
@@ -96,39 +135,76 @@ UVulLevelData* UVulLevelManager::CurrentLevelData()
 	return ResolveData(CurrentLevel.GetValue());
 }
 
-void UVulLevelManager::InitLevelManager(const FVulLevelSettings& InSettings, UWorld* World)
+bool UVulLevelManager::InitLevelManager(const FVulLevelSettings& InSettings, UWorld* World)
 {
 	Settings = InSettings;
 
 	const auto CurrentLevelData = Settings.FindLevel(World);
 
-	// If the current level is not configured, we infer this is a root level containing all
-	// of our game levels. Auto-load the first level.
-	if (!CurrentLevelData.IsSet())
+	// If this matches our configured root level, start streaming stuff in.
+	if (World == Settings.RootLevel.Get())
 	{
+		// Reset from previous attempts. We'll unset if issues.
+		bIsInStreamingMode = true;
+		
+		VUL_LEVEL_MANAGER_LOG(
+			Verbose,
+			TEXT("Detected running in root level. Attempting level streaming management")
+		)
+		
+		const auto StartingLevel = Settings.GetStartingLevelName(IsDedicatedServer());
+		bool Ok = false;
+		
 		if (!Settings.LoadingLevelName.IsNone())
 		{
 			// If we have a loading level. Display this first.
-			LoadLevel(Settings.LoadingLevelName, FVulLevelDelegate::FDelegate::CreateWeakLambda(
+			Ok = LoadLevel(Settings.LoadingLevelName, FVulLevelDelegate::FDelegate::CreateWeakLambda(
 				this,
-				[this](const UVulLevelData*, const UVulLevelManager*)
+				[this, StartingLevel](const UVulLevelData*, const UVulLevelManager*)
 				{
-					LoadLevel(Settings.StartingLevelName);
+					LoadLevel(StartingLevel);
 				}
 			));
-		} else if (!Settings.StartingLevelName.IsNone())
+		} else if (!StartingLevel.IsNone())
 		{
 			// Else just load the starting level without a loading screen.
-			LoadLevel(Settings.StartingLevelName);
+			Ok = LoadLevel(StartingLevel);
 		}
-	} else
+
+		if (Ok)
+		{
+			VUL_LEVEL_MANAGER_LOG(
+				Verbose,
+				TEXT("Level streaming management successfully enabled")
+			)
+			return true;
+		}
+
+		VUL_LEVEL_MANAGER_LOG(Verbose, TEXT("Could not queue initial LoadLevel request"))
+		bIsInStreamingMode = false;
+		return false;
+	}
+
+	VUL_LEVEL_MANAGER_LOG(
+		Verbose,
+		TEXT("Detected running in non-root level. Disabling VulLevelManager level streaming management")
+	)
+
+	if (CurrentLevelData.IsSet())
 	{
-		// If we are starting with a level we have configured, don't mess with the level loading
-		// and just invoke our extended functionality on that level.
+		VUL_LEVEL_MANAGER_LOG(
+			Display,
+			TEXT("Directly loaded non-root level %s. Running any LevelData hooks only once."),
+			*CurrentLevelData->Key.ToString()
+		)
+		
 		CurrentLevel = CurrentLevelData->Key;
 		OnShowLevelData = CurrentLevelData->Value;
-		bIsInStreamingMode = false;
 	}
+	
+	bIsInStreamingMode = false;
+	
+	return false;
 }
 
 UVulLevelData* UVulLevelManager::ResolveData(const FName& LevelName)
@@ -171,7 +247,7 @@ void UVulLevelManager::ShowLevel(const FName& LevelName)
 		return;
 	}
 
-	UE_LOG(LogVul, Display, TEXT("Showing level %s"), *LevelName.ToString())
+	VUL_LEVEL_MANAGER_LOG(Display, TEXT("Showing level %s"), *LevelName.ToString())
 
 	// Remove all widgets from the viewport from previous levels.
 	RemoveAllWidgets(GetWorld());
@@ -190,7 +266,7 @@ void UVulLevelManager::ShowLevel(const FName& LevelName)
 
 void UVulLevelManager::HideLevel(const FName& LevelName)
 {
-	UE_LOG(LogVul, Display, TEXT("Hiding level %s"), *LevelName.ToString())
+	VUL_LEVEL_MANAGER_LOG(Display, TEXT("Hiding level %s"), *LevelName.ToString())
 
 	if (const auto LS = GetLevelStreaming(LevelName); IsValid(LS))
 	{
@@ -212,7 +288,7 @@ void UVulLevelManager::LoadAssets(const TArray<FSoftObjectPath>& Paths)
 		return;
 	}
 
-	UE_LOG(LogVul, Display, TEXT("Loading %d additional assets with level"), Paths.Num());
+	VUL_LEVEL_MANAGER_LOG(Display, TEXT("Loading %d additional assets with level"), Paths.Num());
 
 	if (AdditionalAssets.IsValid())
 	{
@@ -235,7 +311,7 @@ bool UVulLevelManager::AreWaitingForAdditionalAssets() const
 
 void UVulLevelManager::LoadStreamingLevel(const FName& LevelName, TSoftObjectPtr<UWorld> Level)
 {
-	UE_LOG(LogVul, Display, TEXT("Requesting load of level %s"), *LevelName.ToString())
+	VUL_LEVEL_MANAGER_LOG(Display, TEXT("Requesting load of level %s"), *LevelName.ToString())
 
 	UGameplayStatics::LoadStreamLevelBySoftObjectPtr(
 		this,
@@ -254,7 +330,7 @@ void UVulLevelManager::UnloadStreamingLevel(const FName& Name, TSoftObjectPtr<UW
 		return;
 	}
 
-	UE_LOG(LogVul, Display, TEXT("Requesting unload of level %s"), *Name.ToString())
+	VUL_LEVEL_MANAGER_LOG(Display, TEXT("Requesting unload of level %s"), *Name.ToString())
 
 	UGameplayStatics::UnloadStreamLevelBySoftObjectPtr(
 		this,
@@ -286,6 +362,12 @@ UVulLevelManager::FLoadRequest* UVulLevelManager::CurrentRequest()
 
 void UVulLevelManager::StartProcessing(FLoadRequest* Request)
 {
+	VUL_LEVEL_MANAGER_LOG(
+		Display,
+		TEXT("StartProcessing %s"),
+		*(Request->LevelName.IsSet() ? Request->LevelName.GetValue().ToString() : FString(TEXT("<Unload request>")))
+	);
+
 	Request->StartedAt = FVulTime::WorldTime(GetWorld());
 
 	LastUnLoadedLevel = NAME_None;
@@ -325,7 +407,7 @@ void UVulLevelManager::StartProcessing(FLoadRequest* Request)
 		return;
 	}
 
-	UE_LOG(LogVul, Display, TEXT("Beginning loading of %s"), *LevelName.ToString())
+	VUL_LEVEL_MANAGER_LOG(Display, TEXT("Beginning loading of %s"), *LevelName.ToString())
 
 	if (!Request->IsLoadingLevel)
 	{
@@ -390,7 +472,7 @@ void UVulLevelManager::Process(FLoadRequest* Request)
 	if (Request->StartedAt.GetValue().IsAfter(Settings.LoadTimeout.GetTotalSeconds()))
 	{
 		// TODO: Load timed out. Then what?
-		UE_LOG(LogVul, Error, TEXT("Level load timeout after %s"), *Settings.LoadTimeout.ToString());
+		VUL_LEVEL_MANAGER_LOG(Error, TEXT("Level load timeout after %s"), *Settings.LoadTimeout.ToString());
 		NextRequest();
 		return;
 	}
@@ -410,7 +492,7 @@ void UVulLevelManager::Process(FLoadRequest* Request)
 
 	ShowLevel(Request->LevelName.GetValue());
 
-	UE_LOG(LogVul, Display, TEXT("Completed loading of %s"), *Request->LevelName.GetValue().ToString())
+	VUL_LEVEL_MANAGER_LOG(Display, TEXT("Completed loading of %s"), *Request->LevelName.GetValue().ToString())
 
 	const auto Resolved = ResolveData(Request->LevelName.GetValue());
 	OnLevelLoadComplete.Broadcast(Resolved, this);
@@ -485,12 +567,15 @@ ULevelStreaming* UVulLevelManager::GetLevelStreaming(const FName& LevelName, con
 
 	const auto Loaded = UGameplayStatics::GetStreamingLevel(this, FName(*Data->Level.GetLongPackageName()));
 
-	if (!ensureMsgf(
-		Loaded != nullptr,
-		TEXT("Request to load level %s failed as it was not found in the persistent level"),
-		*LevelName.ToString()
-	))
+	if (!Loaded)
 	{
+		VUL_LEVEL_MANAGER_LOG(
+			Warning,
+			TEXT("Request to load level %s failed as it was not found in the persistent level"),
+			*LevelName.ToString(),
+			*GetWorld()->GetMapName(),
+			*GetWorld()->GetName()
+		)
 		return nullptr;
 	}
 
@@ -499,6 +584,11 @@ ULevelStreaming* UVulLevelManager::GetLevelStreaming(const FName& LevelName, con
 
 bool UVulLevelManager::SpawnLevelWidgets(UVulLevelData* LevelData)
 {
+	if (LevelData->Widgets.IsEmpty())
+	{
+		return false;
+	}
+	
 	const auto Ctrl = VulRuntime::WorldGlobals::GetFirstPlayerController(this);
 	if (!ensureMsgf(IsValid(Ctrl), TEXT("Cannot find player controller to spawn level load widgets")))
 	{
@@ -566,17 +656,18 @@ TStatId UVulLevelManager::GetStatId() const
 	RETURN_QUICK_DECLARE_CYCLE_STAT(UVulLevelManager, STATGROUP_Tickables);
 }
 
-void UVulLevelManager::LoadLevel(const FName& LevelName, FVulLevelDelegate::FDelegate OnComplete)
+bool UVulLevelManager::LoadLevel(const FName& LevelName, FVulLevelDelegate::FDelegate OnComplete)
 {
-	if (!ensureAlwaysMsgf(bIsInStreamingMode, TEXT("Cannot LoadLevel() for a level manager not in streaming mode")))
+	if (!bIsInStreamingMode)
 	{
-		return;
+		VUL_LEVEL_MANAGER_LOG(Warning, TEXT("Cannot LoadLevel() for a level manager not in streaming mode"))
+		return false;
 	}
 
 	// Validate the level name.
 	if (const auto LS = GetLevelStreaming(LevelName); !IsValid(LS))
 	{
-		return;
+		return false;
 	}
 
 	// Special case: if LevelName is the same as the level we're loading, add an unload
@@ -595,6 +686,8 @@ void UVulLevelManager::LoadLevel(const FName& LevelName, FVulLevelDelegate::FDel
 	{
 		Queue.Last().Delegate.Add(OnComplete);
 	}
+
+	return true;
 }
 
 FActorSpawnParameters UVulLevelManager::SpawnParams()
@@ -618,5 +711,29 @@ void UVulLevelManager::SetSpawnParams(FActorSpawnParameters& Params)
 			Params.OverrideLevel = Level->GetLoadedLevel();
 		}
 	}
+}
+
+bool UVulLevelManager::IsServer() const
+{
+	if (!GetWorld())
+	{
+		return false;
+	}
+
+	const auto NM = GetWorld()->GetNetMode();
+
+	return NM_DedicatedServer == NM || NM_ListenServer == NM || NM_Standalone == NM; 
+}
+
+bool UVulLevelManager::IsDedicatedServer() const
+{
+	if (!GetWorld())
+	{
+		return false;
+	}
+
+	const auto NM = GetWorld()->GetNetMode();
+
+	return NM_DedicatedServer == NM; 
 }
 
