@@ -54,6 +54,8 @@ void UVulLevelManager::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
 
+	LevelManagerId = FGuid::NewGuid();
+
 	const auto& World = GetWorld();
 	if (!IsValid(World) || !World->IsGameWorld())
 	{
@@ -136,6 +138,14 @@ UVulLevelData* UVulLevelManager::CurrentLevelData()
 	}
 
 	return ResolveData(CurrentLevel.GetValue());
+}
+
+void UVulLevelManager::OnNetworkDataReplicated(AVulLevelNetworkData* NewData)
+{
+	if (!IsServer() && NewData->HasAuthority())
+	{
+		ClientData = NewData;
+	}
 }
 
 bool UVulLevelManager::InitLevelManager(const FVulLevelSettings& InSettings, UWorld* World)
@@ -224,11 +234,15 @@ void UVulLevelManager::TickNetworkHandling()
 		}
 	} else if (GetWorld() && !ServerData)
 	{
-		
 		// Non servers are listening for a server data actor to follow.
 		// TODO: A way to not spam actor iterators on tick.
 		for (TActorIterator<AVulLevelNetworkData> It(GetWorld()); It; ++It)
 		{
+			if (!(*It)->IsServer)
+			{
+				continue;
+			}
+			
 			ServerData = *It;
 
 			ServerData->OnNetworkLevelChange.AddWeakLambda(this, [this](AVulLevelNetworkData* Data)
@@ -236,10 +250,17 @@ void UVulLevelManager::TickNetworkHandling()
 				FollowServer();
 			});
 
-			VUL_LEVEL_MANAGER_LOG(Display, TEXT("Client detected VulLevelServerData to follow"))
+			VUL_LEVEL_MANAGER_LOG(
+				Display,
+				TEXT("Client detected VulLevelServerData to follow. Clearing queue & forcing load of %s"),
+				ServerData->CurrentLevel
+			)
 			
-			// Immediately sync with whatever level the server has loaded.
-			FollowServer();
+			// Immediately load whatever level the server is on. This isn't a synchronized load,
+			// given the server is like after load here, so just freely load up front to get
+			// in sync.
+			Queue.Reset();
+			LoadLevel(ServerData->CurrentLevel, {}, true);
 
 			break;
 		}
@@ -255,6 +276,7 @@ void UVulLevelManager::InitializeServerHandling()
 		Params.Name = FName(TEXT("LevelManager_ServerData"));
 		Params.NameMode = FActorSpawnParameters::ESpawnActorNameMode::Requested;
 		ServerData = GetWorld()->SpawnActor<AVulLevelNetworkData>(Params);
+		ServerData->IsServer = true;
 
 		if (!ServerData)
 		{
@@ -428,7 +450,7 @@ bool UVulLevelManager::AreWaitingForAdditionalAssets() const
 
 void UVulLevelManager::LoadStreamingLevel(const FName& LevelName, TSoftObjectPtr<UWorld> Level)
 {
-	VUL_LEVEL_MANAGER_LOG(Display, TEXT("Requesting load of level %s"), *LevelName.ToString())
+	VUL_LEVEL_MANAGER_LOG(Verbose, TEXT("Requesting load of level %s"), *LevelName.ToString())
 
 	UGameplayStatics::LoadStreamLevelBySoftObjectPtr(
 		this,
@@ -487,6 +509,29 @@ void UVulLevelManager::StartProcessing(FLoadRequest* Request)
 
 	Request->StartedAt = FVulTime::WorldTime(GetWorld());
 
+	if (Request->LevelName.IsSet() && !Request->IsLoadingLevel)
+	{
+		if (IsServer() && IsValid(ServerData))
+		{
+			// Inform clients we're starting a level load.
+			ServerData->PendingServerLevelRequest = FVulPendingLevelRequest{
+				.RequestId = Request->Id,
+				.LevelName = Request->LevelName.GetValue(),
+				.IssuedAt = Request->StartedAt->Seconds(),
+				.ClientsTotal = ConnectedClients.Num(),
+				.ServerReady = false,
+			};
+		} else if (Request->IsServerFollow && IsValid(ClientData))
+		{
+			// We're on a client following a server load.
+			ClientData->PendingClientLevelRequest = FVulPendingLevelRequest{
+				.RequestId = Request->Id,
+				.LevelName = Request->LevelName.GetValue(),
+				.IssuedAt = GetWorld()->GetTimeSeconds(),
+			};
+		}
+	}
+
 	LastUnLoadedLevel = NAME_None;
 	State = EVulLevelManagerState::Loading;
 
@@ -524,7 +569,7 @@ void UVulLevelManager::StartProcessing(FLoadRequest* Request)
 		return;
 	}
 
-	VUL_LEVEL_MANAGER_LOG(Display, TEXT("Beginning loading of %s"), *LevelName.ToString())
+	VUL_LEVEL_MANAGER_LOG(Verbose, TEXT("Beginning loading of %s"), *LevelName.ToString())
 
 	if (!Request->IsLoadingLevel)
 	{
@@ -586,18 +631,73 @@ void UVulLevelManager::Process(FLoadRequest* Request)
 		return;
 	}
 
-	if (Request->StartedAt.GetValue().IsAfter(Settings.LoadTimeout.GetTotalSeconds()))
-	{
-		// TODO: Load timed out. Then what?
-		VUL_LEVEL_MANAGER_LOG(Error, TEXT("Level load timeout after %s"), *Settings.LoadTimeout.ToString());
-		NextRequest();
-		return;
-	}
-
 	const auto LS = GetLevelStreaming(Request->LevelName.GetValue());
 	if (!IsValid(LS) || !LS->IsLevelLoaded() || AreWaitingForAdditionalAssets())
 	{
 		// Loading is not complete.
+		return;
+	}
+
+	// Check for a network-synchronized level load.
+	if (IsValid(ServerData) && ServerData->PendingServerLevelRequest.IsValid())
+	{
+		if (IsServer() && !ServerData->PendingServerLevelRequest.IsComplete())
+		{
+			ServerData->PendingServerLevelRequest.ServerReady = true;
+			
+			int ClientsLoaded = 0;
+			for (const auto& Entry : ConnectedClients)
+			{
+				if (!Entry.Value->PendingClientLevelRequest.IsValid())
+				{
+					// Client has not yet registered a follow request.
+					continue;
+				}
+				
+				if (Entry.Value->PendingClientLevelRequest.RequestId != ServerData->PendingServerLevelRequest.RequestId)
+				{
+					// If the client has registered a follow request, check it's what we're currently doing.
+					FailLevelLoad(EVulLevelManagerLoadFailure::Desynchronization);
+					return;
+				}
+				
+				if (Entry.Value->PendingClientLevelRequest.IsComplete())
+				{
+					ClientsLoaded++;
+				}
+			}
+
+			ServerData->PendingServerLevelRequest.ClientsLoaded = ClientsLoaded;
+
+			if (ServerData->PendingServerLevelRequest.ClientsLoaded == ServerData->PendingServerLevelRequest.ClientsTotal)
+			{
+				ServerData->PendingServerLevelRequest.CompletedAt = GetWorld()->GetTimeSeconds();
+			} else if (ServerData->PendingServerLevelRequest.IssuedAt + Settings.LoadTimeout.GetTotalSeconds() > GetWorld()->GetTimeSeconds()) {
+				FailLevelLoad(EVulLevelManagerLoadFailure::ClientTimeout);
+				return;
+			} else
+			{
+				// Not all clients connected yet.
+				return;
+			}
+		}
+	}
+
+	if (IsValid(ClientData) && ClientData->PendingClientLevelRequest.IsValid())
+	{
+		if (!IsValid(ServerData) || ServerData->PendingServerLevelRequest.RequestId != ClientData->PendingClientLevelRequest.RequestId)
+		{
+			FailLevelLoad(EVulLevelManagerLoadFailure::Desynchronization);
+			return;
+		}
+
+		ClientData->PendingClientLevelRequest.CompletedAt = GetWorld()->GetTimeSeconds();
+		ClientData->Server_UpdateClientRequest(ClientData->PendingClientLevelRequest);
+	}
+
+	if (Request->StartedAt.GetValue().IsAfter(Settings.LoadTimeout.GetTotalSeconds()))
+	{
+		FailLevelLoad(EVulLevelManagerLoadFailure::LocalLoadTimeout);
 		return;
 	}
 
@@ -790,14 +890,21 @@ TStatId UVulLevelManager::GetStatId() const
 
 bool UVulLevelManager::LoadLevel(const FName& LevelName, FVulLevelDelegate::FDelegate OnComplete)
 {
-	return LoadLevel(LevelName, false, OnComplete);
+	return LoadLevel(LevelName, {}, false, OnComplete);
 }
 
 bool UVulLevelManager::LoadLevel(
 	const FName& LevelName,
-	const bool IsServerFollow,
+	const TOptional<FString>& ServerRequestId,
+	const bool Force,
 	FVulLevelDelegate::FDelegate OnComplete
 ) {
+	if (!Force && IsFollowing() && !ServerRequestId.IsSet())
+	{
+		VUL_LEVEL_MANAGER_LOG(Error, TEXT("Ignoring LoadLevel() request as this level manager is following a server"))
+		return false;
+	}
+	
 	if (!bIsInStreamingMode)
 	{
 		VUL_LEVEL_MANAGER_LOG(Warning, TEXT("Cannot LoadLevel() for a level manager not in streaming mode"))
@@ -815,13 +922,15 @@ bool UVulLevelManager::LoadLevel(
 	if (IsReloadOfSameLevel(LevelName))
 	{
 		FLoadRequest& New = Queue.AddDefaulted_GetRef();
+		New.Id = ServerRequestId.Get(GenerateNextRequestId());
 		New.LevelName = TOptional<FName>();
 	}
 
 	FLoadRequest& New = Queue.AddDefaulted_GetRef();
+	New.Id = ServerRequestId.Get(GenerateNextRequestId());
 	New.LevelName = LevelName;
 	New.IsLoadingLevel = LevelName == Settings.LoadingLevelName;
-	New.IsServerFollow = IsServerFollow;
+	New.IsServerFollow = ServerRequestId.IsSet();
 
 	if (OnComplete.IsBound())
 	{
@@ -887,11 +996,24 @@ FVulLevelEventContext UVulLevelManager::EventCtx() const
 
 void UVulLevelManager::FollowServer()
 {
-	if (ServerData && !ServerData->CurrentLevel.IsNone())
+	if (!ServerData || !ServerData->PendingServerLevelRequest.IsValid())
 	{
-		VUL_LEVEL_MANAGER_LOG(Display, TEXT("Following server to %s"), *ServerData->CurrentLevel.ToString())
-		LoadLevel(ServerData->CurrentLevel, true);
+		return;
 	}
+
+	// We may already be working on this request.
+	const auto NewRequest = Queue.ContainsByPredicate([this](const FLoadRequest& Req)
+	{
+		return Req.Id == ServerData->PendingServerLevelRequest.RequestId;
+	});
+	
+	if (!NewRequest)
+	{
+		return;
+	}
+	
+	VUL_LEVEL_MANAGER_LOG(Display, TEXT("Following server to %s"), *ServerData->PendingServerLevelRequest.LevelName.ToString())
+	LoadLevel(ServerData->CurrentLevel, ServerData->PendingServerLevelRequest.RequestId);
 }
 
 FString UVulLevelManager::LevelManagerNetId() const
@@ -913,5 +1035,35 @@ FString UVulLevelManager::LevelManagerNetId() const
 	}
 
 	return FString::Printf(TEXT("%s, WorldID: %s (%s - %s)"), NetModeStr, *WorldIdStr, *WorldNameStr, *MapNameStr);
+}
+
+bool UVulLevelManager::IsFollowing() const
+{
+	return IsValid(ServerData) && !ServerData->HasAuthority();
+}
+
+FString UVulLevelManager::GenerateNextRequestId() const
+{
+	return FString::Printf(TEXT("%s_%d"), *LevelManagerId.ToString(), ++RequestIdGenerator);
+}
+
+DEFINE_ENUM_TO_STRING(EVulLevelManagerLoadFailure, "VulRuntime")
+
+void UVulLevelManager::FailLevelLoad(const EVulLevelManagerLoadFailure Failure)
+{
+	VUL_LEVEL_MANAGER_LOG(Error, "Level load failure: %s", *EnumToString(Failure));
+
+	if (IsServer() && IsValid(ServerData))
+	{
+		ServerData->PendingServerLevelRequest = {};
+	}
+
+	if (IsValid(ClientData))
+	{
+		ClientData = nullptr;
+	}
+
+	Queue.Reset();
+	// TODO: What now? Back to start level? Disconnect from server?
 }
 

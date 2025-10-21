@@ -131,6 +131,30 @@ enum class EVulLevelManagerState : uint8
 };
 
 /**
+ * Why did we fail to load a level?
+ */
+UENUM()
+enum class EVulLevelManagerLoadFailure : uint8
+{
+	/**
+	 * We exceeded the timeout to complete a load (locally, outside of any network considerations).
+	 */
+	LocalLoadTimeout,
+
+	/**
+	 * One client failed to load a level in time.
+	 */
+	ClientTimeout,
+
+	/**
+	 * During a network level load, some state got unexpectedly desynchronized.
+	 */
+	Desynchronization,
+};
+
+VULRUNTIME_API DECLARE_ENUM_TO_STRING(EVulLevelManagerLoadFailure);
+
+/**
  * Responsible for loading levels using Unreal's streaming level model.
  *
  * This provides a simple framework for switching levels with a loading screen
@@ -273,12 +297,19 @@ public:
 	 */
 	UVulLevelData* CurrentLevelData();
 
+	void OnNetworkDataReplicated(AVulLevelNetworkData* NewData);
+
 private:
 	UVulLevelData* ResolveData(const FName& LevelName);
 
 	ULevelStreaming* GetLevelStreaming(const FName& LevelName, const TCHAR* FailReason = TEXT(""));
 
-	bool LoadLevel(const FName& LevelName, const bool IsServerFollow, FVulLevelDelegate::FDelegate OnComplete = FVulLevelDelegate::FDelegate());
+	bool LoadLevel(
+		const FName& LevelName,
+		const TOptional<FString>& ServerRequestId,
+		const bool Force = false,
+		FVulLevelDelegate::FDelegate OnComplete = FVulLevelDelegate::FDelegate()
+	);
 
 	/**
 	 * Spawns the widgets specified in LevelData, returning true if this was done.
@@ -362,6 +393,7 @@ private:
 	 */
 	struct FLoadRequest
 	{
+		FString Id;
 		/**
 		 * If not set, a request is simply a request to unload the current level.
 		 */
@@ -433,6 +465,9 @@ private:
 	 */
 	UPROPERTY()
 	AVulLevelNetworkData* ServerData = nullptr;
+	
+	UPROPERTY()
+	AVulLevelNetworkData* ClientData = nullptr;
 
 	/**
 	 * Server only: mapping of network data instances to their owners.
@@ -452,6 +487,20 @@ private:
 	 * Generates an ID that is used for internal logging & identification.
 	 */
 	FString LevelManagerNetId() const;
+
+	/**
+	 * Returns true if this is a client instance connected to & following a server.
+	 *
+	 * A following instance cannot make LoadLevel calls.
+	 */
+	bool IsFollowing() const;
+
+	FGuid LevelManagerId;
+	mutable int32 RequestIdGenerator;
+
+	FString GenerateNextRequestId() const;
+
+	void FailLevelLoad(const EVulLevelManagerLoadFailure Failure);
 };
 
 template <typename WidgetType>
