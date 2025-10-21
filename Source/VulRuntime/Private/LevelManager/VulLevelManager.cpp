@@ -142,7 +142,14 @@ UVulLevelData* UVulLevelManager::CurrentLevelData()
 
 void UVulLevelManager::OnNetworkDataReplicated(AVulLevelNetworkData* NewData)
 {
-	if (!IsServer() && NewData->HasAuthority())
+	// Find if it's our actor.
+	if (IsServer() || !GetWorld())
+	{
+		return;
+	}
+
+	const auto Player = GetWorld()->GetFirstLocalPlayerFromController();
+	if (!IsServer() && NewData->GetOwner() == Player->GetPlayerController(GetWorld()))
 	{
 		ClientData = NewData;
 	}
@@ -692,8 +699,12 @@ void UVulLevelManager::Process(FLoadRequest* Request)
 			return;
 		}
 
-		ClientData->PendingClientLevelRequest.CompletedAt = GetWorld()->GetTimeSeconds();
-		ClientData->Server_UpdateClientRequest(ClientData->PendingClientLevelRequest);
+		if (!ClientData->PendingClientLevelRequest.IsComplete())
+		{
+			ClientData->PendingClientLevelRequest.CompletedAt = GetWorld()->GetTimeSeconds();
+			ClientData->Server_UpdateClientRequest(ClientData->PendingClientLevelRequest);
+			VUL_LEVEL_MANAGER_LOG(Display, TEXT("Client-side loading complete; telling server we're ready"))
+		}
 	}
 
 	if (!IsServer() && IsValid(ServerData) && ServerData->PendingServerLevelRequest.IsPending())
@@ -1064,7 +1075,7 @@ void UVulLevelManager::FollowServer()
 		*ServerData->PendingServerLevelRequest.LevelName.ToString()
 	)
 	
-	LoadLevel(ServerData->CurrentLevel, ServerData->PendingServerLevelRequest.RequestId);
+	LoadLevel(ServerData->PendingServerLevelRequest.LevelName, ServerData->PendingServerLevelRequest.RequestId);
 }
 
 FString UVulLevelManager::LevelManagerNetId() const
