@@ -8,6 +8,11 @@ bool FVulSequenceLevelData::IsValid() const
 	return !LevelSequenceTag.IsNone();
 }
 
+void UVulLevelData::OnLoadProgress(const FVulPendingLevelRequest& SyncRequest, const FVulLevelEventContext& Ctx)
+{
+	
+}
+
 void UVulLevelData::OnLevelShown(const FVulLevelShownInfo& Info, const FVulLevelEventContext& Ctx)
 {
 	LevelManager = Info.LevelManager;

@@ -253,7 +253,7 @@ void UVulLevelManager::TickNetworkHandling()
 			VUL_LEVEL_MANAGER_LOG(
 				Display,
 				TEXT("Client detected VulLevelServerData to follow. Clearing queue & forcing load of %s"),
-				ServerData->CurrentLevel
+				*ServerData->CurrentLevel.ToString()
 			)
 			
 			// Immediately load whatever level the server is on. This isn't a synchronized load,
@@ -678,6 +678,7 @@ void UVulLevelManager::Process(FLoadRequest* Request)
 			} else
 			{
 				// Not all clients connected yet.
+				NotifyLevelLoadProgress();
 				return;
 			}
 		}
@@ -693,6 +694,13 @@ void UVulLevelManager::Process(FLoadRequest* Request)
 
 		ClientData->PendingClientLevelRequest.CompletedAt = GetWorld()->GetTimeSeconds();
 		ClientData->Server_UpdateClientRequest(ClientData->PendingClientLevelRequest);
+	}
+
+	if (!IsServer() && IsValid(ServerData) && ServerData->PendingServerLevelRequest.IsPending())
+	{
+		// Client waiting for other clients or the server.
+		NotifyLevelLoadProgress();
+		return;
 	}
 
 	if (Request->StartedAt.GetValue().IsAfter(Settings.LoadTimeout.GetTotalSeconds()))
@@ -938,6 +946,22 @@ bool UVulLevelManager::LoadLevel(
 	}
 
 	return true;
+}
+
+void UVulLevelManager::NotifyLevelLoadProgress()
+{
+	if (State != EVulLevelManagerState::Loading)
+	{
+		return;
+	}
+
+	if (const auto LoadingLevel = ResolveData(Settings.LoadingLevelName); LoadingLevel)
+	{
+		LoadingLevel->OnLoadProgress(
+			ServerData ? ServerData->PendingServerLevelRequest : FVulPendingLevelRequest(),
+			EventCtx()
+		);
+	}
 }
 
 FActorSpawnParameters UVulLevelManager::SpawnParams()

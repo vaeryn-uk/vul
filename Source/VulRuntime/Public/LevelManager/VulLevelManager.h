@@ -246,6 +246,8 @@ public:
 		LoadLevel(LevelName, OnComplete);
 	}
 
+	void NotifyLevelLoadProgress();
+
 	/**
 	 * Returns parameters for spawning in an actor that belongs to the currently-loaded level.
 	 */

@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "LevelSequence.h"
+#include "VulLevelNetworkData.h"
 #include "Components/Widget.h"
 #include "UObject/Object.h"
 #include "VulLevelData.generated.h"
@@ -103,6 +104,16 @@ public:
 	 */
 	UPROPERTY(EditAnywhere)
 	FVulSequenceLevelData SequenceSettings;
+
+	/**
+	 * Called when there is progress towards loading, but not yet complete.
+	 *
+	 * SyncRequest reports on the status of a synchronized network load, involving a server
+	 * and multiple clients.
+	 *
+	 * This is called on the loading level only, and will be called very frequently during this time.
+	 */
+	virtual void OnLoadProgress(const FVulPendingLevelRequest& SyncRequest, const FVulLevelEventContext& Ctx);
 
 	/**
 	 * Called when this level is shown (after loading is complete). You can use this to execute your

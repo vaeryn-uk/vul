@@ -50,6 +50,7 @@ struct VULRUNTIME_API FVulPendingLevelRequest
 
 	bool IsValid() const { return !LevelName.IsNone() && !RequestId.IsEmpty(); }
 	bool IsComplete() const { return CompletedAt > 0; }
+	bool IsPending() const { return IsValid() && !IsComplete(); }
 };
 
 /**
