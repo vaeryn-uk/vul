@@ -257,17 +257,8 @@ void UVulLevelManager::TickNetworkHandling()
 				FollowServer();
 			});
 
-			VUL_LEVEL_MANAGER_LOG(
-				Display,
-				TEXT("Client detected VulLevelServerData to follow. Clearing queue & forcing load of %s"),
-				*ServerData->CurrentLevel.ToString()
-			)
-			
-			// Immediately load whatever level the server is on. This isn't a synchronized load,
-			// given the server is like after load here, so just freely load up front to get
-			// in sync.
-			Queue.Reset();
-			LoadLevel(ServerData->CurrentLevel, {}, true);
+			// Try follow immediately. Will switch to whatever level the server is already on.
+			FollowServer();
 
 			break;
 		}
@@ -1053,29 +1044,52 @@ FVulLevelEventContext UVulLevelManager::EventCtx() const
 
 void UVulLevelManager::FollowServer()
 {
-	if (!ServerData || !ServerData->PendingServerLevelRequest.IsValid())
+	if (!ServerData)
 	{
+		// Nothing to follow.
 		return;
 	}
 
-	// We may already be working on this request.
-	const auto ExistingRequest = Queue.ContainsByPredicate([this](const FLoadRequest& Req)
+	FName LevelName = FName();
+	TOptional<FString> RequestId;
+
+	if (ServerData->PendingServerLevelRequest.IsValid())
 	{
-		return Req.Id == ServerData->PendingServerLevelRequest.RequestId;
-	});
+		// We may already be working on this request.
+		const auto ExistingRequest = Queue.ContainsByPredicate([this](const FLoadRequest& Req)
+		{
+			return Req.Id == ServerData->PendingServerLevelRequest.RequestId;
+		});
 	
-	if (ExistingRequest)
-	{
-		return;
+		if (!ExistingRequest)
+		{
+			return;
+		}
+
+		LevelName = ServerData->PendingServerLevelRequest.LevelName;
+		RequestId = ServerData->PendingServerLevelRequest.RequestId;
+	
+		VUL_LEVEL_MANAGER_LOG(
+			Display,
+			TEXT("Following server to %s (synchronized network level switch)"),
+			*ServerData->PendingServerLevelRequest.LevelName.ToString()
+		)
 	}
-	
-	VUL_LEVEL_MANAGER_LOG(
-		Display,
-		TEXT("Following server to %s"),
-		*ServerData->PendingServerLevelRequest.LevelName.ToString()
-	)
-	
-	LoadLevel(ServerData->PendingServerLevelRequest.LevelName, ServerData->PendingServerLevelRequest.RequestId);
+
+	if (LevelName.IsNone() && !ServerData->CurrentLevel.IsNone())
+	{
+		LevelName = ServerData->CurrentLevel;
+		VUL_LEVEL_MANAGER_LOG(
+			Display,
+			TEXT("Following server to %s (server current level)"),
+			*ServerData->PendingServerLevelRequest.LevelName.ToString()
+		)
+	}
+
+	if (LevelName.IsValid())
+	{
+		LoadLevel(LevelName, RequestId);
+	}
 }
 
 FString UVulLevelManager::LevelManagerNetId() const
