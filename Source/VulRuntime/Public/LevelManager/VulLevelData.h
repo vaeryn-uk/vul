@@ -59,6 +59,18 @@ struct FVulLevelDataWidget
 };
 
 /**
+ * Useful information made available in VulLevelManagement hooks.
+ */
+USTRUCT()
+struct FVulLevelEventContext
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	bool IsDedicatedServer;
+};
+
+/**
  * Base definition of level data.
  *
  * You may extend this in your project to add additional data and provide
@@ -96,14 +108,14 @@ public:
 	 * Called when this level is shown (after loading is complete). You can use this to execute your
 	 * own level-specific functionality.
 	 */
-	virtual void OnLevelShown(const struct FVulLevelShownInfo& Info);
+	virtual void OnLevelShown(const struct FVulLevelShownInfo& Info, const FVulLevelEventContext& Ctx);
 
 	/**
 	 * Adds to a list of assets that will be loaded as part of this level's loading.
 	 *
 	 * Loading will not complete (and a new level not shown) until all of these assets are loaded.
 	 */
-	virtual void AssetsToLoad(TArray<FSoftObjectPath>& Assets);
+	virtual void AssetsToLoad(TArray<FSoftObjectPath>& Assets, const FVulLevelEventContext& Ctx);
 
 private:
 	UFUNCTION()

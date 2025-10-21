@@ -141,11 +141,15 @@ spawning widgets when certain levels are shown, based on the `LevelData` assets 
 settings.
 
 `UVulLevelManager` makes a best attempt to support loading non-root levels from the editor. If it detects
-that you're booting a level that's specified in `UVulRuntimeSettings::LevelSettings` (i.e. a non-root/persistent
-level), it will initialize actors and hooks in the same way as if it were being loaded during normal gameplay.
+that you're booting a level that's not the configured `RootLevel`, it will initialize actors and hooks in 
+the same way as if it were being loaded during normal gameplay.
 
 Levels can be marked as cinematic levels, see `UVulLevelData::SequenceSettings`. In this case, the level
 manager will play the cinematic and immediately move on to another level when it's completed.
+
+Network support is included. This works as follows:
+
+TODO.
 
 ### Enhanced Developer Settings
 

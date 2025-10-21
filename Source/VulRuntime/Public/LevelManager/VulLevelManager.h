@@ -2,8 +2,10 @@
 
 #include "CoreMinimal.h"
 #include "VulLevelData.h"
+#include "VulLevelNetworkData.h"
 #include "Engine/StreamableManager.h"
 #include "GameFramework/Actor.h"
+#include "GameFramework/PlayerState.h"
 #include "Time/VulTime.h"
 #include "VulLevelManager.generated.h"
 
@@ -106,6 +108,9 @@ struct VULRUNTIME_API FVulLevelShownInfo
 	 */
 	UPROPERTY()
 	ULevel* ShownLevel;
+
+	UPROPERTY()
+	FVulLevelEventContext Ctx;
 };
 
 /**
@@ -164,6 +169,29 @@ public:
 	 * Returns true if the LoadLevel request was accepted & queued.
 	 */
 	bool LoadLevel(const FName& LevelName, FVulLevelDelegate::FDelegate OnComplete = FVulLevelDelegate::FDelegate());
+
+	/**
+	 * Connects a client to a remote server.
+	 *
+	 * Unlike other level loading methods, this does trigger a full world reload so that we can
+	 * sync with the remote server's world & replication.
+	 *
+	 * We load the loading level whilst the connection is happening. Once complete, we'll land in
+	 * the server's copy of a persistent world, then follow its ShownLevels.
+	 *
+	 * TODO: Needed/useful now we have UVulLevelNetworkData?
+	 */
+	void Connect(const FString& URI);
+
+	/**
+	 * Disconnects a client from a remote server, causing a recreation of the Root Level
+	 * locally and having level manager take ownership of that.
+	 *
+	 * Like Connect, LoadingLevel will be shown before this reload occurs.
+	 *
+	 * TODO: Needed/useful now we have UVulLevelNetworkData?
+	 */
+	void Disconnect();
 
 	/**
 	 * Loads a level by an enum value.
@@ -250,6 +278,8 @@ private:
 
 	ULevelStreaming* GetLevelStreaming(const FName& LevelName, const TCHAR* FailReason = TEXT(""));
 
+	bool LoadLevel(const FName& LevelName, const bool IsServerFollow, FVulLevelDelegate::FDelegate OnComplete = FVulLevelDelegate::FDelegate());
+
 	/**
 	 * Spawns the widgets specified in LevelData, returning true if this was done.
 	 */
@@ -266,6 +296,10 @@ private:
 	 * Returns true if the level manager successfully initialized in streaming mode.
 	 */
 	bool InitLevelManager(const FVulLevelSettings& InSettings, UWorld* World);
+
+	void TickNetworkHandling();
+
+	void InitializeServerHandling();
 
 	/**
 	 * Generates a unique action info input required for streaming levels. Required for the level streaming API.
@@ -335,6 +369,7 @@ private:
 		FVulLevelDelegate Delegate;
 		TOptional<FVulTime> StartedAt;
 		bool IsLoadingLevel;
+		bool IsServerFollow;
 	};
 
 	FLoadRequest* CurrentRequest();
@@ -376,9 +411,47 @@ private:
 
 	EVulLevelManagerState State = EVulLevelManagerState::Idle;
 
+	/**
+	 * Is this a server instance that clients may connect to?
+	 *
+	 * Enables ServerData + replication so that clients can keep in sync.
+	 */
 	bool IsServer() const;
 	
 	bool IsDedicatedServer() const;
+
+	FVulLevelEventContext EventCtx() const;
+
+	void FollowServer();
+
+	/**
+	 * Which level is the server showing?
+	 *
+	 * On the server, this is the authoritative state that we keep up to date.
+	 * On the client, we have a replicated copy of this actor so we can easily track
+	 *    the server moving between levels.
+	 */
+	UPROPERTY()
+	AVulLevelNetworkData* ServerData = nullptr;
+
+	/**
+	 * Server only: mapping of network data instances to their owners.
+	 *
+	 * These instances are spawned on the server, but client-owned so they can
+	 * notify the server of their current level state.
+	 */
+	UPROPERTY()
+	TMap<APlayerController*, AVulLevelNetworkData*> ConnectedClients;
+
+	float LastLoadFailLog = -1.f;
+
+	FDelegateHandle OnClientJoined;
+	FDelegateHandle OnClientLeft;
+
+	/**
+	 * Generates an ID that is used for internal logging & identification.
+	 */
+	FString LevelManagerNetId() const;
 };
 
 template <typename WidgetType>
@@ -407,18 +480,5 @@ namespace VulRuntime
 
 #define VUL_LEVEL_MANAGER_LOG(Verbosity, Format, ...) \
 do { \
-	const UWorld* _World = GetWorld(); \
-	const ENetMode _NetMode = _World ? _World->GetNetMode() : NM_Standalone; \
-	const TCHAR* _NetModeStr = TEXT("Unknown"); \
-	switch (_NetMode) { \
-		case NM_Client:          _NetModeStr = TEXT("Client"); break; \
-		case NM_ListenServer:    _NetModeStr = TEXT("ListenServer"); break; \
-		case NM_DedicatedServer: _NetModeStr = TEXT("Server"); break; \
-		case NM_Standalone:      _NetModeStr = TEXT("Standalone"); break; \
-		default: break; \
-	} \
-	FString _WorldId = _World ? FString::FromInt(_World->GetUniqueID()) : FString(TEXT("unknown")); \
-	FString _WorldName = _World ? _World->GetName() : FString(TEXT("unknown")); \
-	FString _MapName = _World ? _World->GetMapName() : FString(TEXT("unknown")); \
-	UE_LOG(LogVul, Verbosity, TEXT("[%s, WorldID: %s, %s - %s] VulLevelManager: ") Format, _NetModeStr, *_WorldId, *_WorldName, *_MapName, ##__VA_ARGS__); \
+	UE_LOG(LogVul, Verbosity, TEXT("VulLevelManager [%s]: ") Format, *LevelManagerNetId(), ##__VA_ARGS__); \
 } while (0);

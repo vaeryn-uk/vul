@@ -8,7 +8,7 @@ bool FVulSequenceLevelData::IsValid() const
 	return !LevelSequenceTag.IsNone();
 }
 
-void UVulLevelData::OnLevelShown(const FVulLevelShownInfo& Info)
+void UVulLevelData::OnLevelShown(const FVulLevelShownInfo& Info, const FVulLevelEventContext& Ctx)
 {
 	LevelManager = Info.LevelManager;
 
@@ -33,7 +33,7 @@ void UVulLevelData::OnLevelShown(const FVulLevelShownInfo& Info)
 	}
 }
 
-void UVulLevelData::AssetsToLoad(TArray<FSoftObjectPath>& Assets)
+void UVulLevelData::AssetsToLoad(TArray<FSoftObjectPath>& Assets, const FVulLevelEventContext& Ctx)
 {
 
 }
