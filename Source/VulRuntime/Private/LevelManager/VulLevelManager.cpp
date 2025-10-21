@@ -380,16 +380,18 @@ void UVulLevelManager::ShowLevel(const FName& LevelName)
 	const auto Level = ResolvedData->Level;
 
 	const auto LS = GetLevelStreaming(LevelName);
-	if (!IsValid(LS) || GetLevelStreaming(LevelName)->GetShouldBeVisibleFlag())
+	if (!IsValid(LS))
 	{
 		// Not valid or already shown.
+		VUL_LEVEL_MANAGER_LOG(
+			Warning,
+			TEXT("Not showing level %s because LS was invalid"),
+			*LevelName.ToString()
+		)
 		return;
 	}
 
 	VUL_LEVEL_MANAGER_LOG(Display, TEXT("Showing level %s"), *LevelName.ToString())
-
-	// Remove all widgets from the viewport from previous levels.
-	RemoveAllWidgets(GetWorld());
 
 	LastLoadedLevel = LS;
 	LastLoadedLevel->SetShouldBeVisible(true);
@@ -397,8 +399,6 @@ void UVulLevelManager::ShowLevel(const FName& LevelName)
 	// Need to ensure that visibility is finalized as it seems that not all actors are
 	// always available.
 	GetWorld()->FlushLevelStreaming();
-
-	Widgets.Reset();
 
 	OnShowLevelData = ResolvedData;
 }
@@ -672,7 +672,7 @@ void UVulLevelManager::Process(FLoadRequest* Request)
 			if (ServerData->PendingServerLevelRequest.ClientsLoaded == ServerData->PendingServerLevelRequest.ClientsTotal)
 			{
 				ServerData->PendingServerLevelRequest.CompletedAt = GetWorld()->GetTimeSeconds();
-			} else if (ServerData->PendingServerLevelRequest.IssuedAt + Settings.LoadTimeout.GetTotalSeconds() > GetWorld()->GetTimeSeconds()) {
+			} else if (GetWorld()->GetTimeSeconds() > ServerData->PendingServerLevelRequest.IssuedAt + Settings.LoadTimeout.GetTotalSeconds()) {
 				FailLevelLoad(EVulLevelManagerLoadFailure::ClientTimeout);
 				return;
 			} else
@@ -822,15 +822,37 @@ ULevelStreaming* UVulLevelManager::GetLevelStreaming(const FName& LevelName, con
 
 bool UVulLevelManager::SpawnLevelWidgets(UVulLevelData* LevelData)
 {
-	if (LevelData->Widgets.IsEmpty() || IsDedicatedServer())
+	if (!GetWorld())
 	{
 		return false;
 	}
-	
-	const auto Ctrl = VulRuntime::WorldGlobals::GetFirstPlayerController(this);
-	if (!ensureMsgf(IsValid(Ctrl), TEXT("Cannot find player controller to spawn level load widgets")))
+
+	if (IsDedicatedServer())
+	{
+		// Never need to spawn widgets. Just report ok.
+		return true;
+	}
+
+	const auto Player = GetWorld()->GetFirstLocalPlayerFromController();
+	if (!ensureMsgf(IsValid(Player), TEXT("Cannot find local player to spawn level load widgets")))
 	{
 		return false;
+	}
+
+	const auto Ctrl = Player->GetPlayerController(GetWorld());
+
+	// Clear anything from previous levels.
+	RemoveAllWidgets(GetWorld());
+	Widgets.Reset(); 
+
+	if (!LevelData->Widgets.IsEmpty())
+	{
+		VUL_LEVEL_MANAGER_LOG(
+			Display,
+			TEXT("Spawning %d widgets from level data for %s"),
+			LevelData->Widgets.Num(),
+			*LevelData->Level->GetName()
+		)
 	}
 
 	for (const auto& Widget : LevelData->Widgets)
@@ -1026,17 +1048,22 @@ void UVulLevelManager::FollowServer()
 	}
 
 	// We may already be working on this request.
-	const auto NewRequest = Queue.ContainsByPredicate([this](const FLoadRequest& Req)
+	const auto ExistingRequest = Queue.ContainsByPredicate([this](const FLoadRequest& Req)
 	{
 		return Req.Id == ServerData->PendingServerLevelRequest.RequestId;
 	});
 	
-	if (!NewRequest)
+	if (ExistingRequest)
 	{
 		return;
 	}
 	
-	VUL_LEVEL_MANAGER_LOG(Display, TEXT("Following server to %s"), *ServerData->PendingServerLevelRequest.LevelName.ToString())
+	VUL_LEVEL_MANAGER_LOG(
+		Display,
+		TEXT("Following server to %s"),
+		*ServerData->PendingServerLevelRequest.LevelName.ToString()
+	)
+	
 	LoadLevel(ServerData->CurrentLevel, ServerData->PendingServerLevelRequest.RequestId);
 }
 

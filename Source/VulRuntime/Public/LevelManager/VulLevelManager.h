@@ -343,6 +343,7 @@ private:
 	 * The last level that was successfully loaded by this manager (including loading level).
 	 */
 	TWeakObjectPtr<ULevelStreaming> LastLoadedLevel = nullptr;
+	
 	FName LastUnLoadedLevel;
 
 	/**
