@@ -43,6 +43,17 @@ void UVulLevelData::AssetsToLoad(TArray<FSoftObjectPath>& Assets, const FVulLeve
 
 }
 
+void UVulLevelData::AdditionalActorsToSpawn(TArray<FVulLevelSpawnActorParams>& Classes, const FVulLevelEventContext& Ctx)
+{
+}
+
+TArray<FVulLevelSpawnActorParams> UVulLevelData::GetActorsToSpawn(const FVulLevelEventContext& Ctx)
+{
+	TArray<FVulLevelSpawnActorParams> Ret = ActorsToSpawn;
+	AdditionalActorsToSpawn(Ret, Ctx);
+	return Ret;
+}
+
 void UVulLevelData::OnSequenceFinished()
 {
 	if (!SequenceSettings.NextLevel.IsNone() && IsValid(LevelManager))

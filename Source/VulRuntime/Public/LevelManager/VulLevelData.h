@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "LevelSequence.h"
 #include "VulLevelNetworkData.h"
+#include "VulLevelSpawnActor.h"
 #include "Components/Widget.h"
 #include "UObject/Object.h"
 #include "VulLevelData.generated.h"
@@ -105,6 +106,9 @@ public:
 	UPROPERTY(EditAnywhere)
 	FVulSequenceLevelData SequenceSettings;
 
+	UPROPERTY(EditAnywhere)
+	TArray<FVulLevelSpawnActorParams> ActorsToSpawn;
+
 	/**
 	 * Called when there is progress towards loading, but not yet complete.
 	 *
@@ -127,6 +131,14 @@ public:
 	 * Loading will not complete (and a new level not shown) until all of these assets are loaded.
 	 */
 	virtual void AssetsToLoad(TArray<FSoftObjectPath>& Assets, const FVulLevelEventContext& Ctx);
+
+	/**
+	 * Any actors to spawn when this level is shown. Respects the configured class'
+	 * net ownership - see IVulLevelSpawnActor.
+	 */
+	virtual void AdditionalActorsToSpawn(TArray<FVulLevelSpawnActorParams>& Classes, const FVulLevelEventContext& Ctx);
+
+	TArray<FVulLevelSpawnActorParams> GetActorsToSpawn(const FVulLevelEventContext& Ctx);
 
 private:
 	UFUNCTION()

@@ -3,7 +3,7 @@
 #include "CoreMinimal.h"
 #include "Modules/ModuleManager.h"
 
-VULRUNTIME_API DECLARE_LOG_CATEGORY_EXTERN(LogVul, Display, Display)
+VULRUNTIME_API DECLARE_LOG_CATEGORY_EXTERN(LogVul, Display, All)
 
 class FVulRuntimeModule : public IModuleInterface
 {

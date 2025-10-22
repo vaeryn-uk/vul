@@ -5,7 +5,6 @@
 #include "VulLevelNetworkData.h"
 #include "Engine/StreamableManager.h"
 #include "GameFramework/Actor.h"
-#include "GameFramework/PlayerState.h"
 #include "Time/VulTime.h"
 #include "VulLevelManager.generated.h"
 
@@ -301,6 +300,9 @@ public:
 
 	void OnNetworkDataReplicated(AVulLevelNetworkData* NewData);
 
+	template <typename ActorClass>
+	ActorClass* GetLevelActor() const;
+
 private:
 	UVulLevelData* ResolveData(const FName& LevelName);
 
@@ -317,6 +319,9 @@ private:
 	 * Spawns the widgets specified in LevelData, returning true if this was done.
 	 */
 	bool SpawnLevelWidgets(UVulLevelData* LevelData);
+	bool SpawnLevelActors(UVulLevelData* LevelData);
+	void SpawnLevelActorsForClient(const TArray<FVulLevelSpawnActorParams>& Actors, APlayerController* Client);
+	AActor* SpawnLevelActor(TSubclassOf<AActor> Class, const FName& Tag = FName());
 
 	void ShowLevel(const FName& LevelName);
 	void HideLevel(const FName& LevelName);
@@ -452,8 +457,12 @@ private:
 	 * Enables ServerData + replication so that clients can keep in sync.
 	 */
 	bool IsServer() const;
+
+	bool IsClient() const;
 	
 	bool IsDedicatedServer() const;
+	
+	bool IsNetModeOneOf(const TArray<ENetMode>& NetModes) const;
 
 	FVulLevelEventContext EventCtx() const;
 
@@ -504,6 +513,28 @@ private:
 	FString GenerateNextRequestId() const;
 
 	void FailLevelLoad(const EVulLevelManagerLoadFailure Failure);
+
+	UPROPERTY()
+	TArray<AActor*> LevelActors;
+
+	/**
+	 * A tag identifying the actor as originating from the given player controller.
+	 *
+	 * Will use our own controller if not provided.
+	 */
+	FName LevelActorTag(APlayerController* Controller = nullptr) const;
+
+	APlayerController* GetController() const;
+
+	struct FSpawnedActorListener
+	{
+		FDelegateHandle Handle;
+		TWeakObjectPtr<UWorld> World;
+	} WorldActorSpawnedListener;
+
+	bool HasInitiallyFollowedServerLevel = false;
+
+	const FName ServerActorTag = FName(TEXT("vullevelmanager_server_actor"));
 };
 
 template <typename WidgetType>
@@ -519,6 +550,20 @@ WidgetType* UVulLevelManager::LastSpawnedWidget() const
 		if (const auto Casted = Cast<WidgetType>(Widget.Get()); IsValid(Casted))
 		{
 			return Casted;
+		}
+	}
+
+	return nullptr;
+}
+
+template <typename ActorClass>
+ActorClass* UVulLevelManager::GetLevelActor() const
+{
+	for (const auto& Actor : LevelActors)
+	{
+		if (Actor->IsA<ActorClass>())
+		{
+			return Actor;
 		}
 	}
 

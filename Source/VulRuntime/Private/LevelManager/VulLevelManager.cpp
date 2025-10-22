@@ -4,6 +4,7 @@
 #include "ActorUtil/VulActorUtil.h"
 #include "Blueprint/UserWidget.h"
 #include "Engine/StreamableManager.h"
+#include "GameFramework/PlayerState.h"
 #include "GameFramework/GameModeBase.h"
 #include "Kismet/GameplayStatics.h"
 #include "LevelManager/VulLevelAwareActor.h"
@@ -159,7 +160,53 @@ bool UVulLevelManager::InitLevelManager(const FVulLevelSettings& InSettings, UWo
 {
 	Settings = InSettings;
 
+	HasInitiallyFollowedServerLevel = false;
+
 	const auto CurrentLevelData = Settings.FindLevel(World);
+
+	if (!WorldActorSpawnedListener.Handle.IsValid() || WorldActorSpawnedListener.World != World)
+	{
+		if (WorldActorSpawnedListener.Handle.IsValid() && WorldActorSpawnedListener.World.IsValid())
+		{
+			VUL_LEVEL_MANAGER_LOG(Verbose, TEXT("Removing existing WorldActorSpawned handler"))
+			WorldActorSpawnedListener.World->RemoveOnActorSpawnedHandler(WorldActorSpawnedListener.Handle);
+		}
+
+		VUL_LEVEL_MANAGER_LOG(Verbose, TEXT("Registering world actor handle"))
+		WorldActorSpawnedListener = {
+			.Handle = GetWorld()->AddOnActorSpawnedHandler(FOnActorSpawned::FDelegate::CreateWeakLambda(
+				this,
+				[this](AActor* Spawned)
+				{
+					if (IsClient() && Spawned->GetComponentByClass<UVulLevelActorComponent>())
+					{
+						if (Spawned->ActorHasTag(ServerActorTag))
+						{
+							LevelActors.Add(Spawned);
+							
+							VUL_LEVEL_MANAGER_LOG(
+								Verbose,
+								TEXT("Client detected server-owned, replicated actor %s"),
+								*Spawned->GetName()
+							)
+						}
+
+						if (Spawned->ActorHasTag(LevelActorTag()))
+						{
+							LevelActors.Add(Spawned);
+							
+							VUL_LEVEL_MANAGER_LOG(
+								Verbose,
+								TEXT("Client detected server-spawned client actor %s"),
+								*Spawned->GetName()
+							)
+						}
+					}
+				}
+			)),
+			.World = GetWorld()
+		}; 
+	}
 
 	// If this matches our configured root level, start streaming stuff in.
 	if (World == Settings.RootLevel.Get())
@@ -230,6 +277,11 @@ bool UVulLevelManager::InitLevelManager(const FVulLevelSettings& InSettings, UWo
 
 void UVulLevelManager::TickNetworkHandling()
 {
+	if (IsFollowing() && !HasInitiallyFollowedServerLevel)
+	{
+		FollowServer();
+	}
+	
 	if (IsServer())
 	{
 		InitializeServerHandling();
@@ -249,6 +301,8 @@ void UVulLevelManager::TickNetworkHandling()
 			{
 				continue;
 			}
+
+			VUL_LEVEL_MANAGER_LOG(Verbose, TEXT("Client detected server network data. Binding & following..."))
 			
 			ServerData = *It;
 
@@ -307,6 +361,11 @@ void UVulLevelManager::InitializeServerHandling()
 						TEXT("Client %d joined & VulLevelNetworkData spawned"), Controller->PlayerState->GetPlayerId()
 					)
 					ConnectedClients.Add(Controller, ClientData);
+				}
+
+				if (const auto LD = CurrentLevelData(); LD)
+				{
+					SpawnLevelActorsForClient(LD->GetActorsToSpawn(EventCtx()), Controller);
 				}
 			}
 		);
@@ -851,7 +910,7 @@ bool UVulLevelManager::SpawnLevelWidgets(UVulLevelData* LevelData)
 	{
 		VUL_LEVEL_MANAGER_LOG(
 			Display,
-			TEXT("Spawning %d widgets from level data for %s"),
+			TEXT("Spawning %d level-managed widgets from level data for %s"),
 			LevelData->Widgets.Num(),
 			*LevelData->Level->GetName()
 		)
@@ -872,6 +931,120 @@ bool UVulLevelManager::SpawnLevelWidgets(UVulLevelData* LevelData)
 	}
 
 	return true;
+}
+
+bool UVulLevelManager::SpawnLevelActors(UVulLevelData* LevelData) {
+	if (!GetWorld())
+	{
+		return false;
+	}
+	
+	TArray<FVulLevelSpawnActorParams> ActorsToSpawn = LevelData->GetActorsToSpawn(EventCtx());
+
+	if (!LevelActors.IsEmpty())
+	{
+		VUL_LEVEL_MANAGER_LOG(Verbose, TEXT("Removing %d level-managed actors"), LevelActors.Num())
+	}
+
+	if (IsServer())
+	{
+		for (const auto& Entry : ConnectedClients)
+		{
+			SpawnLevelActorsForClient(ActorsToSpawn, Entry.Key);
+		}
+	}
+
+	for (const auto& Entry : ActorsToSpawn)
+	{
+		FActorSpawnParameters Params;
+		SetSpawnParams(Params);
+		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+		TArray<AActor*> SpawnedActors = {};
+
+		switch (Entry.Network)
+		{
+		case EVulLevelSpawnActorNetOwnership::Local:
+			SpawnedActors.Add(SpawnLevelActor(Entry.Actor));
+			break;
+		case EVulLevelSpawnActorNetOwnership::Server:
+			if (IsServer())
+			{
+				SpawnedActors.Add(SpawnLevelActor(Entry.Actor, ServerActorTag));
+			}
+			break;
+		case EVulLevelSpawnActorNetOwnership::ClientLocal:
+			if (IsClient())
+			{
+				SpawnedActors.Add(SpawnLevelActor(Entry.Actor));
+			}
+			break;
+		default: break;
+		}
+
+		for (const auto& Actor : SpawnedActors)
+		{
+			if (IsValid(Actor))
+			{
+				if (const auto& LAA = Cast<IVulLevelAwareActor>(Actor))
+				{
+					LAA->OnVulLevelShown(GenerateLevelShownInfo());
+				}
+
+				LevelActors.Add(Actor);
+			}
+		}
+	}
+
+	VUL_LEVEL_MANAGER_LOG(Display, TEXT("Spawned %d level-managed actors in to level"), LevelActors.Num())
+
+	return true;
+}
+
+void UVulLevelManager::SpawnLevelActorsForClient(
+	const TArray<FVulLevelSpawnActorParams>& Actors,
+	APlayerController* Client
+) {
+	for (const auto& Actor : Actors)
+	{
+		if (Actor.Network == EVulLevelSpawnActorNetOwnership::Client)
+		{
+			if (const auto Spawned = SpawnLevelActor(Actor.Actor, LevelActorTag(Client)))
+			{
+				Spawned->SetOwner(Client);
+				
+				if (const auto LevelActorComp = Spawned->GetComponentByClass<UVulLevelActorComponent>(); IsValid(LevelActorComp))
+				{
+					LevelActorComp->OwningLevelManager = LevelActorTag(Client);
+				}
+				
+				LevelActors.Add(Spawned);
+			}
+		}
+	}
+}
+
+AActor* UVulLevelManager::SpawnLevelActor(TSubclassOf<AActor> Class, const FName& Tag)
+{
+	if (!GetWorld())
+	{
+		return nullptr;
+	}
+	
+	FActorSpawnParameters Params;
+	SetSpawnParams(Params);
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+	const auto Spawned = GetWorld()->SpawnActor(Class, nullptr, nullptr, Params);
+
+	if (!Tag.IsNone())
+	{
+		Spawned->Tags.Add(Tag);
+		
+		const auto Comp = FVulActorUtil::SpawnDynamicComponent<UVulLevelActorComponent>(Spawned, FName("VulLevelManagement"));
+		Comp->OwningLevelManager = Tag;
+	}
+
+	return Spawned;
 }
 
 void UVulLevelManager::Tick(float DeltaTime)
@@ -897,6 +1070,7 @@ void UVulLevelManager::Tick(float DeltaTime)
 			// Non-streaming mode: just invoke what we can globally.
 			if (SpawnLevelWidgets(OnShowLevelData.Get()))
 			{
+				SpawnLevelActors(OnShowLevelData.Get());
 				NotifyActorsLevelShown(GetWorld()->GetCurrentLevel());
 				OnShowLevelData->OnLevelShown(GenerateLevelShownInfo(), EventCtx());
 				OnShowLevelData.Reset();
@@ -907,6 +1081,7 @@ void UVulLevelManager::Tick(float DeltaTime)
 			// the controller required to spawn widgets, call relevant hooks.
 			if (SpawnLevelWidgets(OnShowLevelData.Get()))
 			{
+				SpawnLevelActors(OnShowLevelData.Get());
 				NotifyActorsLevelShown(GetLastLoadedLevel()->GetLoadedLevel());
 				OnShowLevelData->OnLevelShown(GenerateLevelShownInfo(), EventCtx());
 				OnShowLevelData.Reset();
@@ -1013,26 +1188,27 @@ void UVulLevelManager::SetSpawnParams(FActorSpawnParameters& Params)
 
 bool UVulLevelManager::IsServer() const
 {
-	if (!GetWorld())
-	{
-		return false;
-	}
+	return IsNetModeOneOf({NM_DedicatedServer, NM_ListenServer, NM_Standalone});
+}
 
-	const auto NM = GetWorld()->GetNetMode();
-
-	return NM_DedicatedServer == NM || NM_ListenServer == NM; 
+bool UVulLevelManager::IsClient() const
+{
+	return IsNetModeOneOf({NM_Client, NM_ListenServer, NM_Standalone});
 }
 
 bool UVulLevelManager::IsDedicatedServer() const
+{
+	return IsNetModeOneOf({NM_DedicatedServer}); 
+}
+
+bool UVulLevelManager::IsNetModeOneOf(const TArray<ENetMode>& NetModes) const
 {
 	if (!GetWorld())
 	{
 		return false;
 	}
 
-	const auto NM = GetWorld()->GetNetMode();
-
-	return NM_DedicatedServer == NM; 
+	return NetModes.Contains(GetWorld()->GetNetMode());
 }
 
 FVulLevelEventContext UVulLevelManager::EventCtx() const
@@ -1061,7 +1237,7 @@ void UVulLevelManager::FollowServer()
 			return Req.Id == ServerData->PendingServerLevelRequest.RequestId;
 		});
 	
-		if (!ExistingRequest)
+		if (ExistingRequest)
 		{
 			return;
 		}
@@ -1079,6 +1255,7 @@ void UVulLevelManager::FollowServer()
 	if (LevelName.IsNone() && !ServerData->CurrentLevel.IsNone())
 	{
 		LevelName = ServerData->CurrentLevel;
+		
 		VUL_LEVEL_MANAGER_LOG(
 			Display,
 			TEXT("Following server to %s (server current level)"),
@@ -1089,6 +1266,7 @@ void UVulLevelManager::FollowServer()
 	if (LevelName.IsValid())
 	{
 		LoadLevel(LevelName, RequestId);
+		HasInitiallyFollowedServerLevel = true;
 	}
 }
 
@@ -1141,5 +1319,35 @@ void UVulLevelManager::FailLevelLoad(const EVulLevelManagerLoadFailure Failure)
 
 	Queue.Reset();
 	// TODO: What now? Back to start level? Disconnect from server?
+}
+
+FName UVulLevelManager::LevelActorTag(APlayerController* Controller) const
+{
+	if (IsServer() && (!Controller || Controller == GetController()))
+	{
+		return ServerActorTag;
+	}
+
+	if (!Controller)
+	{
+		Controller = GetController();
+	}
+
+	if (!Controller || !Controller->PlayerState)
+	{
+		return FName();
+	}
+	
+	return FName(FString::Printf(TEXT("vullevelmanager_client_actor_%d"), Controller->PlayerState->GetPlayerId()));
+}
+
+APlayerController* UVulLevelManager::GetController() const
+{
+	if (GetWorld() && GetWorld()->GetFirstLocalPlayerFromController())
+	{
+		return GetWorld()->GetFirstLocalPlayerFromController()->GetPlayerController(GetWorld());
+	}
+
+	return nullptr;
 }
 
