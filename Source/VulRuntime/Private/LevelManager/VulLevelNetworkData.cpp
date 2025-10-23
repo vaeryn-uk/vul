@@ -32,6 +32,12 @@ void AVulLevelNetworkData::PostNetInit()
 	}
 }
 
+void AVulLevelNetworkData::SetPendingClientLevelRequest(const FVulPendingLevelRequest& New)
+{
+	PendingClientLevelRequest = New;
+	Server_UpdateClientRequest(New);
+}
+
 void AVulLevelNetworkData::Server_UpdateClientRequest_Implementation(const FVulPendingLevelRequest& Request)
 {
 	PendingClientLevelRequest = Request;

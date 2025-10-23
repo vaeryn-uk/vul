@@ -280,6 +280,11 @@ void UVulLevelManager::TickNetworkHandling()
 		{
 			for (const auto& Actor : ServerData->ServerSpawnedClientActors)
 			{
+				if (!IsValid(Actor))
+				{
+					continue;
+				}
+				
 				if (Actor->IsA(ClientPendingActors[I].Actor) && Actor->GetOwner() == GetController() && LevelActors.Contains(Actor))
 				{
 					RegisterLevelActor(Actor);
@@ -531,11 +536,18 @@ void UVulLevelManager::StartProcessing(FLoadRequest* Request)
 {
 	VUL_LEVEL_MANAGER_LOG(
 		Display,
-		TEXT("StartProcessing %s"),
-		*(Request->LevelName.IsSet() ? Request->LevelName.GetValue().ToString() : FString(TEXT("<Unload request>")))
+		TEXT("StartProcessing %s%s"),
+		*(Request->LevelName.IsSet() ? Request->LevelName.GetValue().ToString() : FString(TEXT("<Unload request>"))),
+		*(Request->IsServerFollow ? FString(TEXT(" (server follow)")) : FString())
 	);
 
 	Request->StartedAt = FVulTime::WorldTime(GetWorld());
+	
+	if (IsValid(ClientData))
+	{
+		// Clear any previous pending request state.
+		ClientData->SetPendingClientLevelRequest({});
+	}
 
 	if (Request->LevelName.IsSet() && !Request->IsLoadingLevel)
 	{
@@ -734,7 +746,7 @@ void UVulLevelManager::Process(FLoadRequest* Request)
 		if (!ClientData->PendingClientLevelRequest.IsComplete())
 		{
 			ClientData->PendingClientLevelRequest.CompletedAt = GetWorld()->GetTimeSeconds();
-			ClientData->Server_UpdateClientRequest(ClientData->PendingClientLevelRequest);
+			ClientData->SetPendingClientLevelRequest(ClientData->PendingClientLevelRequest);
 			VUL_LEVEL_MANAGER_LOG(Display, TEXT("Client-side loading complete; telling server we're ready"))
 		}
 	}

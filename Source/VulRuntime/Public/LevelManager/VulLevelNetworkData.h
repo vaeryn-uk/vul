@@ -96,13 +96,16 @@ public:
 	UPROPERTY(Replicated)
 	TArray<AActor*> ServerSpawnedClientActors = {};
 
+	void SetPendingClientLevelRequest(const FVulPendingLevelRequest& New);
+
+private:
+
 	/**
 	 * RPC for a client to share its own Request status to the server.
 	 */
 	UFUNCTION(Server, Reliable)
 	void Server_UpdateClientRequest(const FVulPendingLevelRequest& Request);
-
-private:
+	
 	UFUNCTION()
 	void OnRep_StateChange();
 };
