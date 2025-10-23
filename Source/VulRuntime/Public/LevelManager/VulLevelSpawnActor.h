@@ -19,7 +19,8 @@ enum class EVulLevelSpawnActorNetOwnership : uint8
 	 * Only spawn an actor on the server.
 	 *
 	 * Use standard replication flags to decide if these are visible to any clients too.
-	 * If replicated, these will be 
+	 * 
+	 * If replicated, these will be available on a client via UVulLevelManager::GetLevelActor - TODO: implement.
 	 */
 	Server,
 
@@ -28,6 +29,10 @@ enum class EVulLevelSpawnActorNetOwnership : uint8
 	 * and owned by its respective client, allowing Client -> Server RPCs.
 	 *
 	 * A dedicated server does not spawn an additional server-only copy.
+	 *
+	 * Clients will receive their copy of this actor, which can be retrieved via
+	 * ULevelManager::GetLevelActor. A client-side level load will not be completed
+	 * until these actors are available.
 	 */
 	Client,
 
@@ -52,21 +57,4 @@ struct VULRUNTIME_API FVulLevelSpawnActorParams
 	bool ShouldSpawnOnClient() const;
 
 	bool ShouldSpawnOnServer() const;
-};
-
-/**
- * These are attached to a level actor on the server to share information with the client.
- */
-UCLASS()
-class UVulLevelActorComponent : public UActorComponent
-{
-	GENERATED_BODY()
-
-public:
-	UVulLevelActorComponent();
-
-	UPROPERTY(Replicated)
-	FName OwningLevelManager;
-
-	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 };

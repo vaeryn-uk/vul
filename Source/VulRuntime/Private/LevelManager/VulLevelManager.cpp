@@ -164,50 +164,6 @@ bool UVulLevelManager::InitLevelManager(const FVulLevelSettings& InSettings, UWo
 
 	const auto CurrentLevelData = Settings.FindLevel(World);
 
-	if (!WorldActorSpawnedListener.Handle.IsValid() || WorldActorSpawnedListener.World != World)
-	{
-		if (WorldActorSpawnedListener.Handle.IsValid() && WorldActorSpawnedListener.World.IsValid())
-		{
-			VUL_LEVEL_MANAGER_LOG(Verbose, TEXT("Removing existing WorldActorSpawned handler"))
-			WorldActorSpawnedListener.World->RemoveOnActorSpawnedHandler(WorldActorSpawnedListener.Handle);
-		}
-
-		VUL_LEVEL_MANAGER_LOG(Verbose, TEXT("Registering world actor handle"))
-		WorldActorSpawnedListener = {
-			.Handle = GetWorld()->AddOnActorSpawnedHandler(FOnActorSpawned::FDelegate::CreateWeakLambda(
-				this,
-				[this](AActor* Spawned)
-				{
-					if (IsClient() && Spawned->GetComponentByClass<UVulLevelActorComponent>())
-					{
-						if (Spawned->ActorHasTag(ServerActorTag))
-						{
-							LevelActors.Add(Spawned);
-							
-							VUL_LEVEL_MANAGER_LOG(
-								Verbose,
-								TEXT("Client detected server-owned, replicated actor %s"),
-								*Spawned->GetName()
-							)
-						}
-
-						if (Spawned->ActorHasTag(LevelActorTag()))
-						{
-							LevelActors.Add(Spawned);
-							
-							VUL_LEVEL_MANAGER_LOG(
-								Verbose,
-								TEXT("Client detected server-spawned client actor %s"),
-								*Spawned->GetName()
-							)
-						}
-					}
-				}
-			)),
-			.World = GetWorld()
-		}; 
-	}
-
 	// If this matches our configured root level, start streaming stuff in.
 	if (World == Settings.RootLevel.Get())
 	{
@@ -305,7 +261,7 @@ void UVulLevelManager::TickNetworkHandling()
 			VUL_LEVEL_MANAGER_LOG(Verbose, TEXT("Client detected server network data. Binding & following..."))
 			
 			ServerData = *It;
-
+			
 			ServerData->OnNetworkLevelChange.AddWeakLambda(this, [this](AVulLevelNetworkData* Data)
 			{
 				FollowServer();
@@ -315,6 +271,21 @@ void UVulLevelManager::TickNetworkHandling()
 			FollowServer();
 
 			break;
+		}
+	}
+
+	if (ServerData)
+	{
+		for (int I = ClientPendingActors.Num() - 1; I >= 0; I--)
+		{
+			for (const auto& Actor : ServerData->ServerSpawnedClientActors)
+			{
+				if (Actor->IsA(ClientPendingActors[I].Actor) && Actor->GetOwner() == GetController() && LevelActors.Contains(Actor))
+				{
+					RegisterLevelActor(Actor);
+					ClientPendingActors.RemoveAt(I);
+				}
+			}
 		}
 	}
 }
@@ -596,6 +567,17 @@ void UVulLevelManager::StartProcessing(FLoadRequest* Request)
 	{
 		// Unload the current level.
 		HideLevel(CurrentLevel.GetValue());
+		
+		// Any pending ShowLevelData hooks should be cleared. If they've not fired by now, it's too late.
+		if (OnShowLevelData.IsValid())
+		{
+			VUL_LEVEL_MANAGER_LOG(
+				Verbose,
+				TEXT("Level %s hidden whilst OnShow hooks still pending. Invalidating hooks"),
+				*CurrentLevel->ToString()
+			)
+			OnShowLevelData.Reset();
+		}
 
 		const auto Current = ResolveData(CurrentLevel.GetValue());
 		checkf(IsValid(Current), TEXT("Could not resolve current level object"))
@@ -761,6 +743,12 @@ void UVulLevelManager::Process(FLoadRequest* Request)
 	{
 		// Client waiting for other clients or the server.
 		NotifyLevelLoadProgress();
+		return;
+	}
+
+	// Finally, clients waiting for their copy of an actor spawned on the server on their behalf.
+	if (!ClientPendingActors.IsEmpty())
+	{
 		return;
 	}
 
@@ -944,15 +932,23 @@ bool UVulLevelManager::SpawnLevelActors(UVulLevelData* LevelData) {
 	if (!LevelActors.IsEmpty())
 	{
 		VUL_LEVEL_MANAGER_LOG(Verbose, TEXT("Removing %d level-managed actors"), LevelActors.Num())
+		LevelActors.Reset();
 	}
 
 	if (IsServer())
 	{
+		if (ServerData)
+		{
+			ServerData->ServerSpawnedClientActors.Reset();
+		}
+		
 		for (const auto& Entry : ConnectedClients)
 		{
 			SpawnLevelActorsForClient(ActorsToSpawn, Entry.Key);
 		}
 	}
+
+	ClientPendingActors.Reset();
 
 	for (const auto& Entry : ActorsToSpawn)
 	{
@@ -978,6 +974,14 @@ bool UVulLevelManager::SpawnLevelActors(UVulLevelData* LevelData) {
 				SpawnedActors.Add(SpawnLevelActor(Entry.Actor));
 			}
 			break;
+		case EVulLevelSpawnActorNetOwnership::Client:
+			if (IsClientOnly())
+			{
+				// Record that we're waiting for some server-spawned actors belonging to us
+				// to replicate down.
+				ClientPendingActors.Add(Entry);
+			}
+			break;
 		default: break;
 		}
 
@@ -990,7 +994,7 @@ bool UVulLevelManager::SpawnLevelActors(UVulLevelData* LevelData) {
 					LAA->OnVulLevelShown(GenerateLevelShownInfo());
 				}
 
-				LevelActors.Add(Actor);
+				RegisterLevelActor(Actor);
 			}
 		}
 	}
@@ -1011,13 +1015,12 @@ void UVulLevelManager::SpawnLevelActorsForClient(
 			if (const auto Spawned = SpawnLevelActor(Actor.Actor, LevelActorTag(Client)))
 			{
 				Spawned->SetOwner(Client);
-				
-				if (const auto LevelActorComp = Spawned->GetComponentByClass<UVulLevelActorComponent>(); IsValid(LevelActorComp))
+				RegisterLevelActor(Spawned);
+
+				if (ServerData)
 				{
-					LevelActorComp->OwningLevelManager = LevelActorTag(Client);
+					ServerData->ServerSpawnedClientActors.Add(Spawned);
 				}
-				
-				LevelActors.Add(Spawned);
 			}
 		}
 	}
@@ -1039,9 +1042,6 @@ AActor* UVulLevelManager::SpawnLevelActor(TSubclassOf<AActor> Class, const FName
 	if (!Tag.IsNone())
 	{
 		Spawned->Tags.Add(Tag);
-		
-		const auto Comp = FVulActorUtil::SpawnDynamicComponent<UVulLevelActorComponent>(Spawned, FName("VulLevelManagement"));
-		Comp->OwningLevelManager = Tag;
 	}
 
 	return Spawned;
@@ -1194,6 +1194,11 @@ bool UVulLevelManager::IsServer() const
 bool UVulLevelManager::IsClient() const
 {
 	return IsNetModeOneOf({NM_Client, NM_ListenServer, NM_Standalone});
+}
+
+bool UVulLevelManager::IsClientOnly() const
+{
+	return IsNetModeOneOf({NM_Client});
 }
 
 bool UVulLevelManager::IsDedicatedServer() const
@@ -1349,5 +1354,10 @@ APlayerController* UVulLevelManager::GetController() const
 	}
 
 	return nullptr;
+}
+
+void UVulLevelManager::RegisterLevelActor(AActor* Actor)
+{
+	LevelActors.Add(Actor);
 }
 

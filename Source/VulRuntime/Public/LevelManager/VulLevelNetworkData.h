@@ -89,6 +89,14 @@ public:
 	virtual void PostNetInit() override;
 
 	/**
+	 * For the server, stores level actors that have been spawned.
+	 *
+	 * Clients can inspect this to find their replicated copies of an actor.
+	 */
+	UPROPERTY(Replicated)
+	TArray<AActor*> ServerSpawnedClientActors = {};
+
+	/**
 	 * RPC for a client to share its own Request status to the server.
 	 */
 	UFUNCTION(Server, Reliable)

@@ -16,6 +16,7 @@ void AVulLevelNetworkData::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 	DOREPLIFETIME(AVulLevelNetworkData, CurrentLevel);
 	DOREPLIFETIME(AVulLevelNetworkData, PendingServerLevelRequest);
 	DOREPLIFETIME(AVulLevelNetworkData, IsServer);
+	DOREPLIFETIME(AVulLevelNetworkData, ServerSpawnedClientActors);
 }
 
 void AVulLevelNetworkData::PostNetInit()

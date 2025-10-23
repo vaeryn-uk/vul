@@ -300,6 +300,9 @@ public:
 
 	void OnNetworkDataReplicated(AVulLevelNetworkData* NewData);
 
+	/**
+	 * Attempts to find the first level actor of the given class.
+	 */
 	template <typename ActorClass>
 	ActorClass* GetLevelActor() const;
 
@@ -459,6 +462,8 @@ private:
 	bool IsServer() const;
 
 	bool IsClient() const;
+
+	bool IsClientOnly() const;
 	
 	bool IsDedicatedServer() const;
 	
@@ -526,15 +531,17 @@ private:
 
 	APlayerController* GetController() const;
 
-	struct FSpawnedActorListener
-	{
-		FDelegateHandle Handle;
-		TWeakObjectPtr<UWorld> World;
-	} WorldActorSpawnedListener;
-
 	bool HasInitiallyFollowedServerLevel = false;
 
 	const FName ServerActorTag = FName(TEXT("vullevelmanager_server_actor"));
+
+	/**
+	 * Actors that the server has spawned owning to the client, and we're waiting for
+	 * them to be replicated to us.
+	 */
+	TArray<FVulLevelSpawnActorParams> ClientPendingActors = {};
+
+	void RegisterLevelActor(AActor* Actor);
 };
 
 template <typename WidgetType>
@@ -563,7 +570,7 @@ ActorClass* UVulLevelManager::GetLevelActor() const
 	{
 		if (Actor->IsA<ActorClass>())
 		{
-			return Actor;
+			return Cast<ActorClass>(Actor);
 		}
 	}
 
