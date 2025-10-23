@@ -15,7 +15,7 @@ public class VulRuntime : ModuleRules
         PublicDependencyModuleNames.AddRange(
             new string[]
             {
-                "Core", "CommonUI", "Niagara", "LevelSequence", "MovieScene", "MovieSceneTracks", "Json"
+                "Core", "CommonUI", "Niagara", "LevelSequence", "MovieScene", "MovieSceneTracks", "Json", "NetCore",
             }
         );
 

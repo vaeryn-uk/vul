@@ -61,3 +61,5 @@ void UVulLevelData::OnSequenceFinished()
 		LevelManager->LoadLevel(SequenceSettings.NextLevel);
 	}
 }
+
+DEFINE_ENUM_TO_STRING(EVulLevelManagerLoadFailure, "VulRuntime")

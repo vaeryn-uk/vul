@@ -233,9 +233,20 @@ bool UVulLevelManager::InitLevelManager(const FVulLevelSettings& InSettings, UWo
 
 void UVulLevelManager::TickNetworkHandling()
 {
-	if (IsFollowing() && !HasInitiallyFollowedServerLevel)
+	if (IsFollowing())
 	{
-		FollowServer();
+		if (IsDisconnectedFromServer())
+		{
+			 // Disconnection detected. Don't follow anymore.
+			ServerData = nullptr;
+			ClientData = nullptr;
+			return;
+		}
+		
+		if (!HasInitiallyFollowedServerLevel)
+		{
+			FollowServer();
+		}
 	}
 	
 	if (IsServer())
@@ -247,7 +258,7 @@ void UVulLevelManager::TickNetworkHandling()
 		{
 			ServerData->CurrentLevel = CurrentLevel.IsSet() ? CurrentLevel.GetValue() : FName();
 		}
-	} else if (GetWorld() && !ServerData)
+	} else if (GetWorld() && !ServerData && !IsDisconnectedFromServer())
 	{
 		// Non servers are listening for a server data actor to follow.
 		// TODO: A way to not spam actor iterators on tick.
@@ -541,7 +552,7 @@ void UVulLevelManager::StartProcessing(FLoadRequest* Request)
 		*(Request->IsServerFollow ? FString(TEXT(" (server follow)")) : FString())
 	);
 
-	Request->StartedAt = FVulTime::WorldTime(GetWorld());
+	Request->StartedAt = FVulTime::PlatformTime();
 	
 	if (IsValid(ClientData))
 	{
@@ -689,6 +700,13 @@ void UVulLevelManager::Process(FLoadRequest* Request)
 		return;
 	}
 
+	if (Request->IsServerFollow && IsDisconnectedFromServer())
+	{
+		// If we disconnect from the server during load, hard stop.
+		FailLevelLoad(EVulLevelManagerLoadFailure::Desynchronization);
+		return;
+	}
+
 	// Check for a network-synchronized level load.
 	if (IsValid(ServerData) && ServerData->PendingServerLevelRequest.IsValid())
 	{
@@ -753,7 +771,6 @@ void UVulLevelManager::Process(FLoadRequest* Request)
 
 	if (!IsServer() && IsValid(ServerData) && ServerData->PendingServerLevelRequest.IsPending())
 	{
-		// Client waiting for other clients or the server.
 		NotifyLevelLoadProgress();
 		return;
 	}
@@ -1086,6 +1103,7 @@ void UVulLevelManager::Tick(float DeltaTime)
 				NotifyActorsLevelShown(GetWorld()->GetCurrentLevel());
 				OnShowLevelData->OnLevelShown(GenerateLevelShownInfo(), EventCtx());
 				OnShowLevelData.Reset();
+				LastFailureReason = EVulLevelManagerLoadFailure::None;
 			}
 		} else if (LastLoadedLevel.IsValid() && LastLoadedLevel->HasLoadedLevel())
 		{
@@ -1097,6 +1115,7 @@ void UVulLevelManager::Tick(float DeltaTime)
 				NotifyActorsLevelShown(GetLastLoadedLevel()->GetLoadedLevel());
 				OnShowLevelData->OnLevelShown(GenerateLevelShownInfo(), EventCtx());
 				OnShowLevelData.Reset();
+				LastFailureReason = EVulLevelManagerLoadFailure::None;
 			}
 		}
 	}
@@ -1200,7 +1219,7 @@ void UVulLevelManager::SetSpawnParams(FActorSpawnParameters& Params)
 
 bool UVulLevelManager::IsServer() const
 {
-	return IsNetModeOneOf({NM_DedicatedServer, NM_ListenServer, NM_Standalone});
+	return IsNetModeOneOf({NM_DedicatedServer, NM_ListenServer});
 }
 
 bool UVulLevelManager::IsClient() const
@@ -1228,10 +1247,18 @@ bool UVulLevelManager::IsNetModeOneOf(const TArray<ENetMode>& NetModes) const
 	return NetModes.Contains(GetWorld()->GetNetMode());
 }
 
+bool UVulLevelManager::IsDisconnectedFromServer() const
+{
+	return GetWorld()
+			&& GetWorld()->GetNetDriver()
+			&& GetWorld()->GetNetDriver()->ServerConnection->GetConnectionState() == USOCK_Closed;
+}
+
 FVulLevelEventContext UVulLevelManager::EventCtx() const
 {
 	return {
 		.IsDedicatedServer = IsDedicatedServer(),
+		.FailureReason = LastFailureReason,
 	};
 }
 
@@ -1318,14 +1345,25 @@ FString UVulLevelManager::GenerateNextRequestId() const
 	return FString::Printf(TEXT("%s_%d"), *LevelManagerId.ToString(), ++RequestIdGenerator);
 }
 
-DEFINE_ENUM_TO_STRING(EVulLevelManagerLoadFailure, "VulRuntime")
-
 void UVulLevelManager::FailLevelLoad(const EVulLevelManagerLoadFailure Failure)
 {
 	VUL_LEVEL_MANAGER_LOG(Error, "Level load failure: %s", *EnumToString(Failure));
 
 	if (IsServer() && IsValid(ServerData))
 	{
+		if (GetWorld() && GetWorld()->GetNetDriver())
+		{
+			for (const auto& Conn : GetWorld()->GetNetDriver()->ClientConnections)
+			{
+				if (Conn)
+				{
+					VUL_LEVEL_MANAGER_LOG(Display, TEXT("Disconnecting client: %s"), *Conn->LowLevelGetRemoteAddress());
+					Conn->Close();
+				}
+			}
+		}
+
+		ConnectedClients.Reset();
 		ServerData->PendingServerLevelRequest = {};
 	}
 
@@ -1335,7 +1373,10 @@ void UVulLevelManager::FailLevelLoad(const EVulLevelManagerLoadFailure Failure)
 	}
 
 	Queue.Reset();
-	// TODO: What now? Back to start level? Disconnect from server?
+
+	LastFailureReason = Failure;
+
+	LoadLevel(Settings.GetStartingLevelName(IsDedicatedServer()));
 }
 
 FName UVulLevelManager::LevelActorTag(APlayerController* Controller) const

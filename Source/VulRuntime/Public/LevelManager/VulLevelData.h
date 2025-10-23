@@ -9,6 +9,35 @@
 #include "VulLevelData.generated.h"
 
 /**
+ * Why did we fail to load a level?
+ */
+UENUM()
+enum class EVulLevelManagerLoadFailure : uint8
+{
+	/**
+	 * No failure.
+	 */
+	None,
+	
+	/**
+	 * We exceeded the timeout to complete a load (locally, outside of any network considerations).
+	 */
+	LocalLoadTimeout,
+
+	/**
+	 * One client failed to load a level in time.
+	 */
+	ClientTimeout,
+
+	/**
+	 * During a network level load, some state got unexpectedly desynchronized.
+	 */
+	Desynchronization,
+};
+
+VULRUNTIME_API DECLARE_ENUM_TO_STRING(EVulLevelManagerLoadFailure);
+
+/**
  * Describes a level that plays a level sequence (e.g. for cinematics).
  */
 USTRUCT()
@@ -70,6 +99,12 @@ struct FVulLevelEventContext
 
 	UPROPERTY()
 	bool IsDedicatedServer;
+
+	/**
+	 * The latest reason for a level switching failure, if any.
+	 */
+	UPROPERTY()
+	EVulLevelManagerLoadFailure FailureReason = EVulLevelManagerLoadFailure::None;
 };
 
 /**

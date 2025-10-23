@@ -130,30 +130,6 @@ enum class EVulLevelManagerState : uint8
 };
 
 /**
- * Why did we fail to load a level?
- */
-UENUM()
-enum class EVulLevelManagerLoadFailure : uint8
-{
-	/**
-	 * We exceeded the timeout to complete a load (locally, outside of any network considerations).
-	 */
-	LocalLoadTimeout,
-
-	/**
-	 * One client failed to load a level in time.
-	 */
-	ClientTimeout,
-
-	/**
-	 * During a network level load, some state got unexpectedly desynchronized.
-	 */
-	Desynchronization,
-};
-
-VULRUNTIME_API DECLARE_ENUM_TO_STRING(EVulLevelManagerLoadFailure);
-
-/**
  * Responsible for loading levels using Unreal's streaming level model.
  *
  * This provides a simple framework for switching levels with a loading screen
@@ -469,6 +445,8 @@ private:
 	
 	bool IsNetModeOneOf(const TArray<ENetMode>& NetModes) const;
 
+	bool IsDisconnectedFromServer() const;
+
 	FVulLevelEventContext EventCtx() const;
 
 	void FollowServer();
@@ -542,6 +520,8 @@ private:
 	TArray<FVulLevelSpawnActorParams> ClientPendingActors = {};
 
 	void RegisterLevelActor(AActor* Actor);
+
+	EVulLevelManagerLoadFailure LastFailureReason = EVulLevelManagerLoadFailure::None;
 };
 
 template <typename WidgetType>
