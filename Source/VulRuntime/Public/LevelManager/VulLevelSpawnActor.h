@@ -43,6 +43,48 @@ enum class EVulLevelSpawnActorNetOwnership : uint8
 	ClientLocal,
 };
 
+UENUM(BlueprintType)
+enum class EVulLevelSpawnActorPolicy : uint8
+{
+	/**
+	 * This spawn will only last for the current level and always be destroyed when a subsequent level is loaded.
+	 *
+	 * This is the default behaviour.
+	 */
+	SpawnLevel,
+
+	/**
+	 * Actor is spawned in to the root level, unless an existing root level actor of the same class
+	 * already exists, in which case the existing one is preserved.
+	 */
+	SpawnRoot_Preserve,
+
+	/**
+	 * Actor is spawned in to the root level. Unlike SpawnRoot_Preserve, this guarantees a fresh
+	 * instance of the actor is spawned, replacing any that exist from a previous level
+	 */
+	SpawnRoot_New,
+};
+
+/**
+ * Wraps a spawned actor instance with its persistence setting.
+ */
+USTRUCT(BlueprintType)
+struct VULRUNTIME_API FVulLevelManagerSpawnedActor
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	EVulLevelSpawnActorPolicy SpawnPolicy;
+	
+	UPROPERTY()
+	AActor* Actor = nullptr;
+
+	bool IsValid() const;
+
+	bool operator==(const FVulLevelManagerSpawnedActor& Other) const;
+};
+
 USTRUCT(BlueprintType)
 struct VULRUNTIME_API FVulLevelSpawnActorParams
 {
@@ -53,6 +95,9 @@ struct VULRUNTIME_API FVulLevelSpawnActorParams
 
 	UPROPERTY(EditAnywhere)
 	EVulLevelSpawnActorNetOwnership Network = EVulLevelSpawnActorNetOwnership::Local;
+	
+	UPROPERTY(EditAnywhere)
+	EVulLevelSpawnActorPolicy SpawnPolicy = EVulLevelSpawnActorPolicy::SpawnLevel;
 
 	bool ShouldSpawnOnClient() const;
 

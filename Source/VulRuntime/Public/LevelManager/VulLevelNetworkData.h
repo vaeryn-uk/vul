@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "VulLevelSpawnActor.h"
 #include "GameFramework/Actor.h"
 #include "VulLevelNetworkData.generated.h"
 
@@ -94,7 +95,7 @@ public:
 	 * Clients can inspect this to find their replicated copies of an actor.
 	 */
 	UPROPERTY(Replicated)
-	TArray<AActor*> ServerSpawnedClientActors = {};
+	TArray<FVulLevelManagerSpawnedActor> ServerSpawnedClientActors = {};
 
 	void SetPendingClientLevelRequest(const FVulPendingLevelRequest& New);
 

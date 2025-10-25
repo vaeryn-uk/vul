@@ -249,7 +249,7 @@ public:
 			Params = *SpawnParams;
 		}
 		
-		SetSpawnParams(Params);
+		SetLevelSpawnParams(Params);
 
 		return GetWorld()->SpawnActor<ActorType>(Class, Location, Rotation, Params);
 	}
@@ -283,7 +283,24 @@ public:
 	ActorClass* GetLevelActor() const;
 
 private:
+	/**
+	 * Each request is stored in a queue internally.
+	 */
+	struct FLoadRequest
+	{
+		FString Id;
+		/**
+		 * If not set, a request is simply a request to unload the current level.
+		 */
+		TOptional<FName> LevelName;
+		FVulLevelDelegate Delegate;
+		TOptional<FVulTime> StartedAt;
+		bool IsLoadingLevel;
+		bool IsServerFollow;
+	};
+	
 	UVulLevelData* ResolveData(const FName& LevelName);
+	UVulLevelData* ResolveData(const FLoadRequest* Request);
 
 	ULevelStreaming* GetLevelStreaming(const FName& LevelName, const TCHAR* FailReason = TEXT(""));
 
@@ -300,7 +317,7 @@ private:
 	bool SpawnLevelWidgets(UVulLevelData* LevelData);
 	bool SpawnLevelActors(UVulLevelData* LevelData);
 	void SpawnLevelActorsForClient(const TArray<FVulLevelSpawnActorParams>& Actors, APlayerController* Client);
-	AActor* SpawnLevelActor(TSubclassOf<AActor> Class, const FName& Tag = FName());
+	FVulLevelManagerSpawnedActor SpawnLevelActor(FVulLevelSpawnActorParams Params, const FName& Tag = FName());
 
 	void ShowLevel(const FName& LevelName);
 	void HideLevel(const FName& LevelName);
@@ -375,22 +392,6 @@ private:
 	 */
 	static void RemoveAllWidgets(UWorld* World);
 
-	/**
-	 * Each request is stored in a queue internally.
-	 */
-	struct FLoadRequest
-	{
-		FString Id;
-		/**
-		 * If not set, a request is simply a request to unload the current level.
-		 */
-		TOptional<FName> LevelName;
-		FVulLevelDelegate Delegate;
-		TOptional<FVulTime> StartedAt;
-		bool IsLoadingLevel;
-		bool IsServerFollow;
-	};
-
 	FLoadRequest* CurrentRequest();
 	TArray<FLoadRequest> Queue;
 
@@ -426,7 +427,7 @@ private:
 
 	FVulLevelShownInfo GenerateLevelShownInfo();
 	
-	void SetSpawnParams(FActorSpawnParameters& Param);
+	void SetLevelSpawnParams(FActorSpawnParameters& Param);
 
 	EVulLevelManagerState State = EVulLevelManagerState::Idle;
 
@@ -498,7 +499,7 @@ private:
 	void FailLevelLoad(const EVulLevelManagerLoadFailure Failure);
 
 	UPROPERTY()
-	TArray<AActor*> LevelActors;
+	TArray<FVulLevelManagerSpawnedActor> LevelActors;
 
 	/**
 	 * A tag identifying the actor as originating from the given player controller.
@@ -517,11 +518,13 @@ private:
 	 * Actors that the server has spawned owning to the client, and we're waiting for
 	 * them to be replicated to us.
 	 */
-	TArray<FVulLevelSpawnActorParams> ClientPendingActors = {};
+	TArray<FVulLevelSpawnActorParams> PendingClientActors = {};
 
-	void RegisterLevelActor(AActor* Actor);
+	void RegisterLevelActor(const FVulLevelManagerSpawnedActor& Actor);
 
 	EVulLevelManagerLoadFailure LastFailureReason = EVulLevelManagerLoadFailure::None;
+
+	void RemoveLevelActors(const bool Force = false);
 };
 
 template <typename WidgetType>
@@ -548,9 +551,9 @@ ActorClass* UVulLevelManager::GetLevelActor() const
 {
 	for (const auto& Actor : LevelActors)
 	{
-		if (Actor->IsA<ActorClass>())
+		if (Actor.Actor->IsA<ActorClass>())
 		{
-			return Cast<ActorClass>(Actor);
+			return Cast<ActorClass>(Actor.Actor);
 		}
 	}
 
@@ -560,6 +563,13 @@ ActorClass* UVulLevelManager::GetLevelActor() const
 namespace VulRuntime
 {
 	VULRUNTIME_API UVulLevelManager* LevelManager(UWorld* WorldCtx);
+	
+	template <typename ActorClass>
+	ActorClass* LevelManagedActor(UWorld* WorldCtx)
+	{
+		const auto LM = LevelManager(WorldCtx);
+		return IsValid(LM) ? LM->GetLevelActor<ActorClass>() : nullptr;
+	}
 }
 
 #define VUL_LEVEL_MANAGER_LOG(Verbosity, Format, ...) \

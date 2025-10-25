@@ -287,19 +287,19 @@ void UVulLevelManager::TickNetworkHandling()
 
 	if (ServerData)
 	{
-		for (int I = ClientPendingActors.Num() - 1; I >= 0; I--)
+		for (int I = PendingClientActors.Num() - 1; I >= 0; I--)
 		{
-			for (const auto& Actor : ServerData->ServerSpawnedClientActors)
+			for (const auto& Entry : ServerData->ServerSpawnedClientActors)
 			{
-				if (!IsValid(Actor))
+				if (!Entry.IsValid())
 				{
 					continue;
 				}
 				
-				if (Actor->IsA(ClientPendingActors[I].Actor) && Actor->GetOwner() == GetController() && LevelActors.Contains(Actor))
+				if (Entry.Actor->IsA(PendingClientActors[I].Actor) && Entry.Actor->GetOwner() == GetController() && !LevelActors.Contains(Entry))
 				{
-					RegisterLevelActor(Actor);
-					ClientPendingActors.RemoveAt(I);
+					RegisterLevelActor(Entry);
+					PendingClientActors.RemoveAt(I);
 				}
 			}
 		}
@@ -411,6 +411,16 @@ UVulLevelData* UVulLevelManager::ResolveData(const FName& LevelName)
 	}
 
 	return *Found;
+}
+
+UVulLevelData* UVulLevelManager::ResolveData(const FLoadRequest* Request)
+{
+	if (Request && !Request->LevelName->IsNone())
+	{
+		return ResolveData(Request->LevelName.GetValue());
+	}
+
+	return nullptr;
 }
 
 void UVulLevelManager::ShowLevel(const FName& LevelName)
@@ -776,7 +786,7 @@ void UVulLevelManager::Process(FLoadRequest* Request)
 	}
 
 	// Finally, clients waiting for their copy of an actor spawned on the server on their behalf.
-	if (!ClientPendingActors.IsEmpty())
+	if (!PendingClientActors.IsEmpty())
 	{
 		return;
 	}
@@ -958,11 +968,7 @@ bool UVulLevelManager::SpawnLevelActors(UVulLevelData* LevelData) {
 	
 	TArray<FVulLevelSpawnActorParams> ActorsToSpawn = LevelData->GetActorsToSpawn(EventCtx());
 
-	if (!LevelActors.IsEmpty())
-	{
-		VUL_LEVEL_MANAGER_LOG(Verbose, TEXT("Removing %d level-managed actors"), LevelActors.Num())
-		LevelActors.Reset();
-	}
+	RemoveLevelActors();
 
 	if (IsServer())
 	{
@@ -977,30 +983,30 @@ bool UVulLevelManager::SpawnLevelActors(UVulLevelData* LevelData) {
 		}
 	}
 
-	ClientPendingActors.Reset();
+	PendingClientActors.Reset();
 
 	for (const auto& Entry : ActorsToSpawn)
 	{
 		FActorSpawnParameters Params;
-		SetSpawnParams(Params);
+		SetLevelSpawnParams(Params);
 		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
-		TArray<AActor*> SpawnedActors = {};
+		TArray<FVulLevelManagerSpawnedActor> SpawnedActors = {};
 
 		switch (Entry.Network)
 		{
 		case EVulLevelSpawnActorNetOwnership::Local:
-			SpawnedActors.Add(SpawnLevelActor(Entry.Actor));
+			SpawnedActors.Add(SpawnLevelActor(Entry));
 			break;
 		case EVulLevelSpawnActorNetOwnership::Server:
 			if (IsServer())
 			{
-				SpawnedActors.Add(SpawnLevelActor(Entry.Actor, ServerActorTag));
+				SpawnedActors.Add(SpawnLevelActor(Entry, ServerActorTag));
 			}
 			break;
 		case EVulLevelSpawnActorNetOwnership::ClientLocal:
 			if (IsClient())
 			{
-				SpawnedActors.Add(SpawnLevelActor(Entry.Actor));
+				SpawnedActors.Add(SpawnLevelActor(Entry));
 			}
 			break;
 		case EVulLevelSpawnActorNetOwnership::Client:
@@ -1008,22 +1014,24 @@ bool UVulLevelManager::SpawnLevelActors(UVulLevelData* LevelData) {
 			{
 				// Record that we're waiting for some server-spawned actors belonging to us
 				// to replicate down.
-				ClientPendingActors.Add(Entry);
+				// Note that preserved actors are still added to this array. Even if we have
+				// them already, we'll re-resolve them from the replicated server actors array.
+				PendingClientActors.Add(Entry);
 			}
 			break;
 		default: break;
 		}
 
-		for (const auto& Actor : SpawnedActors)
+		for (const auto& SpawnEntry : SpawnedActors)
 		{
-			if (IsValid(Actor))
+			if (SpawnEntry.IsValid())
 			{
-				if (const auto& LAA = Cast<IVulLevelAwareActor>(Actor))
+				if (const auto& LAA = Cast<IVulLevelAwareActor>(SpawnEntry.Actor))
 				{
 					LAA->OnVulLevelShown(GenerateLevelShownInfo());
 				}
 
-				RegisterLevelActor(Actor);
+				RegisterLevelActor(SpawnEntry);
 			}
 		}
 	}
@@ -1041,9 +1049,9 @@ void UVulLevelManager::SpawnLevelActorsForClient(
 	{
 		if (Actor.Network == EVulLevelSpawnActorNetOwnership::Client)
 		{
-			if (const auto Spawned = SpawnLevelActor(Actor.Actor, LevelActorTag(Client)))
+			if (const auto Spawned = SpawnLevelActor(Actor, LevelActorTag(Client)); Spawned.IsValid())
 			{
-				Spawned->SetOwner(Client);
+				Spawned.Actor->SetOwner(Client);
 				RegisterLevelActor(Spawned);
 
 				if (ServerData)
@@ -1055,25 +1063,33 @@ void UVulLevelManager::SpawnLevelActorsForClient(
 	}
 }
 
-AActor* UVulLevelManager::SpawnLevelActor(TSubclassOf<AActor> Class, const FName& Tag)
+FVulLevelManagerSpawnedActor UVulLevelManager::SpawnLevelActor(FVulLevelSpawnActorParams Params, const FName& Tag)
 {
 	if (!GetWorld())
 	{
-		return nullptr;
+		return {};
 	}
 	
-	FActorSpawnParameters Params;
-	SetSpawnParams(Params);
-	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+	FActorSpawnParameters SpawnParams;
+	
+	if (Params.SpawnPolicy == EVulLevelSpawnActorPolicy::SpawnLevel)
+	{
+		SetLevelSpawnParams(SpawnParams);
+	}
+	
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 
-	const auto Spawned = GetWorld()->SpawnActor(Class, nullptr, nullptr, Params);
+	const auto Spawned = GetWorld()->SpawnActor(Params.Actor, nullptr, nullptr, SpawnParams);
 
 	if (!Tag.IsNone())
 	{
 		Spawned->Tags.Add(Tag);
 	}
 
-	return Spawned;
+	return {
+		.SpawnPolicy = Params.SpawnPolicy,
+		.Actor = Spawned,
+	};
 }
 
 void UVulLevelManager::Tick(float DeltaTime)
@@ -1199,11 +1215,11 @@ FActorSpawnParameters UVulLevelManager::SpawnParams()
 	checkf(CurrentLevel.IsSet(), TEXT("Cannot create SpawnParams as no level is loaded"))
 
 	FActorSpawnParameters Params;
-	SetSpawnParams(Params);
+	SetLevelSpawnParams(Params);
 	return Params;
 }
 
-void UVulLevelManager::SetSpawnParams(FActorSpawnParameters& Params)
+void UVulLevelManager::SetLevelSpawnParams(FActorSpawnParameters& Params)
 {
 	checkf(CurrentLevel.IsSet(), TEXT("Cannot create SpawnParams as no level is loaded"))
 
@@ -1318,7 +1334,6 @@ FString UVulLevelManager::LevelManagerNetId() const
 {
 	const auto ThisWorld = GetWorld();
 	FString WorldIdStr = ThisWorld ? FString::FromInt(ThisWorld->GetUniqueID()) : FString(TEXT("unknown"));
-	FString WorldNameStr = ThisWorld ? ThisWorld->GetName() : FString(TEXT("unknown"));
 	FString MapNameStr = ThisWorld ? ThisWorld->GetMapName() : FString(TEXT("unknown"));
 	
 	const ENetMode WorldNetMode = ThisWorld ? ThisWorld->GetNetMode() : NM_Standalone;
@@ -1332,7 +1347,7 @@ FString UVulLevelManager::LevelManagerNetId() const
 		default: break;
 	}
 
-	return FString::Printf(TEXT("%s, WorldID: %s (%s - %s)"), NetModeStr, *WorldIdStr, *WorldNameStr, *MapNameStr);
+	return FString::Printf(TEXT("%s, WorldID: %s (%s)"), NetModeStr, *WorldIdStr, *MapNameStr);
 }
 
 bool UVulLevelManager::IsFollowing() const
@@ -1372,6 +1387,7 @@ void UVulLevelManager::FailLevelLoad(const EVulLevelManagerLoadFailure Failure)
 		ClientData = nullptr;
 	}
 
+	RemoveLevelActors(true);
 	Queue.Reset();
 
 	LastFailureReason = Failure;
@@ -1409,8 +1425,63 @@ APlayerController* UVulLevelManager::GetController() const
 	return nullptr;
 }
 
-void UVulLevelManager::RegisterLevelActor(AActor* Actor)
+void UVulLevelManager::RegisterLevelActor(const FVulLevelManagerSpawnedActor& Actor)
 {
 	LevelActors.Add(Actor);
+}
+
+void UVulLevelManager::RemoveLevelActors(const bool Force)
+{
+	int Removed = 0;
+	for (int32 I = LevelActors.Num() - 1; I >= 0; I--)
+	{
+		const auto ForRemoval = LevelActors[I];
+
+		bool CanRemove = true;
+
+		if (IsValid(ForRemoval.Actor) || !Force)
+		{
+			for (const auto Entry : Queue)
+			{
+				for (const auto& Actor : ResolveData(&Entry)->GetActorsToSpawn(EventCtx()))
+				{
+					if (Actor.SpawnPolicy == EVulLevelSpawnActorPolicy::SpawnRoot_Preserve && Actor.Actor == ForRemoval.Actor->GetClass())
+					{
+						CanRemove = false;
+
+						VUL_LEVEL_MANAGER_LOG(
+							Verbose,
+							TEXT("Preserving actor %s as it is preserved by upcoming level %s"),
+							*ForRemoval.Actor->GetName(),
+							*(Entry.LevelName.Get(FName()).ToString())
+						)
+							
+						break;
+					}
+				}
+
+				if (!CanRemove)
+				{
+					break;
+				}
+			}
+		}
+
+		if (CanRemove)
+		{
+			Removed++;
+			LevelActors.RemoveAt(I);
+		}
+	}
+
+	if (Removed > 0)
+	{
+		VUL_LEVEL_MANAGER_LOG(
+			Display,
+			TEXT("Removed %d level actors%s"),
+			Removed,
+			Force ? TEXT(" (forced removal, ignoring actor spawn policy settings)") : TEXT("")
+		);
+	}
 }
 
