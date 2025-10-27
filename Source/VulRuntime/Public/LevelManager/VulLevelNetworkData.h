@@ -97,10 +97,18 @@ public:
 	UPROPERTY(Replicated)
 	TArray<FVulLevelManagerSpawnedActor> ServerSpawnedClientActors = {};
 
+	/**
+	 * Actors that are spawned by & for the server, but also replicated to clients.
+	 *
+	 * These are made available for convenience so a client can retrieve these via
+	 * LevelManagedActor.
+	 */
+	UPROPERTY(Replicated)
+	TArray<FVulLevelManagerSpawnedActor> ServerSpawnedActors = {};
+
 	void SetPendingClientLevelRequest(const FVulPendingLevelRequest& New);
 
 private:
-
 	/**
 	 * RPC for a client to share its own Request status to the server.
 	 */

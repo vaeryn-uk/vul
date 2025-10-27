@@ -121,6 +121,16 @@ UVulLevelManager* VulRuntime::LevelManager(UWorld* WorldCtx)
 	return VulRuntime::WorldGlobals::GetGameInstanceSubsystemChecked<UVulLevelManager>(WorldCtx);
 }
 
+void UVulLevelManager::ForEachPlayer(const FVulPlayerConnectionEvent::FDelegate& OnAdded)
+{
+	for (const auto& Entry : ConnectedClients)
+	{
+		OnAdded.Execute(Entry.Key);
+	}
+
+	OnPlayerConnected.Add(OnAdded);
+}
+
 ULevelStreaming* UVulLevelManager::GetLastLoadedLevel() const
 {
 	if (LastLoadedLevel.IsValid() && LastLoadedLevel->IsLevelLoaded())
@@ -300,6 +310,7 @@ void UVulLevelManager::TickNetworkHandling()
 				{
 					RegisterLevelActor(Entry);
 					PendingClientActors.RemoveAt(I);
+					break;
 				}
 			}
 		}
@@ -350,6 +361,8 @@ void UVulLevelManager::InitializeServerHandling()
 					ConnectedClients.Add(Controller, ClientData);
 				}
 
+				OnPlayerConnected.Broadcast(Controller);
+
 				if (const auto LD = CurrentLevelData(); LD)
 				{
 					SpawnLevelActorsForClient(LD->GetActorsToSpawn(EventCtx()), Controller);
@@ -369,6 +382,8 @@ void UVulLevelManager::InitializeServerHandling()
 				{
 					return;
 				}
+
+				OnPlayerDisconnected.Broadcast(PC);
 				
 				if (ConnectedClients.Contains(PC))
 				{
@@ -1000,7 +1015,14 @@ bool UVulLevelManager::SpawnLevelActors(UVulLevelData* LevelData) {
 		case EVulLevelSpawnActorNetOwnership::Server:
 			if (IsServer())
 			{
-				SpawnedActors.Add(SpawnLevelActor(Entry, ServerActorTag));
+				const auto Spawned = SpawnLevelActor(Entry, ServerActorTag);
+				
+				if (ServerData && Spawned.IsValid() && Spawned.Actor->GetIsReplicated())
+				{
+					ServerData->ServerSpawnedActors.Add(Spawned);
+				}
+				
+				SpawnedActors.Add(Spawned);
 			}
 			break;
 		case EVulLevelSpawnActorNetOwnership::ClientLocal:
@@ -1439,7 +1461,7 @@ void UVulLevelManager::RemoveLevelActors(const bool Force)
 
 		bool CanRemove = true;
 
-		if (IsValid(ForRemoval.Actor) || !Force)
+		if (IsValid(ForRemoval.Actor) && !Force)
 		{
 			for (const auto Entry : Queue)
 			{

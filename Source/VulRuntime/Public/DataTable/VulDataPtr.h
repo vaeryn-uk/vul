@@ -36,6 +36,9 @@ struct VULRUNTIME_API FVulDataPtr
 	 */
 	FVulDataPtr(const FName& InRowName) : RowName(InRowName) {}
 
+	template <typename T, typename = TEnableIf<TIsDerivedFrom<T, FTableRowBase>::Value>>
+	FVulDataPtr(TVulDataPtr<T> Data);
+
 	bool operator==(const FVulDataPtr& Other) const
 	{
 		return (!IsSet() && !Other.IsSet())
@@ -323,6 +326,17 @@ template <typename To, typename From, typename = TEnableIf<TIsDerivedFrom<To, Fr
 TVulDataPtr<To> Cast(const TVulDataPtr<From>& Ptr)
 {
 	return Cast<To>(Ptr.Data());
+}
+
+template <typename T, typename>
+FVulDataPtr::FVulDataPtr(TVulDataPtr<T> Data)
+{
+	if (!Data.IsSet())
+	{
+		return;
+	}
+
+	*this = Data;
 }
 
 template <typename T, typename>

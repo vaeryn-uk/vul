@@ -25,6 +25,11 @@ public:
 	 *
 	 * This is analogous to BeginPlay, but is guaranteed to run after Vul level management
 	 * has shown the actor's level.
+	 *
+	 * This is only called on actors placed in a level, or for spawn actors:
+	 * - actors spawned directly on the server
+	 * - on the client a server is spawning an actor for (EVulLevelSpawnActorNetOwnership::Client)
+	 * - actors directly spawned on the client
 	 */
 	virtual void OnVulLevelShown(const FVulLevelShownInfo& Info);
 };

@@ -129,6 +129,8 @@ enum class EVulLevelManagerState : uint8
 	Loading,
 };
 
+DECLARE_MULTICAST_DELEGATE_OneParam(FVulPlayerConnectionEvent, APlayerController* Controller)
+
 /**
  * Responsible for loading levels using Unreal's streaming level model.
  *
@@ -253,6 +255,16 @@ public:
 
 		return GetWorld()->SpawnActor<ActorType>(Class, Location, Rotation, Params);
 	}
+	
+	FVulPlayerConnectionEvent OnPlayerConnected;
+	FVulPlayerConnectionEvent OnPlayerDisconnected;
+
+	/**
+	 * Binds delegates such that OnAdded is called on all existing & future players.
+	 *
+	 * OnPlayerDisconnected can be bound-to for any player leaving.
+	 */
+	void ForEachPlayer(const FVulPlayerConnectionEvent::FDelegate& OnAdded);
 
 	/**
 	 * Gets a widget spawned as a result of the last level load of the given type.
@@ -549,11 +561,22 @@ WidgetType* UVulLevelManager::LastSpawnedWidget() const
 template <typename ActorClass>
 ActorClass* UVulLevelManager::GetLevelActor() const
 {
-	for (const auto& Actor : LevelActors)
+	for (const auto& Entry : LevelActors)
 	{
-		if (Actor.Actor->IsA<ActorClass>())
+		if (Entry.Actor->IsA<ActorClass>())
 		{
-			return Cast<ActorClass>(Actor.Actor);
+			return Cast<ActorClass>(Entry.Actor);
+		}
+	}
+
+	if (IsClient() && ServerData)
+	{
+		for (const auto& Entry : ServerData->ServerSpawnedActors)
+		{
+			if (Entry.Actor->IsA<ActorClass>())
+			{
+				return Cast<ActorClass>(Entry.Actor);
+			}
 		}
 	}
 

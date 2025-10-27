@@ -23,12 +23,9 @@ void AVulLevelNetworkData::PostNetInit()
 {
 	Super::PostNetInit();
 
-	if (GetWorld() && GetWorld()->GetGameInstance())
+	if (const auto LM = VulRuntime::LevelManager(GetWorld()))
 	{
-		if (const auto LM = GetWorld()->GetGameInstance()->GetSubsystem<UVulLevelManager>(); IsValid(LM))
-		{
-			LM->OnNetworkDataReplicated(this);
-		}
+		LM->OnNetworkDataReplicated(this);
 	}
 }
 
