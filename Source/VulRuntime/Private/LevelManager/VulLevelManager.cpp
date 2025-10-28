@@ -480,6 +480,8 @@ void UVulLevelManager::HideLevel(const FName& LevelName)
 	{
 		LS->SetShouldBeVisible(false);
 	}
+	
+	RemoveLevelActors();
 }
 
 FLatentActionInfo UVulLevelManager::NextLatentAction()
@@ -975,15 +977,14 @@ bool UVulLevelManager::SpawnLevelWidgets(UVulLevelData* LevelData)
 	return true;
 }
 
-bool UVulLevelManager::SpawnLevelActors(UVulLevelData* LevelData) {
+bool UVulLevelManager::SpawnLevelActors(UVulLevelData* LevelData)
+{
 	if (!GetWorld())
 	{
 		return false;
 	}
 	
 	TArray<FVulLevelSpawnActorParams> ActorsToSpawn = LevelData->GetActorsToSpawn(EventCtx());
-
-	RemoveLevelActors();
 
 	if (IsServer())
 	{
@@ -1090,6 +1091,25 @@ FVulLevelManagerSpawnedActor UVulLevelManager::SpawnLevelActor(FVulLevelSpawnAct
 	if (!GetWorld())
 	{
 		return {};
+	}
+
+	if (Params.SpawnPolicy == EVulLevelSpawnActorPolicy::SpawnRoot_Preserve)
+	{
+		const auto Existing = LevelActors.ContainsByPredicate([Params](const FVulLevelManagerSpawnedActor& Spawned)
+		{
+			return IsValid(Spawned.Actor) && Spawned.Actor->GetClass() == Params.Actor;
+		});
+
+		if (Existing)
+		{
+			VUL_LEVEL_MANAGER_LOG(
+				Verbose,
+				TEXT("Skipping spawn of %s spawnpolicy=preserved and a level actor already exists"),
+				*Params.Actor->GetName()
+			)
+			
+			return {};
+		}
 	}
 	
 	FActorSpawnParameters SpawnParams;
@@ -1477,7 +1497,7 @@ void UVulLevelManager::RemoveLevelActors(const bool Force)
 							*ForRemoval.Actor->GetName(),
 							*(Entry.LevelName.Get(FName()).ToString())
 						)
-							
+
 						break;
 					}
 				}
@@ -1491,6 +1511,12 @@ void UVulLevelManager::RemoveLevelActors(const bool Force)
 
 		if (CanRemove)
 		{
+			VUL_LEVEL_MANAGER_LOG(
+				Verbose,
+				TEXT("Removing level actor %s"),
+				*(IsValid(ForRemoval.Actor) ? ForRemoval.Actor->GetName() : TEXT("nullptr"))
+			);
+			
 			Removed++;
 			LevelActors.RemoveAt(I);
 		}
