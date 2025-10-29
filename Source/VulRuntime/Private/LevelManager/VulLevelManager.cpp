@@ -1049,9 +1049,14 @@ bool UVulLevelManager::SpawnLevelActors(UVulLevelData* LevelData)
 		{
 			if (SpawnEntry.IsValid())
 			{
-				if (const auto& LAA = Cast<IVulLevelAwareActor>(SpawnEntry.Actor))
+				// Invoke shown hook straight away for non-level spawns as these
+				// won't get picked up by later NotifyActorsLevelShown.
+				if (SpawnEntry.SpawnPolicy != EVulLevelSpawnActorPolicy::SpawnLevel)
 				{
-					LAA->OnVulLevelShown(GenerateLevelShownInfo());
+					if (const auto& LAA = Cast<IVulLevelAwareActor>(SpawnEntry.Actor))
+					{
+						LAA->OnVulLevelShown(GenerateLevelShownInfo());
+					}
 				}
 
 				RegisterLevelActor(SpawnEntry);
