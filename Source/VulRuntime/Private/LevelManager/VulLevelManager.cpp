@@ -1488,7 +1488,7 @@ void UVulLevelManager::RemoveLevelActors(const bool Force)
 
 		if (IsValid(ForRemoval.Actor) && !Force)
 		{
-			for (const auto Entry : Queue)
+			for (const auto& Entry : Queue)
 			{
 				for (const auto& Actor : ResolveData(&Entry)->GetActorsToSpawn(EventCtx()))
 				{
