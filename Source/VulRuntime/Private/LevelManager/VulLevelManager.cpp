@@ -27,7 +27,7 @@ TOptional<TPair<FName, UVulLevelData*>> FVulLevelSettings::FindLevel(UWorld* Wor
 
 bool FVulLevelSettings::IsValid() const
 {
-	return !LevelData.IsEmpty() && !StartingLevelName.IsNone() && RootLevel.IsValid();
+	return !LevelData.IsEmpty() && !StartingLevelName.IsNone() && !RootLevel.IsNull();
 }
 
 FString FVulLevelSettings::Summary(const bool IsDedicatedServer) const
@@ -65,7 +65,11 @@ void UVulLevelManager::Initialize(FSubsystemCollectionBase& Collection)
 
 	if (!VulRuntime::Settings()->LevelSettings.IsValid())
 	{
-		VUL_LEVEL_MANAGER_LOG(Display, TEXT("Skipping initialization as no valid LevelSettings configured."))
+		VUL_LEVEL_MANAGER_LOG(
+			Display,
+			TEXT("Skipping initialization as no valid LevelSettings configured. Settings: %s"),
+			*VulRuntime::Settings()->LevelSettings.Summary(IsDedicatedServer())
+		)
 		return;
 	}
 
