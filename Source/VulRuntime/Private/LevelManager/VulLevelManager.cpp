@@ -55,13 +55,13 @@ void UVulLevelManager::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
 
-	LevelManagerId = FGuid::NewGuid();
-
 	const auto& World = GetWorld();
-	if (!IsValid(World) || !World->IsGameWorld())
+	if (!IsValid(World) || !World->IsGameWorld() || HasAnyFlags(RF_ClassDefaultObject))
 	{
 		return;
 	}
+
+	LevelManagerId = FGuid::NewGuid();
 
 	if (!VulRuntime::Settings()->LevelSettings.IsValid())
 	{
@@ -94,15 +94,15 @@ void UVulLevelManager::Initialize(FSubsystemCollectionBase& Collection)
 			
 			if (InitLevelManager(VulRuntime::Settings()->LevelSettings, World))
 			{
-				ensureAlwaysMsgf(
-					FWorldDelegates::OnWorldTickStart.Remove(WorldInitDelegateHandle),
-					TEXT("Could not remove UVulRuntimeSubsystem world change delegate")
-				);
-				
 				VUL_LEVEL_MANAGER_LOG(
 					Display,
 					TEXT("Initialized with configured LevelSettings: %s"),
 					*VulRuntime::Settings()->LevelSettings.Summary(IsDedicatedServer())
+				);
+				
+				ensureAlwaysMsgf(
+					FWorldDelegates::OnWorldTickStart.Remove(WorldInitDelegateHandle),
+					TEXT("Could not remove UVulRuntimeSubsystem world change delegate")
 				);
 			} else
 			{
@@ -115,7 +115,7 @@ void UVulLevelManager::Initialize(FSubsystemCollectionBase& Collection)
 	);
 }
 
-bool UVulLevelManager::IsAllowedToTick() const
+bool UVulLevelManager::IsTickable() const
 {
 	return !HasAnyFlags(RF_ClassDefaultObject);
 }

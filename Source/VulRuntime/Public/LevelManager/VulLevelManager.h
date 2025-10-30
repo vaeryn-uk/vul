@@ -152,7 +152,7 @@ class VULRUNTIME_API UVulLevelManager : public UGameInstanceSubsystem, public FT
 public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 
-	virtual bool IsAllowedToTick() const override;
+	virtual bool IsTickable() const override;
 	virtual void Tick(float DeltaTime) override;
 	virtual TStatId GetStatId() const override;
 
