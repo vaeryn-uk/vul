@@ -127,12 +127,36 @@ UVulLevelManager* VulRuntime::LevelManager(UWorld* WorldCtx)
 
 void UVulLevelManager::ForEachPlayer(const FVulPlayerConnectionEvent::FDelegate& OnAdded)
 {
+	if (HasLocalPlayer())
+	{
+		// We're playing too!
+		OnAdded.Execute(GetLocalPlayerController());
+	}
+	
 	for (const auto& Entry : ConnectedClients)
 	{
 		OnAdded.Execute(Entry.Key);
 	}
 
 	OnPlayerConnected.Add(OnAdded);
+}
+
+TArray<APlayerController*> UVulLevelManager::GetPlayers() const
+{
+	TArray<APlayerController*> Out;
+	
+	if (HasLocalPlayer())
+	{
+		// We're playing too!
+		Out.Add(GetLocalPlayerController());
+	}
+	
+	for (const auto& Entry : ConnectedClients)
+	{
+		Out.Add(Entry.Key);
+	}
+
+	return Out;
 }
 
 ULevelStreaming* UVulLevelManager::GetLastLoadedLevel() const
@@ -157,24 +181,15 @@ UVulLevelData* UVulLevelManager::CurrentLevelData()
 
 void UVulLevelManager::OnNetworkDataReplicated(AVulLevelNetworkData* NewData)
 {
-	// Find if it's our actor.
-	if (IsServer() || !GetWorld())
+	if (IsFollower() && NewData->GetOwner() == GetLocalPlayerController())
 	{
-		return;
-	}
-
-	const auto Player = GetWorld()->GetFirstLocalPlayerFromController();
-	if (!IsServer() && NewData->GetOwner() == Player->GetPlayerController(GetWorld()))
-	{
-		ClientData = NewData;
+		FollowerData = NewData;
 	}
 }
 
 bool UVulLevelManager::InitLevelManager(const FVulLevelSettings& InSettings, UWorld* World)
 {
 	Settings = InSettings;
-
-	HasInitiallyFollowedServerLevel = false;
 
 	const auto CurrentLevelData = Settings.FindLevel(World);
 
@@ -247,32 +262,27 @@ bool UVulLevelManager::InitLevelManager(const FVulLevelSettings& InSettings, UWo
 
 void UVulLevelManager::TickNetworkHandling()
 {
-	if (IsFollowing())
+	if (IsFollower())
 	{
 		if (IsDisconnectedFromServer())
 		{
 			 // Disconnection detected. Don't follow anymore.
-			ServerData = nullptr;
-			ClientData = nullptr;
+			PrimaryData = nullptr;
+			FollowerData = nullptr;
 			return;
-		}
-		
-		if (!HasInitiallyFollowedServerLevel)
-		{
-			FollowServer();
 		}
 	}
 	
-	if (IsServer())
+	if (IsPrimary())
 	{
-		InitializeServerHandling();
+		InitializePrimaryHandling();
 
 		// Keep the current level up to date.
-		if (ServerData)
+		if (PrimaryData)
 		{
-			ServerData->CurrentLevel = CurrentLevel.IsSet() ? CurrentLevel.GetValue() : FName();
+			PrimaryData->CurrentLevel = CurrentLevel.IsSet() ? CurrentLevel.GetValue() : FName();
 		}
-	} else if (GetWorld() && !ServerData && !IsDisconnectedFromServer())
+	} else if (GetWorld() && !PrimaryData && !IsDisconnectedFromServer())
 	{
 		// Non servers are listening for a server data actor to follow.
 		// TODO: A way to not spam actor iterators on tick.
@@ -285,9 +295,9 @@ void UVulLevelManager::TickNetworkHandling()
 
 			VUL_LEVEL_MANAGER_LOG(Verbose, TEXT("Client detected server network data. Binding & following..."))
 			
-			ServerData = *It;
+			PrimaryData = *It;
 			
-			ServerData->OnNetworkLevelChange.AddWeakLambda(this, [this](AVulLevelNetworkData* Data)
+			PrimaryData->OnNetworkLevelChange.AddWeakLambda(this, [this](AVulLevelNetworkData* Data)
 			{
 				FollowServer();
 			});
@@ -299,11 +309,11 @@ void UVulLevelManager::TickNetworkHandling()
 		}
 	}
 
-	if (ServerData)
+	if (PrimaryData)
 	{
 		for (int I = PendingClientActors.Num() - 1; I >= 0; I--)
 		{
-			for (const auto& Entry : ServerData->ServerSpawnedClientActors)
+			for (const auto& Entry : PrimaryData->ServerSpawnedClientActors)
 			{
 				if (!Entry.IsValid())
 				{
@@ -321,18 +331,18 @@ void UVulLevelManager::TickNetworkHandling()
 	}
 }
 
-void UVulLevelManager::InitializeServerHandling()
+void UVulLevelManager::InitializePrimaryHandling()
 {
-	if (!ServerData && GetWorld())
+	if (!PrimaryData && GetWorld())
 	{
 		VUL_LEVEL_MANAGER_LOG(Display, TEXT("Server spawning replicated VulNetworkLevelData"))
 		FActorSpawnParameters Params;
 		Params.Name = FName(TEXT("LevelManager_ServerData"));
 		Params.NameMode = FActorSpawnParameters::ESpawnActorNameMode::Requested;
-		ServerData = GetWorld()->SpawnActor<AVulLevelNetworkData>(Params);
-		ServerData->IsServer = true;
+		PrimaryData = GetWorld()->SpawnActor<AVulLevelNetworkData>(Params);
+		PrimaryData->IsServer = true;
 
-		if (!ServerData)
+		if (!PrimaryData)
 		{
 			VUL_LEVEL_MANAGER_LOG(Error, TEXT("Server could not spawn its network data actor"))
 		}
@@ -369,7 +379,7 @@ void UVulLevelManager::InitializeServerHandling()
 
 				if (const auto LD = CurrentLevelData(); LD)
 				{
-					SpawnLevelActorsForClient(LD->GetActorsToSpawn(EventCtx()), Controller);
+					SpawnLevelActorsPerPlayer(LD->GetActorsToSpawn(EventCtx()), Controller);
 				}
 			}
 		);
@@ -397,12 +407,6 @@ void UVulLevelManager::InitializeServerHandling()
 					)
 					// No need to destroy the UVulLevelNetworkData instance. Its client ownership implies destruction.
 					ConnectedClients.Remove(PC);
-				} else
-				{
-					VUL_LEVEL_MANAGER_LOG(
-						Warning,
-						TEXT("Client %d left & VulLevelNetworkData removed"), PC->PlayerState->GetPlayerId()
-					)
 				}
 			}
 		);
@@ -585,28 +589,28 @@ void UVulLevelManager::StartProcessing(FLoadRequest* Request)
 
 	Request->StartedAt = FVulTime::PlatformTime();
 	
-	if (IsValid(ClientData))
+	if (IsValid(FollowerData))
 	{
 		// Clear any previous pending request state.
-		ClientData->SetPendingClientLevelRequest({});
+		FollowerData->SetPendingClientLevelRequest({});
 	}
 
 	if (Request->LevelName.IsSet() && !Request->IsLoadingLevel)
 	{
-		if (IsServer() && IsValid(ServerData))
+		if (IsPrimary())
 		{
 			// Inform clients we're starting a level load.
-			ServerData->PendingServerLevelRequest = FVulPendingLevelRequest{
+			PrimaryData->PendingPrimaryLevelRequest = FVulPendingLevelRequest{
 				.RequestId = Request->Id,
 				.LevelName = Request->LevelName.GetValue(),
 				.IssuedAt = Request->StartedAt->Seconds(),
 				.ClientsTotal = ConnectedClients.Num(),
 				.ServerReady = false,
 			};
-		} else if (Request->IsServerFollow && IsValid(ClientData))
+		} else if (Request->IsServerFollow && IsValid(FollowerData))
 		{
 			// We're on a client following a server load.
-			ClientData->PendingClientLevelRequest = FVulPendingLevelRequest{
+			FollowerData->PendingClientLevelRequest = FVulPendingLevelRequest{
 				.RequestId = Request->Id,
 				.LevelName = Request->LevelName.GetValue(),
 				.IssuedAt = GetWorld()->GetTimeSeconds(),
@@ -739,11 +743,11 @@ void UVulLevelManager::Process(FLoadRequest* Request)
 	}
 
 	// Check for a network-synchronized level load.
-	if (IsValid(ServerData) && ServerData->PendingServerLevelRequest.IsValid())
+	if (IsValid(PrimaryData) && PrimaryData->PendingPrimaryLevelRequest.IsValid())
 	{
-		if (IsServer() && !ServerData->PendingServerLevelRequest.IsComplete())
+		if (IsPrimary() && !PrimaryData->PendingPrimaryLevelRequest.IsComplete())
 		{
-			ServerData->PendingServerLevelRequest.ServerReady = true;
+			PrimaryData->PendingPrimaryLevelRequest.ServerReady = true;
 			
 			int ClientsLoaded = 0;
 			for (const auto& Entry : ConnectedClients)
@@ -754,7 +758,7 @@ void UVulLevelManager::Process(FLoadRequest* Request)
 					continue;
 				}
 				
-				if (Entry.Value->PendingClientLevelRequest.RequestId != ServerData->PendingServerLevelRequest.RequestId)
+				if (Entry.Value->PendingClientLevelRequest.RequestId != PrimaryData->PendingPrimaryLevelRequest.RequestId)
 				{
 					// If the client has registered a follow request, check it's what we're currently doing.
 					FailLevelLoad(EVulLevelManagerLoadFailure::Desynchronization);
@@ -767,12 +771,12 @@ void UVulLevelManager::Process(FLoadRequest* Request)
 				}
 			}
 
-			ServerData->PendingServerLevelRequest.ClientsLoaded = ClientsLoaded;
+			PrimaryData->PendingPrimaryLevelRequest.ClientsLoaded = ClientsLoaded;
 
-			if (ServerData->PendingServerLevelRequest.ClientsLoaded == ServerData->PendingServerLevelRequest.ClientsTotal)
+			if (PrimaryData->PendingPrimaryLevelRequest.ClientsLoaded == PrimaryData->PendingPrimaryLevelRequest.ClientsTotal)
 			{
-				ServerData->PendingServerLevelRequest.CompletedAt = GetWorld()->GetTimeSeconds();
-			} else if (GetWorld()->GetTimeSeconds() > ServerData->PendingServerLevelRequest.IssuedAt + Settings.LoadTimeout.GetTotalSeconds()) {
+				PrimaryData->PendingPrimaryLevelRequest.CompletedAt = GetWorld()->GetTimeSeconds();
+			} else if (GetWorld()->GetTimeSeconds() > PrimaryData->PendingPrimaryLevelRequest.IssuedAt + Settings.LoadTimeout.GetTotalSeconds()) {
 				FailLevelLoad(EVulLevelManagerLoadFailure::ClientTimeout);
 				return;
 			} else
@@ -784,23 +788,23 @@ void UVulLevelManager::Process(FLoadRequest* Request)
 		}
 	}
 
-	if (IsValid(ClientData) && ClientData->PendingClientLevelRequest.IsValid())
+	if (IsValid(FollowerData) && FollowerData->PendingClientLevelRequest.IsValid())
 	{
-		if (!IsValid(ServerData) || ServerData->PendingServerLevelRequest.RequestId != ClientData->PendingClientLevelRequest.RequestId)
+		if (!IsValid(PrimaryData) || PrimaryData->PendingPrimaryLevelRequest.RequestId != FollowerData->PendingClientLevelRequest.RequestId)
 		{
 			FailLevelLoad(EVulLevelManagerLoadFailure::Desynchronization);
 			return;
 		}
 
-		if (!ClientData->PendingClientLevelRequest.IsComplete())
+		if (!FollowerData->PendingClientLevelRequest.IsComplete())
 		{
-			ClientData->PendingClientLevelRequest.CompletedAt = GetWorld()->GetTimeSeconds();
-			ClientData->SetPendingClientLevelRequest(ClientData->PendingClientLevelRequest);
+			FollowerData->PendingClientLevelRequest.CompletedAt = GetWorld()->GetTimeSeconds();
+			FollowerData->SetPendingClientLevelRequest(FollowerData->PendingClientLevelRequest);
 			VUL_LEVEL_MANAGER_LOG(Display, TEXT("Client-side loading complete; telling server we're ready"))
 		}
 	}
 
-	if (!IsServer() && IsValid(ServerData) && ServerData->PendingServerLevelRequest.IsPending())
+	if (IsFollower() && PrimaryData->PendingPrimaryLevelRequest.IsPending())
 	{
 		NotifyLevelLoadProgress();
 		return;
@@ -929,27 +933,8 @@ ULevelStreaming* UVulLevelManager::GetLevelStreaming(const FName& LevelName, con
 	return Loaded;
 }
 
-bool UVulLevelManager::SpawnLevelWidgets(UVulLevelData* LevelData)
+void UVulLevelManager::SpawnLevelWidgets(UVulLevelData* LevelData, APlayerController* Ctrl)
 {
-	if (!GetWorld())
-	{
-		return false;
-	}
-
-	if (IsDedicatedServer())
-	{
-		// Never need to spawn widgets. Just report ok.
-		return true;
-	}
-
-	const auto Player = GetWorld()->GetFirstLocalPlayerFromController();
-	if (!ensureMsgf(IsValid(Player), TEXT("Cannot find local player to spawn level load widgets")))
-	{
-		return false;
-	}
-
-	const auto Ctrl = Player->GetPlayerController(GetWorld());
-
 	// Clear anything from previous levels.
 	RemoveAllWidgets(GetWorld());
 	Widgets.Reset(); 
@@ -977,8 +962,6 @@ bool UVulLevelManager::SpawnLevelWidgets(UVulLevelData* LevelData)
 			Widgets.Add(SpawnedWidget);
 		}
 	}
-
-	return true;
 }
 
 bool UVulLevelManager::SpawnLevelActors(UVulLevelData* LevelData)
@@ -990,17 +973,14 @@ bool UVulLevelManager::SpawnLevelActors(UVulLevelData* LevelData)
 	
 	TArray<FVulLevelSpawnActorParams> ActorsToSpawn = LevelData->GetActorsToSpawn(EventCtx());
 
-	if (IsServer())
+	if (IsPrimary())
 	{
-		if (ServerData)
+		for (const auto& Ctrl : GetPlayers())
 		{
-			ServerData->ServerSpawnedClientActors.Reset();
+			SpawnLevelActorsPerPlayer(ActorsToSpawn, Ctrl);
 		}
 		
-		for (const auto& Entry : ConnectedClients)
-		{
-			SpawnLevelActorsForClient(ActorsToSpawn, Entry.Key);
-		}
+		PrimaryData->ServerSpawnedClientActors.Reset();
 	}
 
 	PendingClientActors.Reset();
@@ -1014,30 +994,30 @@ bool UVulLevelManager::SpawnLevelActors(UVulLevelData* LevelData)
 
 		switch (Entry.Network)
 		{
-		case EVulLevelSpawnActorNetOwnership::Local:
+		case EVulLevelSpawnActorNetOwnership::Independent:
 			SpawnedActors.Add(SpawnLevelActor(Entry));
 			break;
-		case EVulLevelSpawnActorNetOwnership::Server:
-			if (IsServer())
+		case EVulLevelSpawnActorNetOwnership::Primary:
+			if (IsPrimary())
 			{
-				const auto Spawned = SpawnLevelActor(Entry, ServerActorTag);
+				const auto Spawned = SpawnLevelActor(Entry, PrimaryActorTag);
 				
-				if (ServerData && Spawned.IsValid() && Spawned.Actor->GetIsReplicated())
+				if (PrimaryData && Spawned.IsValid() && Spawned.Actor->GetIsReplicated())
 				{
-					ServerData->ServerSpawnedActors.Add(Spawned);
+					PrimaryData->ServerSpawnedActors.Add(Spawned);
 				}
 				
 				SpawnedActors.Add(Spawned);
 			}
 			break;
-		case EVulLevelSpawnActorNetOwnership::ClientLocal:
-			if (IsClient())
+		case EVulLevelSpawnActorNetOwnership::PlayerLocal:
+			if (HasLocalPlayer())
 			{
 				SpawnedActors.Add(SpawnLevelActor(Entry));
 			}
 			break;
-		case EVulLevelSpawnActorNetOwnership::Client:
-			if (IsClientOnly())
+		case EVulLevelSpawnActorNetOwnership::PerPlayer:
+			if (IsFollower())
 			{
 				// Record that we're waiting for some server-spawned actors belonging to us
 				// to replicate down.
@@ -1073,22 +1053,22 @@ bool UVulLevelManager::SpawnLevelActors(UVulLevelData* LevelData)
 	return true;
 }
 
-void UVulLevelManager::SpawnLevelActorsForClient(
+void UVulLevelManager::SpawnLevelActorsPerPlayer(
 	const TArray<FVulLevelSpawnActorParams>& Actors,
-	APlayerController* Client
+	APlayerController* Follower
 ) {
 	for (const auto& Actor : Actors)
 	{
-		if (Actor.Network == EVulLevelSpawnActorNetOwnership::Client)
+		if (Actor.Network == EVulLevelSpawnActorNetOwnership::PerPlayer)
 		{
-			if (const auto Spawned = SpawnLevelActor(Actor, LevelActorTag(Client)); Spawned.IsValid())
+			if (const auto Spawned = SpawnLevelActor(Actor, LevelActorTag(Follower)); Spawned.IsValid())
 			{
-				Spawned.Actor->SetOwner(Client);
+				Spawned.Actor->SetOwner(Follower);
 				RegisterLevelActor(Spawned);
 
-				if (ServerData)
+				if (PrimaryData)
 				{
-					ServerData->ServerSpawnedClientActors.Add(Spawned);
+					PrimaryData->ServerSpawnedClientActors.Add(Spawned);
 				}
 			}
 		}
@@ -1159,31 +1139,31 @@ void UVulLevelManager::Tick(float DeltaTime)
 		}
 	}
 
-	if (OnShowLevelData.IsValid())
+	if (OnShowLevelData.IsValid() && GetWorld())
 	{
+		ULevel* LevelToTrigger = nullptr;
+
 		if (!bIsInStreamingMode)
 		{
-			// Non-streaming mode: just invoke what we can globally.
-			if (SpawnLevelWidgets(OnShowLevelData.Get()))
-			{
-				SpawnLevelActors(OnShowLevelData.Get());
-				NotifyActorsLevelShown(GetWorld()->GetCurrentLevel());
-				OnShowLevelData->OnLevelShown(GenerateLevelShownInfo(), EventCtx());
-				OnShowLevelData.Reset();
-				LastFailureReason = EVulLevelManagerLoadFailure::None;
-			}
+			LevelToTrigger = GetWorld()->GetCurrentLevel();
 		} else if (LastLoadedLevel.IsValid() && LastLoadedLevel->HasLoadedLevel())
 		{
-			// Normal, streaming mode. When the level has fully loaded and we have
-			// the controller required to spawn widgets, call relevant hooks.
-			if (SpawnLevelWidgets(OnShowLevelData.Get()))
+			LevelToTrigger = LastLoadedLevel->GetLoadedLevel();
+		}
+
+		if (IsValid(LevelToTrigger))
+		{
+			SpawnLevelActors(OnShowLevelData.Get());
+			NotifyActorsLevelShown(LastLoadedLevel->GetLoadedLevel());
+			OnShowLevelData->OnLevelShown(GenerateLevelShownInfo(), EventCtx());
+			LastFailureReason = EVulLevelManagerLoadFailure::None;
+			
+			if (HasLocalPlayer())
 			{
-				SpawnLevelActors(OnShowLevelData.Get());
-				NotifyActorsLevelShown(GetLastLoadedLevel()->GetLoadedLevel());
-				OnShowLevelData->OnLevelShown(GenerateLevelShownInfo(), EventCtx());
-				OnShowLevelData.Reset();
-				LastFailureReason = EVulLevelManagerLoadFailure::None;
+				SpawnLevelWidgets(OnShowLevelData.Get(), GetLocalPlayerController());
 			}
+			
+			OnShowLevelData.Reset();
 		}
 	}
 }
@@ -1198,15 +1178,31 @@ bool UVulLevelManager::LoadLevel(const FName& LevelName, FVulLevelDelegate::FDel
 	return LoadLevel(LevelName, {}, false, OnComplete);
 }
 
+void UVulLevelManager::Connect(const FString& URI)
+{
+	if (!HasLocalPlayer())
+	{
+		VUL_LEVEL_MANAGER_LOG(Error, TEXT("Cannot Connect() from an instance that does not have a local player"))
+		return;
+	}
+	
+	ResetLevelManager();
+
+	VUL_LEVEL_MANAGER_LOG(Display, TEXT("Connecting to %s"), *URI);
+	GetLocalPlayerController()->ConsoleCommand(FString::Printf(TEXT("open %s"), *URI));
+
+	// TODO: Error handling/failures etc.
+}
+
 bool UVulLevelManager::LoadLevel(
 	const FName& LevelName,
 	const TOptional<FString>& ServerRequestId,
 	const bool Force,
 	FVulLevelDelegate::FDelegate OnComplete
 ) {
-	if (!Force && IsFollowing() && !ServerRequestId.IsSet())
+	if (!Force && IsFollower() && !ServerRequestId.IsSet())
 	{
-		VUL_LEVEL_MANAGER_LOG(Error, TEXT("Ignoring LoadLevel() request as this level manager is following a server"))
+		VUL_LEVEL_MANAGER_LOG(Error, TEXT("Ignoring LoadLevel() request as this level manager is following a primary"))
 		return false;
 	}
 	
@@ -1255,7 +1251,7 @@ void UVulLevelManager::NotifyLevelLoadProgress()
 	if (const auto LoadingLevel = ResolveData(Settings.LoadingLevelName); LoadingLevel)
 	{
 		LoadingLevel->OnLoadProgress(
-			ServerData ? ServerData->PendingServerLevelRequest : FVulPendingLevelRequest(),
+			PrimaryData ? PrimaryData->PendingPrimaryLevelRequest : FVulPendingLevelRequest(),
 			EventCtx()
 		);
 	}
@@ -1331,21 +1327,21 @@ FVulLevelEventContext UVulLevelManager::EventCtx() const
 
 void UVulLevelManager::FollowServer()
 {
-	if (!ServerData)
+	if (!PrimaryData || PrimaryData->HasAuthority())
 	{
-		// Nothing to follow.
+		// Nothing to follow, or it's our own data.
 		return;
 	}
 
-	FName LevelName = FName();
-	TOptional<FString> RequestId;
+	FName LevelName = NAME_None;
+	TOptional<FString> RequestId = {};
 
-	if (ServerData->PendingServerLevelRequest.IsValid())
+	if (PrimaryData->PendingPrimaryLevelRequest.IsPending())
 	{
 		// We may already be working on this request.
 		const auto ExistingRequest = Queue.ContainsByPredicate([this](const FLoadRequest& Req)
 		{
-			return Req.Id == ServerData->PendingServerLevelRequest.RequestId;
+			return Req.Id == PrimaryData->PendingPrimaryLevelRequest.RequestId;
 		});
 	
 		if (ExistingRequest)
@@ -1353,31 +1349,33 @@ void UVulLevelManager::FollowServer()
 			return;
 		}
 
-		LevelName = ServerData->PendingServerLevelRequest.LevelName;
-		RequestId = ServerData->PendingServerLevelRequest.RequestId;
+		LevelName = PrimaryData->PendingPrimaryLevelRequest.LevelName;
+		RequestId = PrimaryData->PendingPrimaryLevelRequest.RequestId;
 	
 		VUL_LEVEL_MANAGER_LOG(
 			Display,
 			TEXT("Following server to %s (synchronized network level switch)"),
-			*ServerData->PendingServerLevelRequest.LevelName.ToString()
+			*PrimaryData->PendingPrimaryLevelRequest.LevelName.ToString()
 		)
 	}
 
-	if (LevelName.IsNone() && !ServerData->CurrentLevel.IsNone())
+	if (LevelName.IsNone() && !PrimaryData->CurrentLevel.IsNone())
 	{
-		LevelName = ServerData->CurrentLevel;
-		
-		VUL_LEVEL_MANAGER_LOG(
-			Display,
-			TEXT("Following server to %s (server current level)"),
-			*ServerData->PendingServerLevelRequest.LevelName.ToString()
-		)
+		LevelName = PrimaryData->CurrentLevel;
+
+		if (!LevelName.IsNone())
+		{
+			VUL_LEVEL_MANAGER_LOG(
+				Display,
+				TEXT("Following server to %s (server current level)"),
+				*LevelName.ToString()
+			)
+		}
 	}
 
-	if (LevelName.IsValid())
+	if (!LevelName.IsNone())
 	{
-		LoadLevel(LevelName, RequestId);
-		HasInitiallyFollowedServerLevel = true;
+		LoadLevel(LevelName, RequestId, true);
 	}
 }
 
@@ -1398,12 +1396,41 @@ FString UVulLevelManager::LevelManagerNetId() const
 		default: break;
 	}
 
-	return FString::Printf(TEXT("%s, WorldID: %s (%s)"), NetModeStr, *WorldIdStr, *MapNameStr);
+	if (IsPrimary())
+	{
+		return FString::Printf(TEXT("%s (PRIMARY), World: %s (%s)"), NetModeStr, *WorldIdStr, *MapNameStr);
+	}
+
+	return FString::Printf(TEXT("%s (FOLLOWER), World: %s (%s)"), NetModeStr, *WorldIdStr, *MapNameStr);
 }
 
-bool UVulLevelManager::IsFollowing() const
+bool UVulLevelManager::IsFollower() const
 {
-	return IsValid(ServerData) && !ServerData->HasAuthority();
+	return IsValid(PrimaryData) && !PrimaryData->HasAuthority();
+}
+
+bool UVulLevelManager::IsPrimary() const
+{
+	// Note that standalone builds become Client once they Connect().
+	return !IsFollower() && !IsNetModeOneOf({NM_Client});
+}
+
+bool UVulLevelManager::HasLocalPlayer() const
+{
+	return IsValid(GetLocalPlayerController());
+}
+
+APlayerController* UVulLevelManager::GetLocalPlayerController() const
+{
+	if (GetWorld())
+	{
+		if (const auto LP = GetWorld()->GetFirstLocalPlayerFromController(); IsValid(LP))
+		{
+			return LP->GetPlayerController(GetWorld());
+		}
+	}
+
+	return nullptr;
 }
 
 FString UVulLevelManager::GenerateNextRequestId() const
@@ -1415,31 +1442,7 @@ void UVulLevelManager::FailLevelLoad(const EVulLevelManagerLoadFailure Failure)
 {
 	VUL_LEVEL_MANAGER_LOG(Error, "Level load failure: %s", *EnumToString(Failure));
 
-	if (IsServer() && IsValid(ServerData))
-	{
-		if (GetWorld() && GetWorld()->GetNetDriver())
-		{
-			for (const auto& Conn : GetWorld()->GetNetDriver()->ClientConnections)
-			{
-				if (Conn)
-				{
-					VUL_LEVEL_MANAGER_LOG(Display, TEXT("Disconnecting client: %s"), *Conn->LowLevelGetRemoteAddress());
-					Conn->Close();
-				}
-			}
-		}
-
-		ConnectedClients.Reset();
-		ServerData->PendingServerLevelRequest = {};
-	}
-
-	if (IsValid(ClientData))
-	{
-		ClientData = nullptr;
-	}
-
-	RemoveLevelActors(true);
-	Queue.Reset();
+	ResetLevelManager();
 
 	LastFailureReason = Failure;
 
@@ -1448,9 +1451,9 @@ void UVulLevelManager::FailLevelLoad(const EVulLevelManagerLoadFailure Failure)
 
 FName UVulLevelManager::LevelActorTag(APlayerController* Controller) const
 {
-	if (IsServer() && (!Controller || Controller == GetController()))
+	if (IsPrimary() && (!Controller || Controller == GetController()))
 	{
-		return ServerActorTag;
+		return PrimaryActorTag;
 	}
 
 	if (!Controller)
@@ -1463,7 +1466,7 @@ FName UVulLevelManager::LevelActorTag(APlayerController* Controller) const
 		return FName();
 	}
 	
-	return FName(FString::Printf(TEXT("vullevelmanager_client_actor_%d"), Controller->PlayerState->GetPlayerId()));
+	return FName(FString::Printf(TEXT("vullevelmanager_follower_actor_%d"), Controller->PlayerState->GetPlayerId()));
 }
 
 APlayerController* UVulLevelManager::GetController() const
@@ -1540,5 +1543,45 @@ void UVulLevelManager::RemoveLevelActors(const bool Force)
 			Force ? TEXT(" (forced removal, ignoring actor spawn policy settings)") : TEXT("")
 		);
 	}
+}
+
+void UVulLevelManager::ResetLevelManager()
+{
+	if (IsPrimary() && IsValid(PrimaryData))
+	{
+		if (GetWorld() && GetWorld()->GetNetDriver())
+		{
+			for (const auto& Conn : GetWorld()->GetNetDriver()->ClientConnections)
+			{
+				if (Conn)
+				{
+					VUL_LEVEL_MANAGER_LOG(Display, TEXT("Disconnecting client: %s"), *Conn->LowLevelGetRemoteAddress());
+					Conn->Close();
+				}
+			}
+		}
+
+		ConnectedClients.Reset();
+		PrimaryData->PendingPrimaryLevelRequest = {};
+	}
+
+	PrimaryData = nullptr;
+	FollowerData = nullptr;
+	OnShowLevelData.Reset();
+	
+	if (OnClientJoined.IsValid())
+	{
+		FGameModeEvents::OnGameModePostLoginEvent().Remove(OnClientJoined);
+	}
+	OnClientJoined.Reset();
+
+	if (OnClientLeft.IsValid())
+	{
+		FGameModeEvents::OnGameModeLogoutEvent().Remove(OnClientLeft);
+	}
+	OnClientLeft.Reset();
+
+	RemoveLevelActors(true);
+	Queue.Reset();
 }
 

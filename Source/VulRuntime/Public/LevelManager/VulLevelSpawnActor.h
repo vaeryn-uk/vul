@@ -4,52 +4,57 @@
 #include "UObject/Interface.h"
 #include "VulLevelSpawnActor.generated.h"
 
+/**
+ * Under which conditions are actors spawned, based on their role in networked games.
+ *
+ * We use LevelManager's distinctions:
+ * - primary: a game instance that is authoritative and running the full game logic.
+ *            This may be an Unreal server, or a standalone game that's running single
+ *            player.
+ * - follower: a game instance that is following a primary; a client.
+ */
 UENUM(BlueprintType)
 enum class EVulLevelSpawnActorNetOwnership : uint8
 {
 	/**
 	 * Spawn an actor with no consideration for network or ownership.
 	 *
-	 * The actor is spawned independently on the server and/or clients as desired,
-	 * without replication or network ownership.
+	 * The actor is spawned independently on primary and followers, without replication or network ownership.
 	 */
-	Local,
+	Independent,
 	
 	/**
-	 * Only spawn an actor on the server.
+	 * Only spawn an actor on the primary instance.
 	 *
 	 * Use standard replication flags to decide if these are visible to any clients too.
 	 * 
-	 * If replicated, these will be available on a client via UVulLevelManager::GetLevelActor - TODO: implement.
+	 * If replicated, these will be available on followers via UVulLevelManager::GetLevelActor.
 	 */
-	Server,
+	Primary,
 
 	/**
-	 * One actor is spawned per connected client. Each is created on the server
-	 * and owned by its respective client, allowing Client -> Server RPCs.
+	 * One actor is spawned per connected player. Each is created on the primary
+	 * and owned by its respective follower. This allows Unreal's Client -> Server RPCs.
 	 *
-	 * A dedicated server does not spawn an additional server-only copy.
-	 *
-	 * Clients will receive their copy of this actor, which can be retrieved via
-	 * ULevelManager::GetLevelActor. A client-side level load will not be completed
-	 * until these actors are available.
+	 * Followers will receive their copy of this actor, which can be retrieved via
+	 * ULevelManager::GetLevelActor. A follower's level load will not be completed
+	 * until its copy of this actor is available.
 	 */
-	Client,
+	PerPlayer,
 
 	/**
-	 * An actor is spawned only for clients, and spawned locally. The server is unaware
-	 * of these.
+	 * An actor is spawned only for followers or a client-based primary, and spawned locally.
 	 */
-	ClientLocal,
+	PlayerLocal,
 };
 
 UENUM(BlueprintType)
 enum class EVulLevelSpawnActorPolicy : uint8
 {
 	/**
-	 * This spawn will only last for the current level and always be destroyed when a subsequent level is loaded.
+	 * This spawn will only last for the current level and always be destroyed when a later level is loaded.
 	 *
-	 * This is the default behaviour.
+	 * This is the default behavior.
 	 */
 	SpawnLevel,
 
@@ -94,12 +99,8 @@ struct VULRUNTIME_API FVulLevelSpawnActorParams
 	TSubclassOf<AActor> Actor;
 
 	UPROPERTY(EditAnywhere)
-	EVulLevelSpawnActorNetOwnership Network = EVulLevelSpawnActorNetOwnership::Local;
+	EVulLevelSpawnActorNetOwnership Network = EVulLevelSpawnActorNetOwnership::Independent;
 	
 	UPROPERTY(EditAnywhere)
 	EVulLevelSpawnActorPolicy SpawnPolicy = EVulLevelSpawnActorPolicy::SpawnLevel;
-
-	bool ShouldSpawnOnClient() const;
-
-	bool ShouldSpawnOnServer() const;
 };

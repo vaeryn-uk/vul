@@ -80,7 +80,7 @@ public:
 	FName CurrentLevel;
 
 	UPROPERTY(ReplicatedUsing=OnRep_StateChange)
-	FVulPendingLevelRequest PendingServerLevelRequest;
+	FVulPendingLevelRequest PendingPrimaryLevelRequest;
 
 	UPROPERTY()
 	FVulPendingLevelRequest PendingClientLevelRequest;

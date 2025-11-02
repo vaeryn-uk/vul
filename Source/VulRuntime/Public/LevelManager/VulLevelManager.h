@@ -263,8 +263,12 @@ public:
 	 * Binds delegates such that OnAdded is called on all existing & future players.
 	 *
 	 * OnPlayerDisconnected can be bound-to for any player leaving.
+	 *
+	 * If called from a client, only that client's player is returned.
 	 */
 	void ForEachPlayer(const FVulPlayerConnectionEvent::FDelegate& OnAdded);
+
+	TArray<APlayerController*> GetPlayers() const;
 
 	/**
 	 * Gets a widget spawned as a result of the last level load of the given type.
@@ -326,9 +330,9 @@ private:
 	/**
 	 * Spawns the widgets specified in LevelData, returning true if this was done.
 	 */
-	bool SpawnLevelWidgets(UVulLevelData* LevelData);
+	void SpawnLevelWidgets(UVulLevelData* LevelData, APlayerController* Ctrl);
 	bool SpawnLevelActors(UVulLevelData* LevelData);
-	void SpawnLevelActorsForClient(const TArray<FVulLevelSpawnActorParams>& Actors, APlayerController* Client);
+	void SpawnLevelActorsPerPlayer(const TArray<FVulLevelSpawnActorParams>& Actors, APlayerController* Follower);
 	FVulLevelManagerSpawnedActor SpawnLevelActor(FVulLevelSpawnActorParams Params, const FName& Tag = FName());
 
 	void ShowLevel(const FName& LevelName);
@@ -345,7 +349,7 @@ private:
 
 	void TickNetworkHandling();
 
-	void InitializeServerHandling();
+	void InitializePrimaryHandling();
 
 	/**
 	 * Generates a unique action info input required for streaming levels. Required for the level streaming API.
@@ -472,10 +476,10 @@ private:
 	 *    the server moving between levels.
 	 */
 	UPROPERTY()
-	AVulLevelNetworkData* ServerData = nullptr;
+	AVulLevelNetworkData* PrimaryData = nullptr;
 	
 	UPROPERTY()
-	AVulLevelNetworkData* ClientData = nullptr;
+	AVulLevelNetworkData* FollowerData = nullptr;
 
 	/**
 	 * Server only: mapping of network data instances to their owners.
@@ -501,7 +505,15 @@ private:
 	 *
 	 * A following instance cannot make LoadLevel calls.
 	 */
-	bool IsFollowing() const;
+	bool IsFollower() const;
+
+	/**
+	 * Returns true if this is a primary instance
+	 */
+	bool IsPrimary() const;
+
+	bool HasLocalPlayer() const;
+	APlayerController* GetLocalPlayerController() const;
 
 	FGuid LevelManagerId;
 	mutable int32 RequestIdGenerator;
@@ -522,9 +534,7 @@ private:
 
 	APlayerController* GetController() const;
 
-	bool HasInitiallyFollowedServerLevel = false;
-
-	const FName ServerActorTag = FName(TEXT("vullevelmanager_server_actor"));
+	const FName PrimaryActorTag = FName(TEXT("vullevelmanager_primary_actor"));
 
 	/**
 	 * Actors that the server has spawned owning to the client, and we're waiting for
@@ -537,6 +547,11 @@ private:
 	EVulLevelManagerLoadFailure LastFailureReason = EVulLevelManagerLoadFailure::None;
 
 	void RemoveLevelActors(const bool Force = false);
+
+	/**
+	 * Hard reset of the level manager's state, leaving us clean to start over.
+	 */
+	void ResetLevelManager();
 };
 
 template <typename WidgetType>
@@ -569,9 +584,9 @@ ActorClass* UVulLevelManager::GetLevelActor() const
 		}
 	}
 
-	if (IsClient() && ServerData)
+	if (IsClient() && PrimaryData)
 	{
-		for (const auto& Entry : ServerData->ServerSpawnedActors)
+		for (const auto& Entry : PrimaryData->ServerSpawnedActors)
 		{
 			if (Entry.Actor->IsA<ActorClass>())
 			{
