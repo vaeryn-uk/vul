@@ -874,7 +874,10 @@ void UVulLevelManager::Process(FLoadRequest* Request)
 
 void UVulLevelManager::NextRequest()
 {
-	Queue.RemoveAt(0);
+	if (!Queue.IsEmpty())
+	{
+		Queue.RemoveAt(0);
+	}
 }
 
 bool UVulLevelManager::IsReloadOfSameLevel(const FName& LevelName) const
@@ -1221,10 +1224,16 @@ void UVulLevelManager::Connect(const FString& URI)
 	
 	ResetLevelManager();
 
-	VUL_LEVEL_MANAGER_LOG(Display, TEXT("Connecting to %s"), *URI);
-	GetLocalPlayerController()->ConsoleCommand(FString::Printf(TEXT("open %s"), *URI));
-
-	// TODO: Error handling/failures etc.
+	LoadLevel(
+		Settings.LoadingLevelName,
+		FVulLevelDelegate::FDelegate::CreateWeakLambda(this, [this, URI](const UVulLevelData*, const class UVulLevelManager*)
+		{
+			VUL_LEVEL_MANAGER_LOG(Display, TEXT("Connecting to %s"), *URI);
+			GetLocalPlayerController()->ConsoleCommand(FString::Printf(TEXT("open %s"), *URI));
+			
+			// TODO: Error handling/failures etc.
+		})
+	);
 }
 
 bool UVulLevelManager::LoadLevel(
