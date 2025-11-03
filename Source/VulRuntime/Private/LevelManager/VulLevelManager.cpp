@@ -1373,6 +1373,27 @@ void UVulLevelManager::FollowServer()
 		}
 	}
 
+	if (CurrentLevel.IsSet() && CurrentLevel.GetValue() == LevelName)
+	{
+		VUL_LEVEL_MANAGER_LOG(Verbose, TEXT("Skipping server follow to %s as we're already there"), *LevelName.ToString());
+		return;
+	}
+
+	const auto AlreadyLoading = Queue.ContainsByPredicate([LevelName](const FLoadRequest& Req)
+	{
+		return Req.LevelName.IsSet() && Req.LevelName == LevelName;
+	});
+
+	if (AlreadyLoading)
+	{
+		VUL_LEVEL_MANAGER_LOG(
+			Verbose,
+			TEXT("Skipping server follow to %s as we're already queued to go there"),
+			*LevelName.ToString()
+		);
+		return;
+	}
+
 	if (!LevelName.IsNone())
 	{
 		LoadLevel(LevelName, RequestId, true);

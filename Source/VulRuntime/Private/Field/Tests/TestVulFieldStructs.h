@@ -86,7 +86,7 @@ enum class EVulFieldTestTreeNodeType : uint8
 VULFLD_TYPE(EVulFieldTestTreeNodeType, "VulFieldTestTreeNodeType");
 
 // Substituted-out macro of DECLARE_ENUM_TO_STRING + DEFINE_ENUM_TO_STRING to save needing a .cpp file.
-FString EnumToString(const EVulFieldTestTreeNodeType Value)
+inline FString EnumToString(const EVulFieldTestTreeNodeType Value)
 {
 	static const UEnum* TypeEnum = FindObject<UEnum>(nullptr, TEXT("VulRuntime") TEXT(".") TEXT("EVulFieldTestTreeNodeType"));
 	return TypeEnum->GetNameStringByIndex(static_cast<int32>(Value));
