@@ -502,8 +502,6 @@ void UVulLevelManager::HideLevel(const FName& LevelName)
 	{
 		LS->SetShouldBeVisible(false);
 	}
-	
-	RemoveLevelActors();
 }
 
 FLatentActionInfo UVulLevelManager::NextLatentAction()
@@ -639,6 +637,7 @@ void UVulLevelManager::StartProcessing(FLoadRequest* Request)
 	{
 		// Unload the current level.
 		HideLevel(CurrentLevel.GetValue());
+		RemoveLevelActors();
 		
 		// Any pending ShowLevelData hooks should be cleared. If they've not fired by now, it's too late.
 		if (OnShowLevelData.IsValid())
