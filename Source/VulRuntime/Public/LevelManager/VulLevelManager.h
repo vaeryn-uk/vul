@@ -380,7 +380,7 @@ private:
 	/**
 	 * Maintains a unique value so our streamed load requests don't collide with one another.
 	 */
-	int32 LoadingUuid;
+	static int32 LoadingUuid;
 
 	/**
 	 * Caches the level data defined for each level.
@@ -552,6 +552,8 @@ private:
 	 * Hard reset of the level manager's state, leaving us clean to start over.
 	 */
 	void ResetLevelManager();
+
+	bool LoadingLevelReadyToHide = false;
 };
 
 template <typename WidgetType>

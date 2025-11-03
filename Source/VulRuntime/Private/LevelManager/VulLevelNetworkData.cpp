@@ -17,6 +17,7 @@ void AVulLevelNetworkData::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 	DOREPLIFETIME(AVulLevelNetworkData, PendingPrimaryLevelRequest);
 	DOREPLIFETIME(AVulLevelNetworkData, IsServer);
 	DOREPLIFETIME(AVulLevelNetworkData, ServerSpawnedClientActors);
+	DOREPLIFETIME(AVulLevelNetworkData, LevelManagerId);
 }
 
 void AVulLevelNetworkData::PostNetInit()
@@ -35,9 +36,26 @@ void AVulLevelNetworkData::SetPendingClientLevelRequest(const FVulPendingLevelRe
 	Server_UpdateClientRequest(New);
 }
 
+void AVulLevelNetworkData::SetPendingClientLevelManagerId(const FString& Id)
+{
+	// Debugging only: no need to keep this up to date outside of editor.
+#if WITH_EDITOR
+	if (Id != LevelManagerId)
+	{
+		LevelManagerId = Id;
+		Server_UpdatePendingLevelManagerId(Id);
+	}
+#endif
+}
+
 void AVulLevelNetworkData::Server_UpdateClientRequest_Implementation(const FVulPendingLevelRequest& Request)
 {
 	PendingClientLevelRequest = Request;
+}
+
+void AVulLevelNetworkData::Server_UpdatePendingLevelManagerId_Implementation(const FString& Id)
+{
+	LevelManagerId = Id;
 }
 
 void AVulLevelNetworkData::OnRep_StateChange()

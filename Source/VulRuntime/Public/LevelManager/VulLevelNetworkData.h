@@ -15,16 +15,16 @@ struct VULRUNTIME_API FVulPendingLevelRequest
 {
 	GENERATED_BODY()
 
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere)
 	FString RequestId;
 
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere)
 	FName LevelName;
 
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere)
 	double IssuedAt;
 
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere)
 	double CompletedAt = -1;
 
 	/**
@@ -32,7 +32,7 @@ struct VULRUNTIME_API FVulPendingLevelRequest
 	 *
 	 * This excludes the server.
 	 */
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere)
 	int32 ClientsLoaded = 0;
 	
 	/**
@@ -40,13 +40,13 @@ struct VULRUNTIME_API FVulPendingLevelRequest
 	 *
 	 * This excludes the server.
 	 */
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere)
 	int32 ClientsTotal = 0;
 
 	/**
 	 * Is the server itself ready to switch?
 	 */
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere)
 	bool ServerReady = false;
 
 	bool IsValid() const { return !LevelName.IsNone() && !RequestId.IsEmpty(); }
@@ -73,16 +73,28 @@ public:
 
 	FVulServerLevelChange OnNetworkLevelChange;
 
-	UPROPERTY(Replicated)
+	/**
+	 * For debugging in editor.
+	 */
+	UPROPERTY(Replicated, VisibleAnywhere)
+	FString LevelManagerId;
+
+	UPROPERTY(Replicated, VisibleAnywhere)
 	bool IsServer = false;
 	
-	UPROPERTY(ReplicatedUsing=OnRep_StateChange)
+	UPROPERTY(ReplicatedUsing=OnRep_StateChange, VisibleAnywhere)
 	FName CurrentLevel;
 
-	UPROPERTY(ReplicatedUsing=OnRep_StateChange)
+	/**
+	 * How a server informs clients of its load progress.
+	 */
+	UPROPERTY(ReplicatedUsing=OnRep_StateChange, VisibleAnywhere)
 	FVulPendingLevelRequest PendingPrimaryLevelRequest;
 
-	UPROPERTY()
+	/**
+	 * How clients update the client as to their load progress.
+	 */
+	UPROPERTY(VisibleAnywhere)
 	FVulPendingLevelRequest PendingClientLevelRequest;
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
@@ -107,6 +119,7 @@ public:
 	TArray<FVulLevelManagerSpawnedActor> ServerSpawnedActors = {};
 
 	void SetPendingClientLevelRequest(const FVulPendingLevelRequest& New);
+	void SetPendingClientLevelManagerId(const FString& Id);
 
 private:
 	/**
@@ -114,6 +127,8 @@ private:
 	 */
 	UFUNCTION(Server, Reliable)
 	void Server_UpdateClientRequest(const FVulPendingLevelRequest& Request);
+	UFUNCTION(Server, Reliable)
+	void Server_UpdatePendingLevelManagerId(const FString& Id);
 	
 	UFUNCTION()
 	void OnRep_StateChange();

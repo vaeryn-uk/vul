@@ -51,6 +51,8 @@ FName FVulLevelSettings::GetStartingLevelName(const bool IsDedicatedServer) cons
 	return StartingLevelName;
 }
 
+int32 UVulLevelManager::LoadingUuid = 0;
+
 void UVulLevelManager::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
@@ -262,6 +264,18 @@ bool UVulLevelManager::InitLevelManager(const FVulLevelSettings& InSettings, UWo
 
 void UVulLevelManager::TickNetworkHandling()
 {
+#if WITH_EDITOR
+	if (IsFollower() && FollowerData)
+	{
+		FollowerData->SetPendingClientLevelManagerId(LevelManagerNetId());
+	}
+
+	if (IsPrimary() && PrimaryData)
+	{
+		PrimaryData->LevelManagerId = LevelManagerNetId();
+	}
+#endif
+	
 	if (IsFollower())
 	{
 		if (IsDisconnectedFromServer())
@@ -607,14 +621,14 @@ void UVulLevelManager::StartProcessing(FLoadRequest* Request)
 				.ClientsTotal = ConnectedClients.Num(),
 				.ServerReady = false,
 			};
-		} else if (Request->IsServerFollow && IsValid(FollowerData))
+		} else if (IsValid(FollowerData))
 		{
 			// We're on a client following a server load.
-			FollowerData->PendingClientLevelRequest = FVulPendingLevelRequest{
+			FollowerData->SetPendingClientLevelRequest(FVulPendingLevelRequest{
 				.RequestId = Request->Id,
 				.LevelName = Request->LevelName.GetValue(),
 				.IssuedAt = GetWorld()->GetTimeSeconds(),
-			};
+			});
 		}
 	}
 
@@ -825,7 +839,8 @@ void UVulLevelManager::Process(FLoadRequest* Request)
 	// Otherwise we're done. Boot it up.
 	if (!Settings.LoadingLevelName.IsNone() && !Request->IsLoadingLevel)
 	{
-		HideLevel(Settings.LoadingLevelName);
+		// Queue the hiding of our loading level until OnShow logic has been invoked.
+		LoadingLevelReadyToHide = true;
 	}
 
 	ShowLevel(Request->LevelName.GetValue());
@@ -1164,6 +1179,12 @@ void UVulLevelManager::Tick(float DeltaTime)
 			}
 			
 			OnShowLevelData.Reset();
+
+			if (bIsInStreamingMode && LoadingLevelReadyToHide)
+			{
+				HideLevel(Settings.LoadingLevelName);
+				LoadingLevelReadyToHide = false;
+			}
 		}
 	}
 }
@@ -1544,13 +1565,17 @@ void UVulLevelManager::RemoveLevelActors(const bool Force)
 
 		if (CanRemove)
 		{
-			VUL_LEVEL_MANAGER_LOG(
-				Verbose,
-				TEXT("Removing level actor %s"),
-				*(IsValid(ForRemoval.Actor) ? ForRemoval.Actor->GetName() : TEXT("nullptr"))
-			);
+			if (IsValid(ForRemoval.Actor))
+			{
+				VUL_LEVEL_MANAGER_LOG(
+					Verbose,
+					TEXT("Removing level actor %s"),
+					*ForRemoval.Actor->GetName()
+				);
 			
-			Removed++;
+				Removed++;
+			}
+			
 			LevelActors.RemoveAt(I);
 		}
 	}
