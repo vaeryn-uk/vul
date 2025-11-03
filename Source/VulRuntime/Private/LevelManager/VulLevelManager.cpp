@@ -746,6 +746,11 @@ void UVulLevelManager::Process(FLoadRequest* Request)
 	if (!IsValid(LS) || !LS->IsLevelLoaded() || AreWaitingForAdditionalAssets())
 	{
 		// Loading is not complete.
+		if (Request->StartedAt.GetValue().IsAfter(Settings.LoadTimeout.GetTotalSeconds()))
+		{
+			FailLevelLoad(EVulLevelManagerLoadFailure::LocalLoadTimeout);
+		}
+		
 		return;
 	}
 
@@ -790,7 +795,7 @@ void UVulLevelManager::Process(FLoadRequest* Request)
 			if (PrimaryData->PendingPrimaryLevelRequest.ClientsLoaded == PrimaryData->PendingPrimaryLevelRequest.ClientsTotal)
 			{
 				PrimaryData->PendingPrimaryLevelRequest.CompletedAt = GetWorld()->GetTimeSeconds();
-			} else if (GetWorld()->GetTimeSeconds() > PrimaryData->PendingPrimaryLevelRequest.IssuedAt + Settings.LoadTimeout.GetTotalSeconds()) {
+			} else if (Request->StartedAt.GetValue().IsAfter(Settings.LoadTimeout.GetTotalSeconds())) {
 				FailLevelLoad(EVulLevelManagerLoadFailure::ClientTimeout);
 				return;
 			} else
@@ -800,6 +805,13 @@ void UVulLevelManager::Process(FLoadRequest* Request)
 				return;
 			}
 		}
+	}
+	
+	// If we exceed time now, it's because the server hasn't loaded in time.
+	if (IsFollower() && Request->StartedAt.GetValue().IsAfter(Settings.LoadTimeout.GetTotalSeconds()))
+	{
+		FailLevelLoad(EVulLevelManagerLoadFailure::ServerTimeout);
+		return;
 	}
 
 	if (IsValid(FollowerData) && FollowerData->PendingClientLevelRequest.IsValid())

@@ -20,7 +20,7 @@ enum class EVulLevelManagerLoadFailure : uint8
 	None,
 	
 	/**
-	 * We exceeded the timeout to complete a load (locally, outside of any network considerations).
+	 * We exceeded the timeout to complete a load (locally, outside any network considerations).
 	 */
 	LocalLoadTimeout,
 
@@ -28,6 +28,11 @@ enum class EVulLevelManagerLoadFailure : uint8
 	 * One client failed to load a level in time.
 	 */
 	ClientTimeout,
+
+	/**
+	 * On a client, the server failed to load in the time we allow.
+	 */
+	ServerTimeout,
 
 	/**
 	 * During a network level load, some state got unexpectedly desynchronized.
