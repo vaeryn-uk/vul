@@ -336,12 +336,13 @@ FVulDataPtr::FVulDataPtr(TVulDataPtr<T> Data)
 		return;
 	}
 
-	*this = Data;
+	*this = Data.Data();
 }
 
 template <typename T, typename>
 TVulDataPtr<T> FVulDataPtr::GetAsDataPtr() const
 {
+	EnsureLoaded(); // Force a load so the returned ptr is ready to use. Saves multiple accesses later.
 	return Cast<T>(*this);
 }
 
