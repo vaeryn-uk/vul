@@ -24,9 +24,10 @@ public:
 		const FName& Name,
 		USceneComponent* Parent   = nullptr,
 		UActorComponent* Template = nullptr,
-		const EObjectFlags Flags = RF_NoFlags
+		const EObjectFlags Flags = RF_NoFlags,
+		const FName& SocketName = NAME_None
 	) {
-		return Cast<T>(SpawnDynamicComponent(T::StaticClass(), Owner, Name, Parent, Template, Flags));
+		return Cast<T>(SpawnDynamicComponent(T::StaticClass(), Owner, Name, Parent, Template, Flags, SocketName));
 	}
 
 	/**
@@ -40,7 +41,8 @@ public:
 		const FName& Name,
 		USceneComponent* Parent   = nullptr,
 		UActorComponent* Template = nullptr,
-		const EObjectFlags Flags = RF_NoFlags
+		const EObjectFlags Flags = RF_NoFlags,
+		const FName& SocketName = NAME_None
 	);
 
 	/**
