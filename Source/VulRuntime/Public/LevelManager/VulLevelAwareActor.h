@@ -32,4 +32,10 @@ public:
 	 * - actors directly spawned on the client
 	 */
 	virtual void OnVulLevelShown(const FVulLevelShownInfo& Info);
+
+	/**
+	 * Similar to OnVulLevelShown, but is called for any actor in the world, whether they were
+	 * spawned in for that level or not.
+	 */
+	virtual void OnVulLevelChangeComplete(const FVulLevelShownInfo& Info);
 };

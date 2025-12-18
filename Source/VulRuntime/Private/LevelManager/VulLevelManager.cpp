@@ -906,6 +906,15 @@ void UVulLevelManager::NotifyActorsLevelShown(ULevel* Level)
 			LevelAware->OnVulLevelShown(Info);
 		}
 	}
+
+	for (TActorIterator<AActor> It(Info.World); It; ++It)
+	{
+		AActor* Actor = *It;
+		if (const auto LevelAware = Cast<IVulLevelAwareActor>(Actor))
+		{
+			LevelAware->OnVulLevelChangeComplete(Info);
+		}
+	}
 }
 
 FVulLevelShownInfo UVulLevelManager::GenerateLevelShownInfo()
