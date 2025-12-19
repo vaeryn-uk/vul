@@ -143,6 +143,12 @@ private:
 
 	const void* EnsurePtr() const;
 
+	/*
+	 * TODO: Whilst these properties serialize over the net nicely, they can leave invalid ptrs,
+	 * both the cached one to data, and presumably the Repository Ptr too, so won't work on
+	 * client side. This needs more work for network support.
+	 */
+	
 	UPROPERTY()
 	UVulDataRepository* Repository = nullptr;
 	UPROPERTY(VisibleAnywhere)
