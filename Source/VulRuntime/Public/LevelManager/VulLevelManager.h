@@ -122,12 +122,46 @@ enum class EVulLevelManagerState : uint8
 	 * The level manager is not actively loading any levels.
 	 */
 	Idle,
+
+	/**
+	 * Loading has just begun, with no further details on progress so far.
+	 */
+	Loading_Started,
 	
 	/**
-	 * A level is currently being loaded.
+	 * Level is loading: waiting for minimum time on load screen setting to have elapsed.
 	 */
-	Loading,
+	Loading_MinimumLoadScreenTime,
+
+	/**
+	 * Core level is being streamed in.
+	 */
+	Loading_StreamingInProgress,
+
+	/**
+	 * Waiting for additional assets configured by level data. 
+	 */
+	Loading_AdditionalAssets,
+
+	/**
+	 * Followers are waiting for their copies of actors spawned on the server to be available in their world.
+	 */
+	Loading_PendingFollowerActors,
+
+	/**
+	 * Followers are waiting for the primary to mark its load as complete.
+	 */
+	Loading_FollowerAwaitingPrimary,
+
+	/**
+	 * The primary is waiting for all followers to confirm their readiness.
+	 */
+	Loading_PrimaryAwaitingFollowers,
 };
+
+DECLARE_ENUM_TO_STRING(EVulLevelManagerState);
+
+inline bool IsLoading(const EVulLevelManagerState& State) { return State != EVulLevelManagerState::Idle; }
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FVulPlayerConnectionEvent, APlayerController* Controller)
 
@@ -498,7 +532,7 @@ private:
 	/**
 	 * Generates an ID that is used for internal logging & identification.
 	 */
-	FString LevelManagerNetId() const;
+	FString LevelManagerNetInfo() const;
 
 	/**
 	 * Returns true if this is a client instance connected to & following a server.
@@ -520,7 +554,7 @@ private:
 
 	FString GenerateNextRequestId() const;
 
-	void FailLevelLoad(const EVulLevelManagerLoadFailure Failure);
+	void FailLevelLoad(const EVulLevelManagerLoadFailure Failure, const FString Extra = FString());
 
 	UPROPERTY()
 	TArray<FVulLevelManagerSpawnedActor> LevelActors;
@@ -540,7 +574,7 @@ private:
 	 * Actors that the server has spawned owning to the client, and we're waiting for
 	 * them to be replicated to us.
 	 */
-	TArray<FVulLevelSpawnActorParams> PendingClientActors = {};
+	TArray<FVulLevelSpawnActorParams> PendingFollowerActors = {};
 
 	void RegisterLevelActor(const FVulLevelManagerSpawnedActor& Actor);
 
@@ -554,6 +588,8 @@ private:
 	void ResetLevelManager();
 
 	bool LoadingLevelReadyToHide = false;
+
+	void TransitionState(const EVulLevelManagerState New);
 };
 
 template <typename WidgetType>
@@ -614,5 +650,5 @@ namespace VulRuntime
 
 #define VUL_LEVEL_MANAGER_LOG(Verbosity, Format, ...) \
 do { \
-	UE_LOG(LogVul, Verbosity, TEXT("VulLevelManager [%s]: ") Format, *LevelManagerNetId(), ##__VA_ARGS__); \
+	UE_LOG(LogVul, Verbosity, TEXT("VulLevelManager [%s]: ") Format, *LevelManagerNetInfo(), ##__VA_ARGS__); \
 } while (0);

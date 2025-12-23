@@ -12,6 +12,8 @@
 #include "UserInterface/VulUserInterface.h"
 #include "World/VulWorldGlobals.h"
 
+DEFINE_ENUM_TO_STRING(EVulLevelManagerState, "VulRuntime");
+
 TOptional<TPair<FName, UVulLevelData*>> FVulLevelSettings::FindLevel(UWorld* World) const
 {
 	for (const auto& Entry : LevelData)
@@ -183,8 +185,19 @@ UVulLevelData* UVulLevelManager::CurrentLevelData()
 
 void UVulLevelManager::OnNetworkDataReplicated(AVulLevelNetworkData* NewData)
 {
-	if (IsFollower() && NewData->GetOwner() == GetLocalPlayerController())
+	if (!IsValid(NewData)) return;
+
+	// Only followers (clients). Server should never take this path.
+	if (NewData->HasAuthority())
 	{
+		return;
+	}
+
+	// If you mean "this replicated object corresponds to *my* local player"
+	const APlayerController* PC = GetLocalPlayerController();
+	if (IsValid(PC) && NewData->GetOwner() == PC)
+	{
+		VUL_LEVEL_MANAGER_LOG(Verbose, TEXT("Received new network data belonging to us - how we inform the server of our state"));
 		FollowerData = NewData;
 	}
 }
@@ -267,12 +280,12 @@ void UVulLevelManager::TickNetworkHandling()
 #if WITH_EDITOR
 	if (IsFollower() && FollowerData)
 	{
-		FollowerData->SetPendingClientLevelManagerId(LevelManagerNetId());
+		FollowerData->SetPendingClientLevelManagerId(LevelManagerNetInfo());
 	}
 
 	if (IsPrimary() && PrimaryData)
 	{
-		PrimaryData->LevelManagerId = LevelManagerNetId();
+		PrimaryData->LevelManagerId = LevelManagerNetInfo();
 	}
 #endif
 	
@@ -325,7 +338,7 @@ void UVulLevelManager::TickNetworkHandling()
 
 	if (PrimaryData)
 	{
-		for (int I = PendingClientActors.Num() - 1; I >= 0; I--)
+		for (int I = PendingFollowerActors.Num() - 1; I >= 0; I--)
 		{
 			for (const auto& Entry : PrimaryData->ServerSpawnedClientActors)
 			{
@@ -334,10 +347,10 @@ void UVulLevelManager::TickNetworkHandling()
 					continue;
 				}
 				
-				if (Entry.Actor->IsA(PendingClientActors[I].Actor) && Entry.Actor->GetOwner() == GetController() && !LevelActors.Contains(Entry))
+				if (Entry.Actor->IsA(PendingFollowerActors[I].Actor) && Entry.Actor->GetOwner() == GetController() && !LevelActors.Contains(Entry))
 				{
 					RegisterLevelActor(Entry);
-					PendingClientActors.RemoveAt(I);
+					PendingFollowerActors.RemoveAt(I);
 					break;
 				}
 			}
@@ -594,9 +607,10 @@ void UVulLevelManager::StartProcessing(FLoadRequest* Request)
 {
 	VUL_LEVEL_MANAGER_LOG(
 		Display,
-		TEXT("StartProcessing %s%s"),
+		TEXT("StartProcessing %s%s (requestId=%s)"),
 		*(Request->LevelName.IsSet() ? Request->LevelName.GetValue().ToString() : FString(TEXT("<Unload request>"))),
-		*(Request->IsServerFollow ? FString(TEXT(" (server follow)")) : FString())
+		*(Request->IsServerFollow ? FString(TEXT(" (server follow)")) : FString()),
+		*(Request->Id)
 	);
 
 	Request->StartedAt = FVulTime::PlatformTime();
@@ -626,12 +640,13 @@ void UVulLevelManager::StartProcessing(FLoadRequest* Request)
 				.RequestId = Request->Id,
 				.LevelName = Request->LevelName.GetValue(),
 				.IssuedAt = GetWorld()->GetTimeSeconds(),
+				.CompletedAt = -1,
 			});
 		}
 	}
 
 	LastUnLoadedLevel = NAME_None;
-	State = EVulLevelManagerState::Loading;
+	TransitionState(EVulLevelManagerState::Loading_Started);
 
 	if (CurrentLevel.IsSet())
 	{
@@ -738,18 +753,29 @@ void UVulLevelManager::Process(FLoadRequest* Request)
 	{
 		// Loading, but haven't been on the load screen long enough.
 		// Unless we're loading the loading screen, in which case go straight away.
+		TransitionState(EVulLevelManagerState::Loading_MinimumLoadScreenTime);
 		return;
 	}
 
+#define EXCEEDED_LOAD_TIMEOUT Request->StartedAt.GetValue().IsAfter(Settings.LoadTimeout.GetTotalSeconds())
+
 	const auto LS = GetLevelStreaming(Request->LevelName.GetValue());
-	if (!IsValid(LS) || !LS->IsLevelLoaded() || AreWaitingForAdditionalAssets())
+	if (!IsValid(LS) || !LS->IsLevelLoaded())
 	{
+		TransitionState(EVulLevelManagerState::Loading_StreamingInProgress);
+		
 		// Loading is not complete.
-		if (Request->StartedAt.GetValue().IsAfter(Settings.LoadTimeout.GetTotalSeconds()))
+		if (EXCEEDED_LOAD_TIMEOUT)
 		{
 			FailLevelLoad(EVulLevelManagerLoadFailure::LocalLoadTimeout);
 		}
 		
+		return;
+	}
+
+	if (AreWaitingForAdditionalAssets())
+	{
+		TransitionState(EVulLevelManagerState::Loading_AdditionalAssets);
 		return;
 	}
 
@@ -779,7 +805,14 @@ void UVulLevelManager::Process(FLoadRequest* Request)
 				if (Entry.Value->PendingClientLevelRequest.RequestId != PrimaryData->PendingPrimaryLevelRequest.RequestId)
 				{
 					// If the client has registered a follow request, check it's what we're currently doing.
-					FailLevelLoad(EVulLevelManagerLoadFailure::Desynchronization);
+					FailLevelLoad(
+						EVulLevelManagerLoadFailure::Desynchronization,
+						FString::Printf(
+							TEXT("Primary Request ID: %s, Follower Request ID: %s"),
+							*PrimaryData->PendingPrimaryLevelRequest.RequestId,
+							*Entry.Value->PendingClientLevelRequest.RequestId
+						)
+					);
 					return;
 				}
 				
@@ -794,30 +827,39 @@ void UVulLevelManager::Process(FLoadRequest* Request)
 			if (PrimaryData->PendingPrimaryLevelRequest.ClientsLoaded == PrimaryData->PendingPrimaryLevelRequest.ClientsTotal)
 			{
 				PrimaryData->PendingPrimaryLevelRequest.CompletedAt = GetWorld()->GetTimeSeconds();
-			} else if (Request->StartedAt.GetValue().IsAfter(Settings.LoadTimeout.GetTotalSeconds())) {
+			} else if (EXCEEDED_LOAD_TIMEOUT) {
 				FailLevelLoad(EVulLevelManagerLoadFailure::ClientTimeout);
 				return;
 			} else
 			{
 				// Not all clients connected yet.
 				NotifyLevelLoadProgress();
+				TransitionState(EVulLevelManagerState::Loading_PrimaryAwaitingFollowers);
 				return;
 			}
 		}
 	}
 	
 	// If we exceed time now, it's because the server hasn't loaded in time.
-	if (IsFollower() && Request->StartedAt.GetValue().IsAfter(Settings.LoadTimeout.GetTotalSeconds()))
+	if (IsFollower() && EXCEEDED_LOAD_TIMEOUT)
 	{
 		FailLevelLoad(EVulLevelManagerLoadFailure::ServerTimeout);
 		return;
 	}
 
-	if (IsValid(FollowerData) && FollowerData->PendingClientLevelRequest.IsValid())
+	// Need to verify & tell primary that we (the follower) are ready - only if we're in a synced level load.
+	if (IsValid(FollowerData) && FollowerData->PendingClientLevelRequest.IsValid() && !PrimaryData->PendingPrimaryLevelRequest.IsComplete())
 	{
 		if (!IsValid(PrimaryData) || PrimaryData->PendingPrimaryLevelRequest.RequestId != FollowerData->PendingClientLevelRequest.RequestId)
 		{
-			FailLevelLoad(EVulLevelManagerLoadFailure::Desynchronization);
+			FailLevelLoad(
+				EVulLevelManagerLoadFailure::Desynchronization,
+				FString::Printf(
+					TEXT("Primary Request ID: %s, Follower Request ID: %s"),
+					*PrimaryData->PendingPrimaryLevelRequest.RequestId,
+					*FollowerData->PendingClientLevelRequest.RequestId
+				)
+			);
 			return;
 		}
 
@@ -831,17 +873,19 @@ void UVulLevelManager::Process(FLoadRequest* Request)
 
 	if (IsFollower() && PrimaryData->PendingPrimaryLevelRequest.IsPending())
 	{
+		TransitionState(EVulLevelManagerState::Loading_FollowerAwaitingPrimary);
 		NotifyLevelLoadProgress();
 		return;
 	}
 
-	// Finally, clients waiting for their copy of an actor spawned on the server on their behalf.
-	if (!PendingClientActors.IsEmpty())
+	// Finally, followers waiting for their copy of an actor spawned on the server on their behalf.
+	if (!PendingFollowerActors.IsEmpty())
 	{
+		TransitionState(EVulLevelManagerState::Loading_PendingFollowerActors);
 		return;
 	}
 
-	if (Request->StartedAt.GetValue().IsAfter(Settings.LoadTimeout.GetTotalSeconds()))
+	if (EXCEEDED_LOAD_TIMEOUT)
 	{
 		FailLevelLoad(EVulLevelManagerLoadFailure::LocalLoadTimeout);
 		return;
@@ -865,7 +909,7 @@ void UVulLevelManager::Process(FLoadRequest* Request)
 
 	const auto Resolved = ResolveData(Request->LevelName.GetValue());
 	OnLevelLoadComplete.Broadcast(Resolved, this);
-	State = EVulLevelManagerState::Idle;
+	TransitionState(EVulLevelManagerState::Idle);
 	Request->Delegate.Broadcast(Resolved, this);
 
 	NextRequest();
@@ -1021,7 +1065,7 @@ bool UVulLevelManager::SpawnLevelActors(UVulLevelData* LevelData)
 		PrimaryData->ServerSpawnedClientActors.Reset();
 	}
 
-	PendingClientActors.Reset();
+	PendingFollowerActors.Reset();
 
 	for (const auto& Entry : ActorsToSpawn)
 	{
@@ -1061,7 +1105,7 @@ bool UVulLevelManager::SpawnLevelActors(UVulLevelData* LevelData)
 				// to replicate down.
 				// Note that preserved actors are still added to this array. Even if we have
 				// them already, we'll re-resolve them from the replicated server actors array.
-				PendingClientActors.Add(Entry);
+				PendingFollowerActors.Add(Entry);
 			}
 			break;
 		default: break;
@@ -1293,7 +1337,7 @@ bool UVulLevelManager::LoadLevel(
 
 void UVulLevelManager::NotifyLevelLoadProgress()
 {
-	if (State != EVulLevelManagerState::Loading)
+	if (!IsLoading(State))
 	{
 		return;
 	}
@@ -1404,8 +1448,9 @@ void UVulLevelManager::FollowServer()
 	
 		VUL_LEVEL_MANAGER_LOG(
 			Display,
-			TEXT("Following server to %s (synchronized network level switch)"),
-			*PrimaryData->PendingPrimaryLevelRequest.LevelName.ToString()
+			TEXT("Following server to %s (synchronized network level switch) (RequestId=%s)"),
+			*PrimaryData->PendingPrimaryLevelRequest.LevelName.ToString(),
+			*RequestId.Get(FString("None"))
 		)
 	}
 
@@ -1417,8 +1462,9 @@ void UVulLevelManager::FollowServer()
 		{
 			VUL_LEVEL_MANAGER_LOG(
 				Display,
-				TEXT("Following server to %s (server current level)"),
-				*LevelName.ToString()
+				TEXT("Following server to %s (server current level) (RequestId=%s)"),
+				*LevelName.ToString(),
+				*RequestId.Get(FString("None"))
 			)
 		}
 	}
@@ -1450,7 +1496,7 @@ void UVulLevelManager::FollowServer()
 	}
 }
 
-FString UVulLevelManager::LevelManagerNetId() const
+FString UVulLevelManager::LevelManagerNetInfo() const
 {
 	const auto ThisWorld = GetWorld();
 	FString WorldIdStr = ThisWorld ? FString::FromInt(ThisWorld->GetUniqueID()) : FString(TEXT("unknown"));
@@ -1509,9 +1555,16 @@ FString UVulLevelManager::GenerateNextRequestId() const
 	return FString::Printf(TEXT("%s_%d"), *LevelManagerId.ToString(), ++RequestIdGenerator);
 }
 
-void UVulLevelManager::FailLevelLoad(const EVulLevelManagerLoadFailure Failure)
+void UVulLevelManager::FailLevelLoad(const EVulLevelManagerLoadFailure Failure, const FString Detail)
 {
-	VUL_LEVEL_MANAGER_LOG(Error, "Level load failure: %s", *EnumToString(Failure));
+	VUL_LEVEL_MANAGER_LOG(
+		Error,
+		"Level load failure: %s%s",
+		*EnumToString(Failure),
+		*(Detail.IsEmpty() ? "" : " " + Detail)
+	);
+
+	TransitionState(EVulLevelManagerState::Idle);
 
 	ResetLevelManager();
 
@@ -1658,5 +1711,14 @@ void UVulLevelManager::ResetLevelManager()
 
 	RemoveLevelActors(true);
 	Queue.Reset();
+}
+
+void UVulLevelManager::TransitionState(const EVulLevelManagerState New)
+{
+	if (State != New)
+	{
+		VUL_LEVEL_MANAGER_LOG(Verbose, TEXT("State transition: %s"), *EnumToString(New));
+		State = New;
+	}
 }
 
