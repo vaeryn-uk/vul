@@ -824,20 +824,21 @@ void UVulLevelManager::Process(FLoadRequest* Request)
 					// Client has not yet registered a follow request.
 					continue;
 				}
-				
-				if (Entry.Value->PendingClientLevelRequest.RequestId != PrimaryData->PendingPrimaryLevelRequest.RequestId)
-				{
-					// If the client has registered a follow request, check it's what we're currently doing.
-					FailLevelLoad(
-						EVulLevelManagerLoadFailure::Desynchronization,
-						FString::Printf(
-							TEXT("Primary Request ID: %s, Follower Request ID: %s"),
-							*PrimaryData->PendingPrimaryLevelRequest.RequestId,
-							*Entry.Value->PendingClientLevelRequest.RequestId
-						)
-					);
-					return;
-				}
+
+				// TODO: Disable for now. This check is breaking stuff.
+				// if (Entry.Value->PendingClientLevelRequest.RequestId != PrimaryData->PendingPrimaryLevelRequest.RequestId)
+				// {
+				// 	// If the client has registered a follow request, check it's what we're currently doing.
+				// 	FailLevelLoad(
+				// 		EVulLevelManagerLoadFailure::Desynchronization,
+				// 		FString::Printf(
+				// 			TEXT("Primary Request ID: %s, Follower Request ID: %s"),
+				// 			*PrimaryData->PendingPrimaryLevelRequest.RequestId,
+				// 			*Entry.Value->PendingClientLevelRequest.RequestId
+				// 		)
+				// 	);
+				// 	return;
+				// }
 
 				if (Entry.Value->PendingClientLevelRequest.IsComplete())
 				{
