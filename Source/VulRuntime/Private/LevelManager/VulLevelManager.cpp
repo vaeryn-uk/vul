@@ -187,6 +187,11 @@ UVulLevelData* UVulLevelManager::CurrentLevelData()
 	return ResolveData(CurrentLevel.GetValue());
 }
 
+bool UVulLevelManager::IsOnStartingLevel() const
+{
+	return CurrentLevel.Get("") == Settings.GetStartingLevelName(IsDedicatedServer());
+}
+
 void UVulLevelManager::OnNetworkDataReplicated(AVulLevelNetworkData* NewData)
 {
 	if (!IsValid(NewData)) return;
@@ -204,6 +209,13 @@ void UVulLevelManager::OnNetworkDataReplicated(AVulLevelNetworkData* NewData)
 		VUL_LEVEL_MANAGER_LOG(Verbose, TEXT("Received new network data belonging to us - how we inform the server of our state"));
 		FollowerData = NewData;
 	}
+}
+
+TArray<APlayerController*> UVulLevelManager::GetConnectedClients() const
+{
+	TArray<APlayerController*> Out;
+	ConnectedClients.GenerateKeyArray(Out);
+	return Out;
 }
 
 bool UVulLevelManager::InitLevelManager(const FVulLevelSettings& InSettings, UWorld* World)

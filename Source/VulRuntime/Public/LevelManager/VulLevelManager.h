@@ -342,6 +342,8 @@ public:
 	 */
 	UVulLevelData* CurrentLevelData();
 
+	bool IsOnStartingLevel() const;
+
 	void OnNetworkDataReplicated(AVulLevelNetworkData* NewData);
 
 	/**
@@ -349,6 +351,8 @@ public:
 	 */
 	template <typename ActorClass>
 	ActorClass* GetLevelActor() const;
+
+	TArray<APlayerController*> GetConnectedClients() const;
 
 private:
 	/**
