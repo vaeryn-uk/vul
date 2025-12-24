@@ -1783,6 +1783,12 @@ void UVulLevelManager::ResetLevelManager()
 		GetWorld()->DestroyActor(PrimaryData);
 		PrimaryData = nullptr;
 	}
+
+	if (IsValid(FollowerData))
+	{
+		GetWorld()->DestroyActor(FollowerData);
+	}
+	FollowerData = nullptr;
 	
 	RemoveLevelActors();
 
@@ -1790,7 +1796,6 @@ void UVulLevelManager::ResetLevelManager()
 	PrimaryData = nullptr;
 	FollowerData = nullptr;
 	OnShowLevelData.Reset();
-	CurrentLevel.Reset();
 	
 	if (OnClientJoined.IsValid())
 	{
