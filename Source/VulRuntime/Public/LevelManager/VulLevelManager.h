@@ -165,6 +165,25 @@ inline bool IsLoading(const EVulLevelManagerState& State) { return State != EVul
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FVulPlayerConnectionEvent, APlayerController* Controller)
 
+UENUM()
+enum class EVulLevelLoadReason
+{
+	/**
+	 * A standard load level request issued by a caller.
+	 */
+	Requested,
+
+	/**
+	 * A network error occurred, triggering a return the default level.
+	 */
+	NetworkError,
+
+	/**
+	 * An error raised during UE level travel. Not yet implemented.
+	 */
+	TravelError,
+};
+
 /**
  * Responsible for loading levels using Unreal's streaming level model.
  *
@@ -578,7 +597,7 @@ private:
 
 	void RegisterLevelActor(const FVulLevelManagerSpawnedActor& Actor);
 
-	EVulLevelManagerLoadFailure LastFailureReason = EVulLevelManagerLoadFailure::None;
+	FVulLevelEventContext LastLoadCtx;
 
 	void RemoveLevelActors(const bool Force = false);
 
@@ -590,6 +609,8 @@ private:
 	bool LoadingLevelReadyToHide = false;
 
 	void TransitionState(const EVulLevelManagerState New);
+
+	FDelegateHandle NetworkFailureHandle;
 };
 
 template <typename WidgetType>

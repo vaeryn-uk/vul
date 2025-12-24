@@ -38,6 +38,16 @@ enum class EVulLevelManagerLoadFailure : uint8
 	 * During a network level load, some state got unexpectedly desynchronized.
 	 */
 	Desynchronization,
+
+	/**
+	 * A network error was encountered from within UE.
+	 */
+	NetworkError,
+
+	/**
+	 * UE failed to travel to the requested level.
+	 */
+	TravelError,
 };
 
 VULRUNTIME_API DECLARE_ENUM_TO_STRING(EVulLevelManagerLoadFailure);
@@ -110,6 +120,18 @@ struct FVulLevelEventContext
 	 */
 	UPROPERTY()
 	EVulLevelManagerLoadFailure FailureReason = EVulLevelManagerLoadFailure::None;
+
+	/**
+	 * The network failure, if FailureReason == EVulLevelManagerLoadFailure::NetworkError.
+	 */
+	UPROPERTY()
+	TEnumAsByte<ENetworkFailure::Type> NetworkError;
+
+	/**
+	 * Some failures may provide more info on their cause, stored here.
+	 */
+	UPROPERTY()
+	FString ErrorMsg;
 };
 
 /**

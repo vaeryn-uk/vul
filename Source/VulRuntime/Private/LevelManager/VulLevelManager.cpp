@@ -139,7 +139,11 @@ void UVulLevelManager::ForEachPlayer(const FVulPlayerConnectionEvent::FDelegate&
 	
 	for (const auto& Entry : ConnectedClients)
 	{
-		OnAdded.Execute(Entry.Key);
+		if (!Entry.Key->IsLocalController())
+		{
+			// Already invoked above.
+			OnAdded.Execute(Entry.Key);
+		}
 	}
 
 	OnPlayerConnected.Add(OnAdded);
@@ -796,6 +800,13 @@ void UVulLevelManager::Process(FLoadRequest* Request)
 			int ClientsLoaded = 0;
 			for (const auto& Entry : ConnectedClients)
 			{
+				// If this is a client acting as a server, assume this client is ready.
+				if (Entry.Key->IsLocalController() && Entry.Key->GetLocalPlayer())
+				{
+					ClientsLoaded++;
+					continue;
+				}
+				
 				if (!Entry.Value->PendingClientLevelRequest.IsValid())
 				{
 					// Client has not yet registered a follow request.
@@ -815,7 +826,7 @@ void UVulLevelManager::Process(FLoadRequest* Request)
 					);
 					return;
 				}
-				
+
 				if (Entry.Value->PendingClientLevelRequest.IsComplete())
 				{
 					ClientsLoaded++;
@@ -1238,7 +1249,8 @@ void UVulLevelManager::Tick(float DeltaTime)
 			SpawnLevelActors(OnShowLevelData.Get());
 			NotifyActorsLevelShown(LastLoadedLevel->GetLoadedLevel());
 			OnShowLevelData->OnLevelShown(GenerateLevelShownInfo(), EventCtx());
-			LastFailureReason = EVulLevelManagerLoadFailure::None;
+			LastLoadCtx.FailureReason = EVulLevelManagerLoadFailure::None;
+			LastLoadCtx.ErrorMsg = FString(); 
 			
 			if (HasLocalPlayer())
 			{
@@ -1280,6 +1292,29 @@ void UVulLevelManager::Connect(const FString& URI)
 		Settings.LoadingLevelName,
 		FVulLevelDelegate::FDelegate::CreateWeakLambda(this, [this, URI](const UVulLevelData*, const class UVulLevelManager*)
 		{
+			if (!NetworkFailureHandle.IsValid())
+			{
+				NetworkFailureHandle = GEngine->OnNetworkFailure().AddWeakLambda(
+					this,
+					[this](UWorld* World, UNetDriver* Driver, ENetworkFailure::Type FailureType, const FString& ErrorString)
+					{
+						VUL_LEVEL_MANAGER_LOG(
+							Error,
+							TEXT("Net failure: %s - %s. Reverting to starting level."),
+							ENetworkFailure::ToString(FailureType),
+							*ErrorString
+						)
+
+						LastLoadCtx.FailureReason = EVulLevelManagerLoadFailure::NetworkError;
+						LastLoadCtx.ErrorMsg = ErrorString;
+						LastLoadCtx.NetworkError = FailureType;
+
+						ResetLevelManager();
+						LoadLevel(Settings.GetStartingLevelName(IsDedicatedServer()), {}, true);
+					}
+				);
+			}
+			
 			VUL_LEVEL_MANAGER_LOG(Display, TEXT("Connecting to %s"), *URI);
 			GetLocalPlayerController()->ConsoleCommand(FString::Printf(TEXT("open %s"), *URI));
 			
@@ -1415,7 +1450,9 @@ FVulLevelEventContext UVulLevelManager::EventCtx() const
 {
 	return {
 		.IsDedicatedServer = IsDedicatedServer(),
-		.FailureReason = LastFailureReason,
+		.FailureReason = LastLoadCtx.FailureReason,
+		.NetworkError = LastLoadCtx.NetworkError,
+		.ErrorMsg = LastLoadCtx.ErrorMsg,
 	};
 }
 
@@ -1568,7 +1605,7 @@ void UVulLevelManager::FailLevelLoad(const EVulLevelManagerLoadFailure Failure, 
 
 	ResetLevelManager();
 
-	LastFailureReason = Failure;
+	LastLoadCtx.FailureReason = Failure;
 
 	LoadLevel(Settings.GetStartingLevelName(IsDedicatedServer()));
 }
@@ -1691,8 +1728,13 @@ void UVulLevelManager::ResetLevelManager()
 
 		ConnectedClients.Reset();
 		PrimaryData->PendingPrimaryLevelRequest = {};
-	}
 
+		GetWorld()->DestroyActor(PrimaryData);
+	}
+	
+	RemoveLevelActors();
+
+	NetworkFailureHandle.Reset();
 	PrimaryData = nullptr;
 	FollowerData = nullptr;
 	OnShowLevelData.Reset();
