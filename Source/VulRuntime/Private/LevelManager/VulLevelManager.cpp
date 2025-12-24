@@ -1244,6 +1244,14 @@ void UVulLevelManager::Tick(float DeltaTime)
 		}
 	}
 
+	if (!TravelFailureHandle.IsValid())
+	{
+		TravelFailureHandle = GEngine->OnTravelFailure().AddWeakLambda(this, [this](UWorld*, ETravelFailure::Type, const FString&)
+		{
+			Disconnect();
+		});
+	} 
+
 	if (OnShowLevelData.IsValid() && GetWorld())
 	{
 		ULevel* LevelToTrigger = nullptr;
@@ -1753,24 +1761,27 @@ void UVulLevelManager::RemoveLevelActors(const bool Force)
 
 void UVulLevelManager::ResetLevelManager()
 {
-	if (IsPrimary() && IsValid(PrimaryData))
+	if (IsValid(PrimaryData))
 	{
-		if (GetWorld() && GetWorld()->GetNetDriver())
+		if (IsPrimary())
 		{
-			for (const auto& Conn : GetWorld()->GetNetDriver()->ClientConnections)
+			if (GetWorld() && GetWorld()->GetNetDriver())
 			{
-				if (Conn)
+				for (const auto& Conn : GetWorld()->GetNetDriver()->ClientConnections)
 				{
-					VUL_LEVEL_MANAGER_LOG(Display, TEXT("Disconnecting client: %s"), *Conn->LowLevelGetRemoteAddress());
-					Conn->Close();
+					if (Conn)
+					{
+						VUL_LEVEL_MANAGER_LOG(Display, TEXT("Disconnecting client: %s"), *Conn->LowLevelGetRemoteAddress());
+						Conn->Close();
+					}
 				}
 			}
 		}
 
 		ConnectedClients.Reset();
-		PrimaryData->PendingPrimaryLevelRequest = {};
-
+		
 		GetWorld()->DestroyActor(PrimaryData);
+		PrimaryData = nullptr;
 	}
 	
 	RemoveLevelActors();
@@ -1779,6 +1790,7 @@ void UVulLevelManager::ResetLevelManager()
 	PrimaryData = nullptr;
 	FollowerData = nullptr;
 	OnShowLevelData.Reset();
+	CurrentLevel.Reset();
 	
 	if (OnClientJoined.IsValid())
 	{

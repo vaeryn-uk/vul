@@ -538,7 +538,7 @@ private:
 	AVulLevelNetworkData* FollowerData = nullptr;
 
 	/**
-	 * Server only: mapping of network data instances to their owners.
+	 * Primary only: mapping of network data instances to their owners.
 	 *
 	 * These instances are spawned on the server, but client-owned so they can
 	 * notify the server of their current level state.
@@ -614,6 +614,7 @@ private:
 	void TransitionState(const EVulLevelManagerState New);
 
 	FDelegateHandle NetworkFailureHandle;
+	FDelegateHandle TravelFailureHandle;
 };
 
 template <typename WidgetType>
