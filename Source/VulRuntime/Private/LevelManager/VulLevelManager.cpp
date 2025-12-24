@@ -1323,6 +1323,35 @@ void UVulLevelManager::Connect(const FString& URI)
 	);
 }
 
+void UVulLevelManager::Disconnect()
+{
+	// Disconnect from any synced map.
+	if (IsFollower())
+	{
+		APlayerController* PC = GetWorld()->GetFirstPlayerController();
+		if (PC)
+		{
+			PC->ClientTravel(TEXT(""), TRAVEL_Absolute);
+		}
+	} else if (IsPrimary())
+	{
+		for (const auto& Client : ConnectedClients)
+		{
+			if (Client.Key->IsLocalController())
+			{
+				continue;
+			}
+
+			// Disconnect clients.
+			Client.Key->ClientTravel(TEXT(""), TRAVEL_Absolute);
+		}
+	}
+	
+	ResetLevelManager();
+	
+	LoadLevel(Settings.GetStartingLevelName(IsDedicatedServer()));
+}
+
 bool UVulLevelManager::LoadLevel(
 	const FName& LevelName,
 	const TOptional<FString>& ServerRequestId,
@@ -1442,8 +1471,8 @@ bool UVulLevelManager::IsNetModeOneOf(const TArray<ENetMode>& NetModes) const
 bool UVulLevelManager::IsDisconnectedFromServer() const
 {
 	return GetWorld()
-			&& GetWorld()->GetNetDriver()
-			&& GetWorld()->GetNetDriver()->ServerConnection->GetConnectionState() == USOCK_Closed;
+		&& GetWorld()->GetNetDriver()
+		&& GetWorld()->GetNetDriver()->ServerConnection->GetConnectionState() == USOCK_Closed;
 }
 
 FVulLevelEventContext UVulLevelManager::EventCtx() const

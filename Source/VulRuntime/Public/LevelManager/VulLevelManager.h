@@ -238,12 +238,11 @@ public:
 	void Connect(const FString& URI);
 
 	/**
-	 * Disconnects a client from a remote server, causing a recreation of the Root Level
-	 * locally and having level manager take ownership of that.
+	 * Disconnects from any remote server or clients then returns to the starting level.
 	 *
-	 * Like Connect, LoadingLevel will be shown before this reload occurs.
+	 * This can be called in networkless contexts to simply return the starting level.
 	 *
-	 * TODO: Needed/useful now we have UVulLevelNetworkData?
+	 * If this is a server, this will eject all clients.
 	 */
 	void Disconnect();
 
