@@ -10,7 +10,7 @@ TArray<FVulFieldRegistry::FEntry> FVulFieldRegistry::GetSubtypes(const FString& 
 {
 	TArray<FEntry> Out;
 
-	for (const auto Entry : Entries)
+	for (const auto& Entry : Entries)
 	{
 		if (Entry.Value.BaseType == TypeId)
 		{
@@ -29,7 +29,7 @@ TOptional<FVulFieldRegistry::FEntry> FVulFieldRegistry::GetBaseType(const FStrin
 		return {};
 	}
 
-	for (const auto Entry : Entries)
+	for (const auto& Entry : Entries)
 	{
 		if (Type->BaseType == Entry.Value.TypeId)
 		{

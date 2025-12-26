@@ -113,7 +113,7 @@ bool FVulFieldSet::Serialize(TSharedPtr<FJsonValue>& Out, FVulFieldSerialization
 	
 	auto Obj = MakeShared<FJsonObject>();
 	
-	for (const auto Entry : Entries)
+	for (const auto& Entry : Entries)
 	{
 		TSharedPtr<FJsonValue> JsonValue;
 		
@@ -157,7 +157,7 @@ bool FVulFieldSet::Deserialize(const TSharedPtr<FJsonValue>& Data, FVulFieldDese
 		return false;
 	}
 
-	for (const auto Entry : (*Obj)->Values)
+	for (const auto& Entry : (*Obj)->Values)
 	{
 		if (!Entries.Contains(Entry.Key) || Entries[Entry.Key].Fn != nullptr || Entries[Entry.Key].Field.IsReadOnly())
 		{
@@ -175,7 +175,7 @@ bool FVulFieldSet::Deserialize(const TSharedPtr<FJsonValue>& Data, FVulFieldDese
 
 bool FVulFieldSet::Describe(FVulFieldSerializationContext& Ctx, TSharedPtr<FVulFieldDescription>& Description) const
 {
-	for (const auto Entry : Entries)
+	for (const auto& Entry : Entries)
 	{
 		TSharedPtr<FVulFieldDescription> Field = MakeShared<FVulFieldDescription>();
 

@@ -24,9 +24,10 @@ public:
 		const FName& Name,
 		USceneComponent* Parent   = nullptr,
 		UActorComponent* Template = nullptr,
-		const EObjectFlags Flags = RF_NoFlags
+		const EObjectFlags Flags = RF_NoFlags,
+		const FName& SocketName = NAME_None
 	) {
-		return Cast<T>(SpawnDynamicComponent(T::StaticClass(), Owner, Name, Parent, Template, Flags));
+		return Cast<T>(SpawnDynamicComponent(T::StaticClass(), Owner, Name, Parent, Template, Flags, SocketName));
 	}
 
 	/**
@@ -40,7 +41,8 @@ public:
 		const FName& Name,
 		USceneComponent* Parent   = nullptr,
 		UActorComponent* Template = nullptr,
-		const EObjectFlags Flags = RF_NoFlags
+		const EObjectFlags Flags = RF_NoFlags,
+		const FName& SocketName = NAME_None
 	);
 
 	/**
@@ -78,9 +80,10 @@ public:
 	 */
 	template <typename T>
 	std::enable_if_t<std::is_base_of_v<UActorComponent, T>, T*>
-	static ConstructorSpawnActorComponent(AActor* Owner, const FName& Name)
+	static ConstructorSpawnActorComponent(AActor* Owner, const FName& Name = FName())
 	{
-		return Owner->CreateDefaultSubobject<T>(Name);
+		const FName CompName = Name.IsNone() ? FName(T::StaticClass()->GetName()) : Name;
+		return Owner->CreateDefaultSubobject<T>(CompName);
 	}
 
 	template <typename T>

@@ -2,9 +2,55 @@
 
 #include "CoreMinimal.h"
 #include "LevelSequence.h"
+#include "VulLevelNetworkData.h"
+#include "VulLevelSpawnActor.h"
 #include "Components/Widget.h"
 #include "UObject/Object.h"
 #include "VulLevelData.generated.h"
+
+/**
+ * Why did we fail to load a level?
+ */
+UENUM()
+enum class EVulLevelManagerLoadFailure : uint8
+{
+	/**
+	 * No failure.
+	 */
+	None,
+	
+	/**
+	 * We exceeded the timeout to complete a load (locally, outside any network considerations).
+	 */
+	LocalLoadTimeout,
+
+	/**
+	 * One client failed to load a level in time.
+	 */
+	ClientTimeout,
+
+	/**
+	 * On a client, the server failed to load in the time we allow.
+	 */
+	ServerTimeout,
+
+	/**
+	 * During a network level load, some state got unexpectedly desynchronized.
+	 */
+	Desynchronization,
+
+	/**
+	 * A network error was encountered from within UE.
+	 */
+	NetworkError,
+
+	/**
+	 * UE failed to travel to the requested level.
+	 */
+	TravelError,
+};
+
+VULRUNTIME_API DECLARE_ENUM_TO_STRING(EVulLevelManagerLoadFailure);
 
 /**
  * Describes a level that plays a level sequence (e.g. for cinematics).
@@ -59,6 +105,36 @@ struct FVulLevelDataWidget
 };
 
 /**
+ * Useful information made available in VulLevelManagement hooks.
+ */
+USTRUCT()
+struct FVulLevelEventContext
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	bool IsDedicatedServer;
+
+	/**
+	 * The latest reason for a level switching failure, if any.
+	 */
+	UPROPERTY()
+	EVulLevelManagerLoadFailure FailureReason = EVulLevelManagerLoadFailure::None;
+
+	/**
+	 * The network failure, if FailureReason == EVulLevelManagerLoadFailure::NetworkError.
+	 */
+	UPROPERTY()
+	TEnumAsByte<ENetworkFailure::Type> NetworkError;
+
+	/**
+	 * Some failures may provide more info on their cause, stored here.
+	 */
+	UPROPERTY()
+	FString ErrorMsg;
+};
+
+/**
  * Base definition of level data.
  *
  * You may extend this in your project to add additional data and provide
@@ -92,18 +168,39 @@ public:
 	UPROPERTY(EditAnywhere)
 	FVulSequenceLevelData SequenceSettings;
 
+	UPROPERTY(EditAnywhere)
+	TArray<FVulLevelSpawnActorParams> ActorsToSpawn;
+
+	/**
+	 * Called when there is progress towards loading, but not yet complete.
+	 *
+	 * SyncRequest reports on the status of a synchronized network load, involving a server
+	 * and multiple clients.
+	 *
+	 * This is called on the loading level only, and will be called very frequently during this time.
+	 */
+	virtual void OnLoadProgress(const FVulPendingLevelRequest& SyncRequest, const FVulLevelEventContext& Ctx);
+
 	/**
 	 * Called when this level is shown (after loading is complete). You can use this to execute your
 	 * own level-specific functionality.
 	 */
-	virtual void OnLevelShown(const struct FVulLevelShownInfo& Info);
+	virtual void OnLevelShown(const struct FVulLevelShownInfo& Info, const FVulLevelEventContext& Ctx);
 
 	/**
 	 * Adds to a list of assets that will be loaded as part of this level's loading.
 	 *
 	 * Loading will not complete (and a new level not shown) until all of these assets are loaded.
 	 */
-	virtual void AssetsToLoad(TArray<FSoftObjectPath>& Assets);
+	virtual void AssetsToLoad(TArray<FSoftObjectPath>& Assets, const FVulLevelEventContext& Ctx);
+
+	/**
+	 * Any actors to spawn when this level is shown. Respects the configured class'
+	 * net ownership - see IVulLevelSpawnActor.
+	 */
+	virtual void AdditionalActorsToSpawn(TArray<FVulLevelSpawnActorParams>& Classes, const FVulLevelEventContext& Ctx);
+
+	TArray<FVulLevelSpawnActorParams> GetActorsToSpawn(const FVulLevelEventContext& Ctx);
 
 private:
 	UFUNCTION()

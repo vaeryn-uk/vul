@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "VulLevelData.h"
+#include "VulLevelNetworkData.h"
 #include "Engine/StreamableManager.h"
 #include "GameFramework/Actor.h"
 #include "Time/VulTime.h"
@@ -23,6 +24,9 @@ struct FVulLevelSettings
 	UPROPERTY(EditAnywhere)
 	TMap<FName, TSubclassOf<UVulLevelData>> LevelData;
 
+	UPROPERTY(EditAnywhere)
+	TSoftObjectPtr<UWorld> RootLevel;
+
 	/**
 	 * The name of the level in the level data that has a special designation as the
 	 * loading level. That is, one that is shown whilst our levels are loading in and out.
@@ -38,6 +42,14 @@ struct FVulLevelSettings
 	 */
 	UPROPERTY(EditAnywhere)
 	FName StartingLevelName = NAME_None;
+
+	/**
+	 * Optionally specifies a different level for dedicated servers to start on.
+	 *
+	 * Note clients acting as a server do not count, only headless servers respect this.
+	 */
+	UPROPERTY(EditAnywhere)
+	FName ServerStartingLevelName = NAME_None;
 
 	/**
 	 * If showing the load screen, this is the minimum amount of time it will be displayed.
@@ -56,6 +68,10 @@ struct FVulLevelSettings
 	TOptional<TPair<FName, UVulLevelData*>> FindLevel(UWorld* World) const;
 
 	bool IsValid() const;
+
+	FString Summary(const bool IsDedicatedServer) const;
+	
+	FName GetStartingLevelName(const bool IsDedicatedServer) const;
 };
 
 /**
@@ -91,6 +107,9 @@ struct VULRUNTIME_API FVulLevelShownInfo
 	 */
 	UPROPERTY()
 	ULevel* ShownLevel;
+
+	UPROPERTY()
+	FVulLevelEventContext Ctx;
 };
 
 /**
@@ -103,11 +122,66 @@ enum class EVulLevelManagerState : uint8
 	 * The level manager is not actively loading any levels.
 	 */
 	Idle,
+
+	/**
+	 * Loading has just begun, with no further details on progress so far.
+	 */
+	Loading_Started,
 	
 	/**
-	 * A level is currently being loaded.
+	 * Level is loading: waiting for minimum time on load screen setting to have elapsed.
 	 */
-	Loading,
+	Loading_MinimumLoadScreenTime,
+
+	/**
+	 * Core level is being streamed in.
+	 */
+	Loading_StreamingInProgress,
+
+	/**
+	 * Waiting for additional assets configured by level data. 
+	 */
+	Loading_AdditionalAssets,
+
+	/**
+	 * Followers are waiting for their copies of actors spawned on the server to be available in their world.
+	 */
+	Loading_PendingFollowerActors,
+
+	/**
+	 * Followers are waiting for the primary to mark its load as complete.
+	 */
+	Loading_FollowerAwaitingPrimary,
+
+	/**
+	 * The primary is waiting for all followers to confirm their readiness.
+	 */
+	Loading_PrimaryAwaitingFollowers,
+};
+
+DECLARE_ENUM_TO_STRING(EVulLevelManagerState);
+
+inline bool IsLoading(const EVulLevelManagerState& State) { return State != EVulLevelManagerState::Idle; }
+
+DECLARE_MULTICAST_DELEGATE_OneParam(FVulPlayerConnectionEvent, APlayerController* Controller)
+
+UENUM()
+enum class EVulLevelLoadReason
+{
+	/**
+	 * A standard load level request issued by a caller.
+	 */
+	Requested,
+
+	/**
+	 * A network error occurred, triggering a return the default level.
+	 */
+	NetworkError,
+
+	/**
+	 * An error raised during UE level travel. Not yet implemented.
+	 */
+	TravelError,
 };
 
 /**
@@ -131,7 +205,7 @@ class VULRUNTIME_API UVulLevelManager : public UGameInstanceSubsystem, public FT
 public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 
-	virtual bool IsAllowedToTick() const override;
+	virtual bool IsTickable() const override;
 	virtual void Tick(float DeltaTime) override;
 	virtual TStatId GetStatId() const override;
 
@@ -145,8 +219,32 @@ public:
 	 *
 	 * If LevelName is already loaded, this will force a reload, destroying the
 	 * existing level and streaming it in again fresh.
+	 *
+	 * Returns true if the LoadLevel request was accepted & queued.
 	 */
-	void LoadLevel(const FName& LevelName, FVulLevelDelegate::FDelegate OnComplete = FVulLevelDelegate::FDelegate());
+	bool LoadLevel(const FName& LevelName, FVulLevelDelegate::FDelegate OnComplete = FVulLevelDelegate::FDelegate());
+
+	/**
+	 * Connects a client to a remote server.
+	 *
+	 * Unlike other level loading methods, this does trigger a full world reload so that we can
+	 * sync with the remote server's world & replication.
+	 *
+	 * We load the loading level whilst the connection is happening. Once complete, we'll land in
+	 * the server's copy of a persistent world, then follow its ShownLevels.
+	 *
+	 * TODO: Needed/useful now we have UVulLevelNetworkData?
+	 */
+	void Connect(const FString& URI);
+
+	/**
+	 * Disconnects from any remote server or clients then returns to the starting level.
+	 *
+	 * This can be called in networkless contexts to simply return the starting level.
+	 *
+	 * If this is a server, this will eject all clients.
+	 */
+	void Disconnect();
 
 	/**
 	 * Loads a level by an enum value.
@@ -177,6 +275,8 @@ public:
 		LoadLevel(LevelName, OnComplete);
 	}
 
+	void NotifyLevelLoadProgress();
+
 	/**
 	 * Returns parameters for spawning in an actor that belongs to the currently-loaded level.
 	 */
@@ -203,10 +303,24 @@ public:
 			Params = *SpawnParams;
 		}
 		
-		SetSpawnParams(Params);
+		SetLevelSpawnParams(Params);
 
 		return GetWorld()->SpawnActor<ActorType>(Class, Location, Rotation, Params);
 	}
+	
+	FVulPlayerConnectionEvent OnPlayerConnected;
+	FVulPlayerConnectionEvent OnPlayerDisconnected;
+
+	/**
+	 * Binds delegates such that OnAdded is called on all existing & future players.
+	 *
+	 * OnPlayerDisconnected can be bound-to for any player leaving.
+	 *
+	 * If called from a client, only that client's player is returned.
+	 */
+	void ForEachPlayer(const FVulPlayerConnectionEvent::FDelegate& OnAdded);
+
+	TArray<APlayerController*> GetPlayers() const;
 
 	/**
 	 * Gets a widget spawned as a result of the last level load of the given type.
@@ -228,15 +342,54 @@ public:
 	 */
 	UVulLevelData* CurrentLevelData();
 
+	bool IsOnStartingLevel() const;
+
+	void OnNetworkDataReplicated(AVulLevelNetworkData* NewData);
+
+	/**
+	 * Attempts to find the first level actor of the given class.
+	 */
+	template <typename ActorClass>
+	ActorClass* GetLevelActor() const;
+
+	TArray<APlayerController*> GetConnectedClients() const;
+
 private:
+	/**
+	 * Each request is stored in a queue internally.
+	 */
+	struct FLoadRequest
+	{
+		FString Id;
+		/**
+		 * If not set, a request is simply a request to unload the current level.
+		 */
+		TOptional<FName> LevelName;
+		FVulLevelDelegate Delegate;
+		TOptional<FVulTime> StartedAt;
+		bool IsLoadingLevel;
+		bool IsServerFollow;
+	};
+	
 	UVulLevelData* ResolveData(const FName& LevelName);
+	UVulLevelData* ResolveData(const FLoadRequest* Request);
 
 	ULevelStreaming* GetLevelStreaming(const FName& LevelName, const TCHAR* FailReason = TEXT(""));
+
+	bool LoadLevel(
+		const FName& LevelName,
+		const TOptional<FString>& ServerRequestId,
+		const bool Force = false,
+		FVulLevelDelegate::FDelegate OnComplete = FVulLevelDelegate::FDelegate()
+	);
 
 	/**
 	 * Spawns the widgets specified in LevelData, returning true if this was done.
 	 */
-	bool SpawnLevelWidgets(UVulLevelData* LevelData);
+	void SpawnLevelWidgets(UVulLevelData* LevelData, APlayerController* Ctrl);
+	bool SpawnLevelActors(UVulLevelData* LevelData);
+	void SpawnLevelActorsPerPlayer(const TArray<FVulLevelSpawnActorParams>& Actors, APlayerController* Follower);
+	FVulLevelManagerSpawnedActor SpawnLevelActor(FVulLevelSpawnActorParams Params, const FName& Tag = FName());
 
 	void ShowLevel(const FName& LevelName);
 	void HideLevel(const FName& LevelName);
@@ -245,8 +398,14 @@ private:
 	 * Initializes the level manager with the provided settings in normal operation.
 	 *
 	 * Will immediately load the first level, as per settings.
+	 *
+	 * Returns true if the level manager successfully initialized in streaming mode.
 	 */
-	void InitLevelManager(const FVulLevelSettings& InSettings, UWorld* World);
+	bool InitLevelManager(const FVulLevelSettings& InSettings, UWorld* World);
+
+	void TickNetworkHandling();
+
+	void InitializePrimaryHandling();
 
 	/**
 	 * Generates a unique action info input required for streaming levels. Required for the level streaming API.
@@ -257,6 +416,7 @@ private:
 	 * The last level that was successfully loaded by this manager (including loading level).
 	 */
 	TWeakObjectPtr<ULevelStreaming> LastLoadedLevel = nullptr;
+	
 	FName LastUnLoadedLevel;
 
 	/**
@@ -276,7 +436,7 @@ private:
 	/**
 	 * Maintains a unique value so our streamed load requests don't collide with one another.
 	 */
-	int32 LoadingUuid;
+	static int32 LoadingUuid;
 
 	/**
 	 * Caches the level data defined for each level.
@@ -303,20 +463,6 @@ private:
 	 * Removes all widgets from all contained levels' viewports.
 	 */
 	static void RemoveAllWidgets(UWorld* World);
-
-	/**
-	 * Each request is stored in a queue internally.
-	 */
-	struct FLoadRequest
-	{
-		/**
-		 * If not set, a request is simply a request to unload the current level.
-		 */
-		TOptional<FName> LevelName;
-		FVulLevelDelegate Delegate;
-		TOptional<FVulTime> StartedAt;
-		bool IsLoadingLevel;
-	};
 
 	FLoadRequest* CurrentRequest();
 	TArray<FLoadRequest> Queue;
@@ -353,9 +499,122 @@ private:
 
 	FVulLevelShownInfo GenerateLevelShownInfo();
 	
-	void SetSpawnParams(FActorSpawnParameters& Param);
+	void SetLevelSpawnParams(FActorSpawnParameters& Param);
 
 	EVulLevelManagerState State = EVulLevelManagerState::Idle;
+
+	/**
+	 * Is this a server instance that clients may connect to?
+	 *
+	 * Enables ServerData + replication so that clients can keep in sync.
+	 */
+	bool IsServer() const;
+
+	bool IsClient() const;
+
+	bool IsClientOnly() const;
+	
+	bool IsDedicatedServer() const;
+	
+	bool IsNetModeOneOf(const TArray<ENetMode>& NetModes) const;
+
+	bool IsDisconnectedFromServer() const;
+
+	FVulLevelEventContext EventCtx() const;
+
+	void FollowServer();
+
+	/**
+	 * Which level is the server showing?
+	 *
+	 * On the server, this is the authoritative state that we keep up to date.
+	 * On the client, we have a replicated copy of this actor so we can easily track
+	 *    the server moving between levels.
+	 */
+	UPROPERTY()
+	AVulLevelNetworkData* PrimaryData = nullptr;
+	
+	UPROPERTY()
+	AVulLevelNetworkData* FollowerData = nullptr;
+
+	/**
+	 * Primary only: mapping of network data instances to their owners.
+	 *
+	 * These instances are spawned on the server, but client-owned so they can
+	 * notify the server of their current level state.
+	 */
+	UPROPERTY()
+	TMap<APlayerController*, AVulLevelNetworkData*> ConnectedClients;
+
+	float LastLoadFailLog = -1.f;
+
+	FDelegateHandle OnClientJoined;
+	FDelegateHandle OnClientLeft;
+
+	/**
+	 * Generates an ID that is used for internal logging & identification.
+	 */
+	FString LevelManagerNetInfo() const;
+
+	/**
+	 * Returns true if this is a client instance connected to & following a server.
+	 *
+	 * A following instance cannot make LoadLevel calls.
+	 */
+	bool IsFollower() const;
+
+	/**
+	 * Returns true if this is a primary instance
+	 */
+	bool IsPrimary() const;
+
+	bool HasLocalPlayer() const;
+	APlayerController* GetLocalPlayerController() const;
+
+	FGuid LevelManagerId;
+	mutable int32 RequestIdGenerator;
+
+	FString GenerateNextRequestId() const;
+
+	void FailLevelLoad(const EVulLevelManagerLoadFailure Failure, const FString Extra = FString());
+
+	UPROPERTY()
+	TArray<FVulLevelManagerSpawnedActor> LevelActors;
+
+	/**
+	 * A tag identifying the actor as originating from the given player controller.
+	 *
+	 * Will use our own controller if not provided.
+	 */
+	FName LevelActorTag(APlayerController* Controller = nullptr) const;
+
+	APlayerController* GetController() const;
+
+	const FName PrimaryActorTag = FName(TEXT("vullevelmanager_primary_actor"));
+
+	/**
+	 * Actors that the server has spawned owning to the client, and we're waiting for
+	 * them to be replicated to us.
+	 */
+	TArray<FVulLevelSpawnActorParams> PendingFollowerActors = {};
+
+	void RegisterLevelActor(const FVulLevelManagerSpawnedActor& Actor);
+
+	FVulLevelEventContext LastLoadCtx;
+
+	void RemoveLevelActors(const bool Force = false);
+
+	/**
+	 * Hard reset of the level manager's state, leaving us clean to start over.
+	 */
+	void ResetLevelManager();
+
+	bool LoadingLevelReadyToHide = false;
+
+	void TransitionState(const EVulLevelManagerState New);
+
+	FDelegateHandle NetworkFailureHandle;
+	FDelegateHandle TravelFailureHandle;
 };
 
 template <typename WidgetType>
@@ -377,7 +636,44 @@ WidgetType* UVulLevelManager::LastSpawnedWidget() const
 	return nullptr;
 }
 
+template <typename ActorClass>
+ActorClass* UVulLevelManager::GetLevelActor() const
+{
+	for (const auto& Entry : LevelActors)
+	{
+		if (IsValid(Entry.Actor) && Entry.Actor->IsA<ActorClass>())
+		{
+			return Cast<ActorClass>(Entry.Actor);
+		}
+	}
+
+	if (IsClient() && PrimaryData)
+	{
+		for (const auto& Entry : PrimaryData->ServerSpawnedActors)
+		{
+			if (IsValid(Entry.Actor) && Entry.Actor->IsA<ActorClass>())
+			{
+				return Cast<ActorClass>(Entry.Actor);
+			}
+		}
+	}
+
+	return nullptr;
+}
+
 namespace VulRuntime
 {
 	VULRUNTIME_API UVulLevelManager* LevelManager(UWorld* WorldCtx);
+	
+	template <typename ActorClass>
+	ActorClass* LevelManagedActor(UWorld* WorldCtx)
+	{
+		const auto LM = LevelManager(WorldCtx);
+		return IsValid(LM) ? LM->GetLevelActor<ActorClass>() : nullptr;
+	}
 }
+
+#define VUL_LEVEL_MANAGER_LOG(Verbosity, Format, ...) \
+do { \
+	UE_LOG(LogVul, Verbosity, TEXT("VulLevelManager [%s]: ") Format, *LevelManagerNetInfo(), ##__VA_ARGS__); \
+} while (0);

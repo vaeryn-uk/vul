@@ -17,6 +17,14 @@ FVulTime FVulTime::WorldTime(UWorld* World)
 	});
 }
 
+FVulTime FVulTime::PlatformTime()
+{
+	return FVulTime([]
+	{
+		return FPlatformTime::Seconds();
+	});
+}
+
 FVulTime FVulTime::RealTime(UWorld* World)
 {
 	return FVulTime([World]

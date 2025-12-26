@@ -8,7 +8,12 @@ bool FVulSequenceLevelData::IsValid() const
 	return !LevelSequenceTag.IsNone();
 }
 
-void UVulLevelData::OnLevelShown(const FVulLevelShownInfo& Info)
+void UVulLevelData::OnLoadProgress(const FVulPendingLevelRequest& SyncRequest, const FVulLevelEventContext& Ctx)
+{
+	
+}
+
+void UVulLevelData::OnLevelShown(const FVulLevelShownInfo& Info, const FVulLevelEventContext& Ctx)
 {
 	LevelManager = Info.LevelManager;
 
@@ -33,9 +38,20 @@ void UVulLevelData::OnLevelShown(const FVulLevelShownInfo& Info)
 	}
 }
 
-void UVulLevelData::AssetsToLoad(TArray<FSoftObjectPath>& Assets)
+void UVulLevelData::AssetsToLoad(TArray<FSoftObjectPath>& Assets, const FVulLevelEventContext& Ctx)
 {
 
+}
+
+void UVulLevelData::AdditionalActorsToSpawn(TArray<FVulLevelSpawnActorParams>& Classes, const FVulLevelEventContext& Ctx)
+{
+}
+
+TArray<FVulLevelSpawnActorParams> UVulLevelData::GetActorsToSpawn(const FVulLevelEventContext& Ctx)
+{
+	TArray<FVulLevelSpawnActorParams> Ret = ActorsToSpawn;
+	AdditionalActorsToSpawn(Ret, Ctx);
+	return Ret;
 }
 
 void UVulLevelData::OnSequenceFinished()
@@ -45,3 +61,5 @@ void UVulLevelData::OnSequenceFinished()
 		LevelManager->LoadLevel(SequenceSettings.NextLevel);
 	}
 }
+
+DEFINE_ENUM_TO_STRING(EVulLevelManagerLoadFailure, "VulRuntime")

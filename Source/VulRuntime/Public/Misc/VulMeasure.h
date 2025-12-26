@@ -232,7 +232,7 @@ private:
 	{
 		Max = MakeShared<FMaxNumber>(InMax);
 
-		Current = MakeShared<TVulNumber<NumberType>>(InCurrent, TVulNumber<NumberType>::FClamp({
+		Current = MakeShared<TVulNumber<NumberType>>(InCurrent, typename TVulNumber<NumberType>::FClamp({
 			MakeShared<TVulNumber<NumberType>>(0),
 			MakeShared<TVulNumber<NumberType>>(Max->Value())
 		}));
@@ -240,7 +240,7 @@ private:
 
 	void SetCurrentClamp()
 	{
-		Current->ChangeClamp(TVulNumber<NumberType>::FClamp({
+		Current->ChangeClamp(typename TVulNumber<NumberType>::FClamp({
 			MakeShared<TVulNumber<NumberType>>(0),
 			MakeShared<TVulNumber<NumberType>>(Max->Value())
 		}));

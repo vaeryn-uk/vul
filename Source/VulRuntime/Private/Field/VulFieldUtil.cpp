@@ -14,7 +14,7 @@ bool VulRuntime::Field::IsEmpty(const TSharedPtr<FJsonValue>& Value)
 
 	if (Value->Type == EJson::Array)
 	{
-		for (const auto Item : Value->AsArray())
+		for (const auto& Item : Value->AsArray())
 		{
 			if (!IsEmpty(Item))
 			{
@@ -27,7 +27,7 @@ bool VulRuntime::Field::IsEmpty(const TSharedPtr<FJsonValue>& Value)
 
 	if (Value->Type == EJson::Object)
 	{
-		for (const auto Entry : Value->AsObject()->Values)
+		for (const auto& Entry : Value->AsObject()->Values)
 		{
 			if (!IsEmpty(Entry.Value))
 			{
@@ -50,7 +50,7 @@ FString VulRuntime::Field::PathStr(const TArray<FPathItem>& Path)
 	
 	FString Out;
 
-	for (const auto Item : Path)
+	for (const auto& Item : Path)
 	{
 		if (Item.IsType<FString>())
 		{
@@ -73,7 +73,7 @@ bool VulRuntime::Field::PathMatch(const FPath& Path, const FString& Match)
 	
 	int StrIndex = 0;
 	
-	for (const auto Item : Path)
+	for (const auto& Item : Path)
 	{
 		if (Match.Len() - 1 < StrIndex)
 		{

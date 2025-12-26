@@ -7,6 +7,7 @@
 
 template <typename RowType>
 struct TVulDataPtr;
+class UVulDataRepository;
 
 /**
  * A lightweight pointer to data retrieved from a data repository.
@@ -34,6 +35,9 @@ struct VULRUNTIME_API FVulDataPtr
 	 * A non-null pointer to some row in a table. Do not construct these manually; get one via a UVulDataRepository.
 	 */
 	FVulDataPtr(const FName& InRowName) : RowName(InRowName) {}
+
+	template <typename T, typename = TEnableIf<TIsDerivedFrom<T, FTableRowBase>::Value>>
+	FVulDataPtr(TVulDataPtr<T> Data);
 
 	bool operator==(const FVulDataPtr& Other) const
 	{
@@ -139,6 +143,12 @@ private:
 
 	const void* EnsurePtr() const;
 
+	/*
+	 * TODO: Whilst these properties serialize over the net nicely, they can leave invalid ptrs,
+	 * both the cached one to data, and presumably the Repository Ptr too, so won't work on
+	 * client side. This needs more work for network support.
+	 */
+	
 	UPROPERTY()
 	UVulDataRepository* Repository = nullptr;
 	UPROPERTY(VisibleAnywhere)
@@ -277,7 +287,7 @@ struct TVulDataPtr
 	{
 		TArray<TVulDataPtr> Out;
 
-		for (const auto Item : Array)
+		for (const auto& Item : Array)
 		{
 			Out.Add(Item);
 		}
@@ -325,8 +335,20 @@ TVulDataPtr<To> Cast(const TVulDataPtr<From>& Ptr)
 }
 
 template <typename T, typename>
+FVulDataPtr::FVulDataPtr(TVulDataPtr<T> Data)
+{
+	if (!Data.IsSet())
+	{
+		return;
+	}
+
+	*this = Data.Data();
+}
+
+template <typename T, typename>
 TVulDataPtr<T> FVulDataPtr::GetAsDataPtr() const
 {
+	EnsureLoaded(); // Force a load so the returned ptr is ready to use. Saves multiple accesses later.
 	return Cast<T>(*this);
 }
 

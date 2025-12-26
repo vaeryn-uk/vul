@@ -31,13 +31,17 @@ Then add this to your project's `.uproject` file:
 ### Runtime Type Information
 
 The Vul plugin provides some template classes that use `dynamic_cast` outside of the UE UObject system.
-You will need to enable RTTI in your game's module(s) for this to compile.
+Enable RTTI in any module that defines tooltip data or widgets (usually your game module) for this to compile.
+
+Note: RTTI is only enabled for Win64 in VulRuntime, so features within this library that rely on RTTI
+will not work on Android/Linux. See `USE_RTTI` throughout the source code for limitations.
+It is possible that RTTI usage is dropped in the future, which would enable Android/Linux support.
 
 ```
 // in MyGameModule.build.cs
 
     // ...
-    bUseRTTI = true;
+    bUseRTTI = Target.Platform == UnrealTargetPlatform.Win64;
     // ...
 ```
 
@@ -141,11 +145,36 @@ spawning widgets when certain levels are shown, based on the `LevelData` assets 
 settings.
 
 `UVulLevelManager` makes a best attempt to support loading non-root levels from the editor. If it detects
-that you're booting a level that's specified in `UVulRuntimeSettings::LevelSettings` (i.e. a non-root/persistent
-level), it will initialize actors and hooks in the same way as if it were being loaded during normal gameplay.
+that you're booting a level that's not the configured `RootLevel`, it will initialize actors and hooks in 
+the same way as if it were being loaded during normal gameplay.
 
 Levels can be marked as cinematic levels, see `UVulLevelData::SequenceSettings`. In this case, the level
 manager will play the cinematic and immediately move on to another level when it's completed.
+
+Synchronized level transitions are supported in networked games. The server remains 
+authoritative over level changes, while clients automatically follow and report their load progress.
+
+Level synchronization is handled via a lightweight replicated actor (AVulLevelNetworkData) that exists 
+on the server (primary) and on each client (follower). This actor exposes the current level, any 
+in-progress level load request and basic readiness state, relying on replication to communicate & coordinate
+the synchronized loading of levels.
+
+When the server initiates a level change:
+- The target level and request state are replicated to clients.
+- Clients stream the level locally and report completion back to the server.
+- The server waits until all required clients are ready before finalizing the transition.
+- Once the transition is complete, the active level state is replicated back to clients, 
+  allowing loading screens to be dismissed and level-specific initialization to proceed in sync.
+
+Spawned actors created during a managed level load are tracked and replicated so clients can 
+reliably resolve their corresponding instances after the transition, providing a framework
+for RPC calls outside the standard PlayerController model.
+
+*Caveat*
+The current networked level loading implementation is functional but not robust. It has known 
+edge cases, limited fault tolerance and likely many bugs under real-world network conditions. 
+It should be considered experimental and is due a significant rewrite before being reliable for 
+production use.
 
 ### Enhanced Developer Settings
 
@@ -210,10 +239,10 @@ To use this, create a widget class and implement `IVulTooltipWidget` in C++, the
 a widget UMG blueprint that extends it and select the UMG in Vul Runtime's project settings as the
 widget class to use.
 
-Once configured, `UVulTooltipSystem` can be called to show and hide a tooltip per player. When
-showing the tooltip, you must provide a tooltip data instance (which extends `FVulTooltipData`).
-This allows you to define what data can be displayed in a tooltip and provides a structured system
-for consistent tooltips across your game.
+Once configured, `UVulTooltipSubsystem` can be called (see `VulRuntime::Tooltip(WorldCtx)`) to show and 
+hide a tooltip per player. When showing the tooltip, you must provide a tooltip data instance 
+(which extends `FVulTooltipData`). This allows you to define what data can be displayed in a tooltip and 
+provides a structured system for consistent tooltips across your game.
 
 `UVulTooltipUserWidget` is provided to save writing tooltip-triggering logic for widgets that
 should trigger a tooltip when hovered. If you extend this, all you need to do is define the tooltip

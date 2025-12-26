@@ -198,7 +198,7 @@ struct TVulFieldSerializer<TArray<V>>
 		Out.Reset();
 
 		int I = 0;
-		for (const auto Entry : Data->AsArray())
+		for (const auto& Entry : Data->AsArray())
 		{
 			V Value;
 			if (!Ctx.Deserialize<V>(Entry, Value, VulRuntime::Field::FPathItem(TInPlaceType<int>(), I++)))
@@ -273,7 +273,7 @@ struct TVulFieldSerializer<TMap<K, V>>
 
 		Out.Reset();
 
-		for (const auto Entry : Data->AsObject()->Values)
+		for (const auto& Entry : Data->AsObject()->Values)
 		{
 			K KeyToAdd;
 			if (!Ctx.Deserialize<K>(MakeShared<FJsonValueString>(Entry.Key), KeyToAdd))

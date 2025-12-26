@@ -6,7 +6,8 @@ UActorComponent* FVulActorUtil::SpawnDynamicComponent(
 	const FName& Name,
 	USceneComponent* Parent,
 	UActorComponent* Template,
-	const EObjectFlags Flags
+	const EObjectFlags Flags,
+	const FName& SocketName
 ) {
 	auto Spawned = NewObject<UActorComponent>(Owner, ComponentClass.Get(), Name, Flags, Template);
 
@@ -18,7 +19,7 @@ UActorComponent* FVulActorUtil::SpawnDynamicComponent(
 	Spawned->RegisterComponent();
 	if (auto Scene = Cast<USceneComponent>(Spawned))
 	{
-		Scene->AttachToComponent(Parent, FAttachmentTransformRules(EAttachmentRule::KeepRelative, false));
+		Scene->AttachToComponent(Parent, FAttachmentTransformRules(EAttachmentRule::KeepRelative, false), SocketName);
 	}
 	Owner->AddInstanceComponent(Spawned);
 

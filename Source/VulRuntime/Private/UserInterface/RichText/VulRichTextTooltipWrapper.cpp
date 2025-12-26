@@ -1,5 +1,6 @@
 ﻿#include "UserInterface/RichText/VulRichTextTooltipWrapper.h"
 
+#include "VulRuntime.h"
 #include "Components/SizeBoxSlot.h"
 #include "Fonts/FontMeasure.h"
 #include "Misc/DefaultValueHelper.h"
@@ -56,6 +57,7 @@ void IVulAutoSizedInlineWidget::ApplyAutoSizing(
 	const FTextRunInfo& RunInfo,
 	const FTextBlockStyle& TextStyle
 ) {
+#if USE_RTTI
 	const auto AutoSized = dynamic_cast<IVulAutoSizedInlineWidget*>(Widget);
 	if (AutoSized == nullptr)
 	{
@@ -94,4 +96,8 @@ void IVulAutoSizedInlineWidget::ApplyAutoSizing(
 			Slot->SetPadding(Slot->GetPadding() + FMargin(0, -Correction, 0, -Correction));
 		}
 	}
+#else
+	UE_LOG(LogVul, Error, TEXT("dynamic_cast usage invalid with no RTTI. Vul needs fixing for Android/Linux"))
+	return;
+#endif
 }

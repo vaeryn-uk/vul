@@ -9,12 +9,13 @@ public class VulRuntime : ModuleRules
         // For casting of native CPP types.
         // Avoids [C4541] 'dynamic_cast' used on polymorphic type 'XXX' with /GR-; unpredictable behavior may result
         // when casting to non-UObjects.
-        bUseRTTI = true;
+        // TODO: Temporarily disabling so android can compile, but dependent functionality will be broken for now.
+        bUseRTTI = Target.Platform == UnrealTargetPlatform.Win64;
 
         PublicDependencyModuleNames.AddRange(
             new string[]
             {
-                "Core", "CommonUI", "Niagara", "LevelSequence", "MovieScene", "MovieSceneTracks", "Json"
+                "Core", "CommonUI", "Niagara", "LevelSequence", "MovieScene", "MovieSceneTracks", "Json", "NetCore",
             }
         );
 
