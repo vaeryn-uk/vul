@@ -641,7 +641,7 @@ ActorClass* UVulLevelManager::GetLevelActor() const
 {
 	for (const auto& Entry : LevelActors)
 	{
-		if (Entry.Actor->IsA<ActorClass>())
+		if (IsValid(Entry.Actor) && Entry.Actor->IsA<ActorClass>())
 		{
 			return Cast<ActorClass>(Entry.Actor);
 		}

@@ -114,8 +114,10 @@ public:
 	 *
 	 * These are made available for convenience so a client can retrieve these via
 	 * LevelManagedActor.
+	 *
+	 * TODO: This does not currently replicate; verify whether it should and add replication if needed.
 	 */
-	UPROPERTY(Replicated)
+	UPROPERTY()
 	TArray<FVulLevelManagerSpawnedActor> ServerSpawnedActors = {};
 
 	void SetPendingClientLevelRequest(const FVulPendingLevelRequest& New);
