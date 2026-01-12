@@ -35,6 +35,20 @@ bool TestCharacterStat::RunTest(const FString& Parameters)
 		TestEqual("Buckets: base value changed #1", TestStat.GetBase(), 10);
 		TestEqual("Buckets: base value changed #2", TestStat.Value(), 18);
 	}
+
+	{ // Revoke functionality.
+		TVulCharacterStat<int, FString> TestStat = 10;
+
+		TestStat.Delta(4, FString("Buff"));
+		TestStat.Delta(-2, FString("Debuff"));
+		TestEqual("Revoke setup: value with buckets", TestStat.Value(), 12);
+
+		TestStat.Revoke("Buff");
+		TestEqual("Revoke: removed buff bucket", TestStat.Value(), 8);
+		TestEqual("Revoke: base unchanged", TestStat.GetBase(), 10);
+		TestFalse("Revoke: bucket removed from sources", TestStat.GetSources().Contains("Buff"));
+		TestTrue("Revoke: other bucket remains", TestStat.GetSources().Contains("Debuff"));
+	}
 	
 	return true;
 }
