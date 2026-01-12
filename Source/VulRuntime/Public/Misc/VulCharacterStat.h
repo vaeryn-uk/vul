@@ -73,6 +73,14 @@ public:
 	const TMap<SourceType, NumberType>& GetSources() const { return Buckets; }
 
 	/**
+	 * Revoke a previously-applied modification to this stat from the provided source.
+	 */
+	void Revoke(const SourceType Source)
+	{
+		Buckets.Remove(Source);
+	}
+
+	/**
 	 * Sets the base or source to the given value, overriding any previous value.
 	 *
 	 * Returns true if the new value differs from the previous.
