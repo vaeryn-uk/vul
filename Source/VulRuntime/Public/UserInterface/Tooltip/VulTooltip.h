@@ -48,7 +48,7 @@ protected:
 	template <typename DataType, typename = TEnableIf<TIsDerivedFrom<DataType, FVulTooltipData>::Value>>
 	const DataType* GetData() const
 	{
-#if USE_RTTI
+#if defined(USE_RTTI) && USE_RTTI
 		const auto Ret = dynamic_cast<const DataType*>(TooltipData.Get());
 		checkf(Ret, TEXT("Could not convert tooltip data to requested type"))
 		return Ret;

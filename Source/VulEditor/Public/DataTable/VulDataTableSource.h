@@ -1,10 +1,12 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
-#include "Parsing.h"
+#include "UnrealYAML/Public/YamlSerialization.h"
 #include "UObject/Object.h"
-#include "UnrealYAML/Public/UnrealYAMLNode.h"
+#include "UnrealYAML/Public/YamlNode.h"
 #include "VulDataTableSource.generated.h"
+
+typedef FCustomTypeDeserializer FVulYamlTypeHandler;
 
 /**
  * Enhanced functionality for importing data in to data tables.
@@ -118,7 +120,7 @@ public:
 	 * Your module's StartupModule function is an easy place to register your own handlers. You
 	 * likely want to wrap with an #if WITH_EDITOR directive.
 	 */
-	static void RegisterAdditionalTypeHandler(const FString& TypeName, const FYamlParseIntoOptions::FTypeHandler& Handler);
+	static void RegisterAdditionalTypeHandler(const FString& TypeName, const FVulYamlTypeHandler& Handler);
 
 private:
 	void ParseAndBuildRows(TArray<TPair<FName, FTableRowBase*>>& Rows);
@@ -137,7 +139,7 @@ private:
 	UPROPERTY()
 	UVulDataTableSourceImportResult* ImportResults;
 
-	static TMap<FString, FYamlParseIntoOptions::FTypeHandler> AdditionalTypeHandlers;
+	static TMap<FString, FVulYamlTypeHandler> AdditionalTypeHandlers;
 };
 
 USTRUCT()

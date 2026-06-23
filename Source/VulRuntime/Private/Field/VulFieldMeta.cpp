@@ -187,28 +187,28 @@ TSharedPtr<FJsonValue> FVulFieldDescription::JsonSchema() const
 
 	if (ContainsReference(EReferencing::Reference))
 	{
-		TSharedPtr<FJsonValue> Refs = MakeShared<FJsonValueObject>(MakeShared<FJsonObject>(TMap<FString, TSharedPtr<FJsonValue>>{
-			{"type", MakeShared<FJsonValueString>("object")},
-		}));
+		TSharedPtr<FJsonObject> RefsObject = MakeShared<FJsonObject>();
+		RefsObject->SetField(TEXT("type"), MakeShared<FJsonValueString>(TEXT("object")));
+		TSharedPtr<FJsonValue> Refs = MakeShared<FJsonValueObject>(RefsObject);
 		
-		Out = MakeShared<FJsonValueObject>(MakeShared<FJsonObject>(TMap<FString, TSharedPtr<FJsonValue>>{
-			{"refs", Refs},
-			{"data", Out},
-		}));
+		TSharedPtr<FJsonObject> PropertiesObject = MakeShared<FJsonObject>();
+		PropertiesObject->SetField(TEXT("refs"), Refs);
+		PropertiesObject->SetField(TEXT("data"), Out);
+		Out = MakeShared<FJsonValueObject>(PropertiesObject);
 
-		Out = MakeShared<FJsonValueObject>(MakeShared<FJsonObject>(TMap<FString, TSharedPtr<FJsonValue>>{
-			{"type", MakeShared<FJsonValueString>("object")},
-			{"properties", Out},
-		}));
+		TSharedPtr<FJsonObject> RootObject = MakeShared<FJsonObject>();
+		RootObject->SetField(TEXT("type"), MakeShared<FJsonValueString>(TEXT("object")));
+		RootObject->SetField(TEXT("properties"), Out);
+		Out = MakeShared<FJsonValueObject>(RootObject);
 	}
 
 	if (!Definitions->Values.IsEmpty())
 	{
-		Out->AsObject()->Values.Add("definitions", MakeShared<FJsonValueObject>(Definitions));
+		Out->AsObject()->SetField(TEXT("definitions"), MakeShared<FJsonValueObject>(Definitions));
 
 		if (MayContainReference())
 		{
-			Definitions->Values.Add("VulFieldRef", CreateVulRef()->JsonSchema());
+			Definitions->SetField(TEXT("VulFieldRef"), CreateVulRef()->JsonSchema());
 		}
 	}
 
@@ -501,15 +501,14 @@ TSharedPtr<FJsonValue> FVulFieldDescription::JsonSchema(
 		auto Entry = FVulFieldRegistry::Get().GetType(TypeId.GetValue());
 		TypeName = Entry->Name;
 		
-		RefObject = MakeShared<FJsonValueObject>(MakeShared<FJsonObject>(TMap<FString, TSharedPtr<FJsonValue>>{
-			{"$ref", MakeShared<FJsonValueString>(FString::Printf(TEXT("#definitions/%s"), *TypeName.GetValue()))}
-		}));
+		TSharedPtr<FJsonObject> RefJsonObject = MakeShared<FJsonObject>();
+		RefJsonObject->SetField(TEXT("$ref"), MakeShared<FJsonValueString>(FString::Printf(TEXT("#definitions/%s"), *TypeName.GetValue())));
+		RefObject = MakeShared<FJsonValueObject>(RefJsonObject);
 
 		if (Referencing != EReferencing::None)
 		{
-			TSharedPtr<FJsonObject> VulFieldRef = MakeShared<FJsonObject>(TMap<FString, TSharedPtr<FJsonValue>>{
-				{"$ref", MakeShared<FJsonValueString>("#definitions/VulFieldRef")}
-			});
+			TSharedPtr<FJsonObject> VulFieldRef = MakeShared<FJsonObject>();
+			VulFieldRef->SetField(TEXT("$ref"), MakeShared<FJsonValueString>(TEXT("#definitions/VulFieldRef")));
 
 			if (Referencing == EReferencing::Possible)
 			{
@@ -518,19 +517,16 @@ TSharedPtr<FJsonValue> FVulFieldDescription::JsonSchema(
 					MakeShared<FJsonValueObject>(VulFieldRef)
 				};
 				
-				RefObject = MakeShared<FJsonValueObject>(MakeShared<FJsonObject>(TMap<FString, TSharedPtr<FJsonValue>>{
-					{
-						"oneOf",
-						MakeShared<FJsonValueArray>(OneOfs),
-					}
-				}));
+				TSharedPtr<FJsonObject> OneOfObject = MakeShared<FJsonObject>();
+				OneOfObject->SetField(TEXT("oneOf"), MakeShared<FJsonValueArray>(OneOfs));
+				RefObject = MakeShared<FJsonValueObject>(OneOfObject);
 			} else if (Referencing == EReferencing::Reference)
 			{
 				RefObject = MakeShared<FJsonValueObject>(VulFieldRef);
 			}
 		}
 
-		if (Definitions->Values.Contains(TypeName.GetValue()))
+		if (Definitions->HasField(TypeName.GetValue()))
 		{
 			return RefObject;
 		}
@@ -540,7 +536,7 @@ TSharedPtr<FJsonValue> FVulFieldDescription::JsonSchema(
 
 	if (AddToDefinitions && TypeName.IsSet())
 	{
-		Definitions->Values.Add(TypeName.GetValue(), MakeShared<FJsonValueObject>(Out));
+		Definitions->SetField(TypeName.GetValue(), MakeShared<FJsonValueObject>(Out));
 	}
 
 	if (Type != EJson::None)
@@ -558,7 +554,7 @@ TSharedPtr<FJsonValue> FVulFieldDescription::JsonSchema(
 			TypeNode = MakeShared<FJsonValueString>(VulRuntime::Field::JsonTypeToString(Type));
 		}
 		
-		Out->Values.Add("type", TypeNode);
+		Out->SetField(TEXT("type"), TypeNode);
 	}
 
 	if (!Properties.IsEmpty())
@@ -569,10 +565,10 @@ TSharedPtr<FJsonValue> FVulFieldDescription::JsonSchema(
 		
 		for (const auto& Child : Properties)
 		{
-			ChildProperties->Values.Add(Child.Key, Child.Value->JsonSchema(Definitions));
+			ChildProperties->SetField(Child.Key, Child.Value->JsonSchema(Definitions));
 		}
 		
-		Out->Values.Add("properties", MakeShared<FJsonValueObject>(ChildProperties));
+		Out->SetField(TEXT("properties"), MakeShared<FJsonValueObject>(ChildProperties));
 		
 		TArray<TSharedPtr<FJsonValue>> RequiredProps;
 		for (const auto& Prop : RequiredProperties)
@@ -582,18 +578,18 @@ TSharedPtr<FJsonValue> FVulFieldDescription::JsonSchema(
 		
 		if (!RequiredProps.IsEmpty())
 		{
-			Out->Values.Add("required", MakeShared<FJsonValueArray>(RequiredProps));
+			Out->SetField(TEXT("required"), MakeShared<FJsonValueArray>(RequiredProps));
 		}
 	}
 
 	if (Items.IsValid())
 	{
-		Out->Values.Add("items", Items->JsonSchema(Definitions));
+		Out->SetField(TEXT("items"), Items->JsonSchema(Definitions));
 	}
 
 	if (AdditionalProperties.IsValid())
 	{
-		Out->Values.Add("additionalProperties", AdditionalProperties->JsonSchema(Definitions));
+		Out->SetField(TEXT("additionalProperties"), AdditionalProperties->JsonSchema(Definitions));
 	}
 
 	if (!UnionTypes.IsEmpty())
@@ -605,27 +601,27 @@ TSharedPtr<FJsonValue> FVulFieldDescription::JsonSchema(
 			OneOf.Add(Subtype->JsonSchema(Definitions));
 		}
 		
-		Out->Values.Add("oneOf", MakeShared<FJsonValueArray>(OneOf));
+		Out->SetField(TEXT("oneOf"), MakeShared<FJsonValueArray>(OneOf));
 	}
 
 	if (!EnumValues.IsEmpty())
 	{
-		Out->Values.Add("enum", MakeShared<FJsonValueArray>(EnumValues));
+		Out->SetField(TEXT("enum"), MakeShared<FJsonValueArray>(EnumValues));
 	}
 
 	if (ConstValue.IsValid())
 	{
-		Out->Values.Add("const", ConstValue);
+		Out->SetField(TEXT("const"), ConstValue);
 	}
 
 	if (TypeName.IsSet())
 	{
-		Out->Values.Add("x-vul-typename", MakeShared<FJsonValueString>(TypeName.GetValue()));
+		Out->SetField(TEXT("x-vul-typename"), MakeShared<FJsonValueString>(TypeName.GetValue()));
 	}
 
 	if (Documentation.IsSet())
 	{
-		Out->Values.Add("description", MakeShared<FJsonValueString>(Documentation.GetValue()));
+		Out->SetField(TEXT("description"), MakeShared<FJsonValueString>(Documentation.GetValue()));
 	}
 
 	if (RefObject.IsValid())

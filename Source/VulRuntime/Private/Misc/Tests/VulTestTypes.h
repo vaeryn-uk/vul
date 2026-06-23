@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 // Some UE types for our tests.
 

@@ -105,6 +105,8 @@ void TestInvalidPtrRef(TestDataTableSource* Test)
 
 	auto Source = CreateSource(TEXT("invalid_data_ref_parsing.yaml"), Table);
 
+	Test->AddExpectedError(TEXT("Ptr: YAML value cannot be converted to FVulDataPtr"));
+
 	const auto Result = Source->Import();
 
 	Test->TestFalse(TEXT("Invalid ptr fails"), Result->AllFilesOk());
@@ -116,7 +118,7 @@ void TestInvalidPtrRef(TestDataTableSource* Test)
 			Test->TestEqual(
 				TEXT("Invalid ptr error message"),
 				Errors[0],
-				TEXT("row: .Ptr: YAML value cannot be converted to FVulDataPtr")
+				TEXT("row: Ptr: YAML value cannot be converted to FVulDataPtr")
 			);
 		}
 	}

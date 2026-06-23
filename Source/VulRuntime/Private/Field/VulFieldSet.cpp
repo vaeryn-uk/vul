@@ -136,7 +136,7 @@ bool FVulFieldSet::Serialize(TSharedPtr<FJsonValue>& Out, FVulFieldSerialization
 			continue;
 		}
 		
-		Obj->Values.Add(Entry.Key, JsonValue);
+		Obj->SetField(Entry.Key, JsonValue);
 	}
 
 	Out = MakeShared<FJsonValueObject>(Obj);
@@ -159,12 +159,14 @@ bool FVulFieldSet::Deserialize(const TSharedPtr<FJsonValue>& Data, FVulFieldDese
 
 	for (const auto& Entry : (*Obj)->Values)
 	{
-		if (!Entries.Contains(Entry.Key) || Entries[Entry.Key].Fn != nullptr || Entries[Entry.Key].Field.IsReadOnly())
+		const FString Key(GetNum(Entry.Key), GetData(Entry.Key));
+		FEntry* FieldEntry = Entries.Find(Key);
+		if (FieldEntry == nullptr || FieldEntry->Fn != nullptr || FieldEntry->Field.IsReadOnly())
 		{
 			continue;
 		}
 
-		if (!Entries[Entry.Key].Field.Deserialize(Entry.Value, Ctx, VulRuntime::Field::FPathItem(TInPlaceType<FString>(), Entry.Key)))
+		if (!FieldEntry->Field.Deserialize(Entry.Value, Ctx, VulRuntime::Field::FPathItem(TInPlaceType<FString>(), Key)))
 		{
 			return false;
 		}

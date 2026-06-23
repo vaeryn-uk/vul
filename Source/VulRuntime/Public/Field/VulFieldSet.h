@@ -368,7 +368,8 @@ struct TVulFieldSerializer<TScriptInterface<T>>
 			return false;
 		}
 
-		Out = TScriptInterface<T>(Obj);
+		Out.SetObject(Obj);
+		Out.SetInterface(Cast<T>(Obj));
 		return true;
 	}
 };

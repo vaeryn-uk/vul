@@ -1011,7 +1011,7 @@ FVulLevelShownInfo UVulLevelManager::GenerateLevelShownInfo()
 
 ULevelStreaming* UVulLevelManager::GetLevelStreaming(const FName& LevelName, const TCHAR* Reason)
 {
-	checkf(!LevelName.IsNone(), TEXT("Invalid level name provided: "), Reason);
+	checkf(!LevelName.IsNone(), TEXT("Invalid level name provided: %s"), Reason);
 
 	const auto Data = ResolveData(LevelName);
 	checkf(!Data->Level.IsNull(), TEXT("Could not find level by name %s for streaming"), *LevelName.ToString())
@@ -1025,7 +1025,7 @@ ULevelStreaming* UVulLevelManager::GetLevelStreaming(const FName& LevelName, con
 		{
 			VUL_LEVEL_MANAGER_LOG(
 				Warning,
-				TEXT("Request to load level %s failed as it was not found in the persistent level"),
+				TEXT("Request to load level %s failed as it was not found in persistent map %s for world %s"),
 				*LevelName.ToString(),
 				*GetWorld()->GetMapName(),
 				*GetWorld()->GetName()

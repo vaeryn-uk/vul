@@ -103,7 +103,7 @@ void UVulTooltipSubsystem::Show(
 	}
 	
 
-#if !USE_RTTI
+#if !defined(USE_RTTI) || !USE_RTTI
 	UE_LOG(LogVul, Error, TEXT("dynamic_cast usage invalid with no RTTI. Vul needs fixing for Android/Linux"))
 	return;
 #else

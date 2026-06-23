@@ -297,19 +297,20 @@ struct VULRUNTIME_API FVulFieldSerializationContext
 			{
 				if (const auto Known = KnownTypeName(VulRuntime::Field::TypeId<T>()); Known.IsSet())
 				{
-					Obj->Get()->Values.Add("VulType", MakeShared<FJsonValueString>(Known.GetValue()));
+					Obj->Get()->SetField(TEXT("VulType"), MakeShared<FJsonValueString>(Known.GetValue()));
 				}
 			}
 
 			if (Ref.IsValid())
 			{
-				State.Memory.Store.Add(Ref->AsString(), &Out);
+				const FString RefString = Ref->AsString();
+				State.Memory.Store.Add(RefString, &Out);
 				
-				if (State.Memory.Refs.IsValid() && !State.Memory.Refs->Values.Contains(Ref->AsString()))
+				if (State.Memory.Refs.IsValid() && !State.Memory.Refs->HasField(RefString))
 				{
 					// If extracting refs, we always output just the ref here, after capturing the full
 					// serialized form.
-					State.Memory.Refs->Values.Add(Ref->AsString(), Out);
+					State.Memory.Refs->SetField(RefString, Out);
 					Out = Ref;
 				}
 			}
@@ -317,8 +318,8 @@ struct VULRUNTIME_API FVulFieldSerializationContext
 			if (IsOuterObject)
 			{
 				TSharedPtr<FJsonObject> Return = MakeShared<FJsonObject>();
-				Return->Values.Add("refs", MakeShared<FJsonValueObject>(State.Memory.Refs));
-				Return->Values.Add("data", Out);
+				Return->SetField(TEXT("refs"), MakeShared<FJsonValueObject>(State.Memory.Refs));
+				Return->SetField(TEXT("data"), Out);
 				Out = MakeShared<FJsonValueObject>(Return);
 			}
 			

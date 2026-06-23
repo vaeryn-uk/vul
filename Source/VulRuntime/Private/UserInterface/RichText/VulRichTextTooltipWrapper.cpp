@@ -57,7 +57,7 @@ void IVulAutoSizedInlineWidget::ApplyAutoSizing(
 	const FTextRunInfo& RunInfo,
 	const FTextBlockStyle& TextStyle
 ) {
-#if USE_RTTI
+#if defined(USE_RTTI) && USE_RTTI
 	const auto AutoSized = dynamic_cast<IVulAutoSizedInlineWidget*>(Widget);
 	if (AutoSized == nullptr)
 	{

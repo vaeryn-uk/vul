@@ -41,18 +41,20 @@ bool FVulFieldSerializationErrors::RequireJsonProperty(
 		return false;
 	}
 
-	if (!Value->AsObject()->Values.Contains(Property))
+	const TSharedPtr<FJsonObject> Object = Value->AsObject();
+	const TSharedPtr<FJsonValue> PropertyValue = Object->TryGetField(Property);
+	if (!PropertyValue.IsValid())
 	{
 		Add(TEXT("Required JSON property `%s` is not defined"), *Property);
 		return false;
 	}
 
-	if (Type.IsSet() && !RequireJsonType(Value->AsObject()->Values[Property], Type.GetValue()))
+	if (Type.IsSet() && !RequireJsonType(PropertyValue, Type.GetValue()))
 	{
 		return false;
 	}
 
-	Out = Value->AsObject()->Values[Property];
+	Out = PropertyValue;
 	return true;
 }
 

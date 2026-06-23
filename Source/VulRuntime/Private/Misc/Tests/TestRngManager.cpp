@@ -1,6 +1,6 @@
 ﻿#include "VulTest/Public/TestCase.h"
 #include "Misc/AutomationTest.h"
-#include "Types.h"
+#include "VulTestTypes.h"
 #include "Misc/VulRngManager.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(

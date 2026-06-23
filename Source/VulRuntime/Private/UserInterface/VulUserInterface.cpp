@@ -4,7 +4,7 @@
 
 bool VulRuntime::UserInterface::AttachRootUMG(UWidget* Widget, APlayerController* Controller, const int ZOrder)
 {
-	const auto ViewportSS = UGameViewportSubsystem::Get(Controller->GetWorld());
+	const auto ViewportSS = UGameViewportSubsystem::Get();
 	if (!ensureAlwaysMsgf(IsValid(ViewportSS), TEXT("Could not get UGameViewportSubsystem to attach UMG widget")))
 	{
 		return false;

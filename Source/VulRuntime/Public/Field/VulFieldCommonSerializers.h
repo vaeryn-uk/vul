@@ -256,7 +256,7 @@ struct TVulFieldSerializer<TMap<K, V>>
 				return false;
 			}
 
-			OutObj->Values.Add(ItemKey->AsString(), ItemValue);
+			OutObj->SetField(ItemKey->AsString(), ItemValue);
 		}
 
 		Out = MakeShared<FJsonValueObject>(OutObj);
@@ -276,7 +276,8 @@ struct TVulFieldSerializer<TMap<K, V>>
 		for (const auto& Entry : Data->AsObject()->Values)
 		{
 			K KeyToAdd;
-			if (!Ctx.Deserialize<K>(MakeShared<FJsonValueString>(Entry.Key), KeyToAdd))
+			const FString KeyString(GetNum(Entry.Key), GetData(Entry.Key));
+			if (!Ctx.Deserialize<K>(MakeShared<FJsonValueString>(KeyString), KeyToAdd))
 			{
 				return false;
 			}

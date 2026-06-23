@@ -3,10 +3,10 @@
 #include "VulEditor.h"
 #include "VulEditorUtil.h"
 #include "DataTable/VulDataRepository.h"
-#include "UnrealYAML/Public/Parsing.h"
+#include "UnrealYAML/Public/YamlSerialization.h"
 #include "HAL/FileManagerGeneric.h"
 
-TMap<FString, FYamlParseIntoOptions::FTypeHandler> UVulDataTableSource::AdditionalTypeHandlers;
+TMap<FString, FVulYamlTypeHandler> UVulDataTableSource::AdditionalTypeHandlers;
 
 void UVulDataTableSource::BP_Import()
 {
@@ -102,7 +102,7 @@ void UVulDataTableSource::PostEditChangeProperty(FPropertyChangedEvent& Property
 }
 
 void UVulDataTableSource::RegisterAdditionalTypeHandler(const FString& TypeName,
-	const FYamlParseIntoOptions::FTypeHandler& Handler)
+	const FVulYamlTypeHandler& Handler)
 {
 	AdditionalTypeHandlers.Add(TypeName, Handler);
 }
@@ -230,18 +230,18 @@ bool UVulDataTableSource::BuildStructRows(
 		uint8* RowData = (uint8*)FMemory::Malloc(DataTable->RowStruct->GetStructureSize());
 		DataTable->RowStruct->InitializeDefaultValue(RowData);
 
-		auto Options = FYamlParseIntoOptions::Strict();
+		auto Options = FYamlDeserializeOptions::Strict();
 
 		for (const auto& Handler : AdditionalTypeHandlers)
 		{
-			Options.TypeHandlers.Add(Handler);
+			Options.TypeHandlers.Add(Handler.Key, Handler.Value);
 		}
 
-		Options.TypeHandlers.Add("FVulDataPtr", [](
+		Options.TypeHandlers.Add("FVulDataPtr", FCustomTypeDeserializer::CreateLambda([](
 			const FYamlNode& Node,
 			const UScriptStruct* ScriptStruct,
 			void* Value,
-			FYamlParseIntoCtx& Ctx
+			FYamlSerializationResult& Ctx
 		) {
 			if (!Node.CanConvertTo<FString>())
 			{
@@ -253,14 +253,12 @@ bool UVulDataTableSource::BuildStructRows(
 
 			FVulDataPtr Ptr = FName(Str);
 			*static_cast<FVulDataPtr*>(Value) = Ptr;
-		});
+		}));
 
-		FYamlParseIntoCtx ParseResult;
-		ParseNodeIntoStruct(
+		const FYamlSerializationResult ParseResult = DeserializeStruct(
 			FYamlNode(Entry.Value),
 			DataTable->RowStruct,
 			RowData,
-			ParseResult,
 			Options
 		);
 
