@@ -1,6 +1,8 @@
 ﻿#include "VulEditor.h"
 
 #include "AssetIntegration/VulEditorCommands.h"
+#include "DataTable/VulDataPtrCustomization.h"
+#include "PropertyEditorModule.h"
 
 #define LOCTEXT_NAMESPACE "FVulEditorModule"
 
@@ -22,10 +24,24 @@ void FVulEditorModule::StartupModule()
 	FAssetToolsModule::GetModule().Get().RegisterAssetTypeActions(BorderStyleGeneratorAssetTypeActions.ToSharedRef());
 
 	FVulEditorCommands::Register();
+
+	FPropertyEditorModule& PropertyModule = FModuleManager::LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
+	PropertyModule.RegisterCustomPropertyTypeLayout(
+		TEXT("VulDataPtr"),
+		FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FVulDataPtrCustomization::MakeInstance)
+	);
+	PropertyModule.NotifyCustomizationModuleChanged();
 }
 
 void FVulEditorModule::ShutdownModule()
 {
+	if (FModuleManager::Get().IsModuleLoaded("PropertyEditor"))
+	{
+		FPropertyEditorModule& PropertyModule =
+			FModuleManager::GetModuleChecked<FPropertyEditorModule>("PropertyEditor");
+		PropertyModule.UnregisterCustomPropertyTypeLayout(TEXT("VulDataPtr"));
+	}
+
 	if (!FModuleManager::Get().IsModuleLoaded("AssetTools"))
 	{
 		return;
@@ -39,7 +55,7 @@ void FVulEditorModule::ShutdownModule()
 }
 
 #undef LOCTEXT_NAMESPACE
-    
+
 IMPLEMENT_MODULE(FVulEditorModule, VulEditor)
 
 DEFINE_LOG_CATEGORY(LogVulEditor)

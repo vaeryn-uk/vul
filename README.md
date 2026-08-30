@@ -110,6 +110,14 @@ features over & above native UE data table functionality:
   to go back through the repository.
   * `FVulDataPtr` and its typed version, `TVulDataPtr`, provides a bunch of features as a general-use
     pointer type for rows, so we use this as the only type returned from the repository.
+  * A standalone `FVulDataPtr` `UPROPERTY` -- one authored directly in the editor (a Blueprint default, a
+    `DataAsset`, an `Actor` instance) rather than sourced from YAML -- gets a Details-panel dropdown of a
+    table's row names (tag the property `meta=(VulDataTable="TableName")`) in place of typing an `FName` by
+    hand. Selecting a row resolves the owning `UVulDataRepository` (by scanning the asset registry for one
+    whose table matches) and writes it in alongside `RowName`/`TableName`, so the resulting pointer is
+    immediately usable via `Get<T>()`/`GetAsDataPtr<T>()`. See `FVulDataPtrCustomization`. This doesn't apply
+    to `FVulDataPtr` fields inside row structs themselves -- rows are authored in YAML and re-imported, so
+    hand-editing one via the Details panel would just be overwritten on the next import.
 * See `MyProject.ps1`, which contains the `ImportGameData` action demonstrating how repositories can be
   synchronized from a Python script to save booting the editor & needing to manually reimport.
 

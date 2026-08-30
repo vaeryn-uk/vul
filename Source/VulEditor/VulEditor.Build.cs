@@ -23,6 +23,9 @@ public class VulEditor : ModuleRules
                 "UnrealEd", "EditorScriptingUtilities",
                 "Json", "UnrealYAML", "ToolMenus", "Blutility",
                 "CommonUI",
+                "PropertyEditor",
+                "AssetRegistry",
+                "InputCore",
             }
         );
     }

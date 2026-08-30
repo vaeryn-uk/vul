@@ -148,8 +148,12 @@ private:
 	 * both the cached one to data, and presumably the Repository Ptr too, so won't work on
 	 * client side. This needs more work for network support.
 	 */
-	
-	UPROPERTY()
+
+	// VisibleAnywhere (not just UPROPERTY()) so property-handle customizations (see FVulDataPtrCustomization)
+	// can reach it via GetChildHandle("Repository") -- a struct customization's child-node tree only builds
+	// nodes for editor-visible properties, and EnsurePtr() dereferences this unconditionally once RowName/
+	// TableName are set (see IsValid()), so an unreachable, unset Repository is a null-deref waiting to happen.
+	UPROPERTY(VisibleAnywhere)
 	UVulDataRepository* Repository = nullptr;
 	UPROPERTY(VisibleAnywhere)
 	FName TableName;
