@@ -93,11 +93,13 @@ void FVulDataPtrCustomization::OnRowSelected(TSharedPtr<FName> NewSelection, ESe
 		return;
 	}
 
-	if (RowNameHandle.IsValid())
-	{
-		RowNameHandle->SetValue(*NewSelection);
-	}
-
+	// Each SetValue() below fires its own full property-change notification -- including, for a property on an
+	// actor, an immediate construction-script rerun. TableName/Repository must land first: with RowName set but
+	// them still unset (or vice versa), the struct is transiently inconsistent, and FVulDataPtr::StructType()
+	// (reachable from a mid-construction ApplyModel via GetAsDataPtr) checkf's on Repository/TableName
+	// unconditionally -- it doesn't gate on IsValid() first. Setting RowName last means every intermediate
+	// notification sees either a fully-consistent pointer (Repository/TableName already correct) or a fully-unset
+	// one (RowName still None, so IsSet() callers bail out cleanly) -- never the half-updated state that crashes.
 	if (TableNameHandle.IsValid())
 	{
 		TableNameHandle->SetValue(TableNameMeta);
@@ -106,6 +108,11 @@ void FVulDataPtrCustomization::OnRowSelected(TSharedPtr<FName> NewSelection, ESe
 	if (RepositoryHandle.IsValid() && ResolvedRepository.IsValid())
 	{
 		RepositoryHandle->SetValue(static_cast<UObject*>(ResolvedRepository.Get()));
+	}
+
+	if (RowNameHandle.IsValid())
+	{
+		RowNameHandle->SetValue(*NewSelection);
 	}
 }
 
