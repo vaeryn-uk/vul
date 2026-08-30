@@ -123,12 +123,16 @@ struct VULRUNTIME_API FVulDataPtr
 	friend class UVulDataRepository;
 
 private:
+	// Defined out-of-line in VulDataPtr.cpp: assigning InRepository to the TSoftObjectPtr<UVulDataRepository>
+	// Repository member needs UVulDataRepository to be a complete type (TSoftObjectPtr's raw-pointer constructor
+	// is SFINAE'd out for incomplete types, silently falling back to a worse-matching overload otherwise), and
+	// this header only forward-declares it.
 	FVulDataPtr(
 		UVulDataRepository* InRepository,
 		const FName& InTableName,
 		const FName& InRowName,
 		const void* Data = nullptr
-	) : Repository(InRepository), TableName(InTableName), RowName(InRowName), Ptr(Data) {}
+	);
 
 	/**
 	 * Should this pointer be initialized by a data repository?
@@ -153,8 +157,14 @@ private:
 	// can reach it via GetChildHandle("Repository") -- a struct customization's child-node tree only builds
 	// nodes for editor-visible properties, and EnsurePtr() dereferences this unconditionally once RowName/
 	// TableName are set (see IsValid()), so an unreachable, unset Repository is a null-deref waiting to happen.
+	//
+	// Soft rather than a raw UObject* so that any asset embedding a FVulDataPtr (e.g. one row referencing
+	// another table, or game code holding one on a UPROPERTY) only records a soft asset-registry dependency
+	// on the repository, instead of forcing it to hard-load the whole repository (and everything it in turn
+	// hard-references via DataTables) just because one row was picked. Matches the soft-ref-then-resolve
+	// pattern used by UVulDataRepository::Get() and by every asset reference on repository row structs.
 	UPROPERTY(VisibleAnywhere)
-	UVulDataRepository* Repository = nullptr;
+	TSoftObjectPtr<UVulDataRepository> Repository = nullptr;
 	UPROPERTY(VisibleAnywhere)
 	FName TableName;
 	UPROPERTY(EditAnywhere)

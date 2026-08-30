@@ -730,6 +730,43 @@ bool TestVulField::RunTest(const FString& Parameters)
 		VTC_MUST_EQUAL(Field.SerializeToJson(SerializedJson), true, "serialize");
 		VTC_MUST_EQUAL(*SerializedJson, TEXT("[\"E60D099796894926B0A14D18C339D78F\"]"), "serialize");
 	});
-	
+
+	VulTest::Case(this, "TSoftObjectPtr", [](VulTest::TC TC)
+	{
+		// Random suffix so re-running this test in the same session can't collide with a not-yet-GC'd
+		// leftover object from a previous run.
+		const FString ObjectName = FString::Printf(TEXT("VulFieldTestSoftPtrObject_%u"), FMath::Rand());
+		const FString ExpectedPath = FString::Printf(TEXT("/Engine/Transient.%s"), *ObjectName);
+		auto Obj = NewObject<UVulFieldTestUObject1>(GetTransientPackage(), FName(*ObjectName));
+		Obj->Str = "hello";
+
+		TSoftObjectPtr<UVulFieldTestUObject1> SoftPtr(Obj);
+		FVulField Field = FVulField::Create(&SoftPtr);
+
+		TSharedPtr<FJsonValue> Serialized;
+		VTC_MUST_EQUAL(Field.Serialize(Serialized), true, "serialize: set ptr");
+		TC.Equal(true, Serialized->Type == EJson::String, "serialize: set ptr is a json string");
+		TC.Equal(ExpectedPath, Serialized->AsString(), "serialize: set ptr is the object's path");
+
+		TSoftObjectPtr<UVulFieldTestUObject1> Deserialized;
+		FVulField DeserializeField = FVulField::Create(&Deserialized);
+		VTC_MUST_EQUAL(DeserializeField.Deserialize(Serialized), true, "deserialize: set ptr");
+		TC.Equal(ExpectedPath, Deserialized.ToString(), "deserialize: path round-trips");
+		TC.Equal(Obj, Deserialized.Get(), "deserialize: resolves to the same object");
+
+		TSoftObjectPtr<UVulFieldTestUObject1> NullPtr;
+		FVulField NullField = FVulField::Create(&NullPtr);
+
+		TSharedPtr<FJsonValue> SerializedNull;
+		VTC_MUST_EQUAL(NullField.Serialize(SerializedNull), true, "serialize: null ptr");
+		TC.Equal(true, SerializedNull->Type == EJson::Null, "serialize: null ptr is json null");
+
+		// Start non-null to prove deserializing a json null actually resets it.
+		TSoftObjectPtr<UVulFieldTestUObject1> DeserializedNull(Obj);
+		FVulField NullDeserializeField = FVulField::Create(&DeserializedNull);
+		VTC_MUST_EQUAL(NullDeserializeField.Deserialize(SerializedNull), true, "deserialize: null ptr");
+		TC.Equal(true, DeserializedNull.IsNull(), "deserialize: json null resets ptr to null");
+	});
+
 	return true;
 }

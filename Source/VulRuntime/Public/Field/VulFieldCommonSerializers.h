@@ -2,6 +2,7 @@
 
 #include "VulFieldSerializationContext.h"
 #include "Misc/VulEnum.h"
+#include "UObject/SoftObjectPtr.h"
 
 template<>
 struct TVulFieldSerializer<bool>
@@ -518,6 +519,54 @@ struct TVulFieldSerializer<T*>
 			return false;
 		}
 
+		return true;
+	}
+};
+
+/**
+ * Soft references are serialized as their asset path string, rather than the referenced object's data
+ * (unlike the raw-pointer serializer above), since resolving/loading the asset is the caller's concern.
+ */
+template <typename T>
+struct TVulFieldSerializer<TSoftObjectPtr<T>>
+{
+	static bool Serialize(const TSoftObjectPtr<T>& Value, TSharedPtr<FJsonValue>& Out, FVulFieldSerializationContext& Ctx)
+	{
+		if (Value.IsNull())
+		{
+			Out = MakeShared<FJsonValueNull>();
+			return true;
+		}
+
+		Out = MakeShared<FJsonValueString>(Value.ToString());
+		return true;
+	}
+
+	static bool Deserialize(const TSharedPtr<FJsonValue>& Data, TSoftObjectPtr<T>& Out, FVulFieldDeserializationContext& Ctx)
+	{
+		if (Data->Type == EJson::Null)
+		{
+			Out.Reset();
+			return true;
+		}
+
+		if (!Ctx.State.Errors.RequireJsonType(Data, EJson::String))
+		{
+			return false;
+		}
+
+		Out = TSoftObjectPtr<T>(FSoftObjectPath(Data->AsString()));
+		return true;
+	}
+};
+
+template <typename T>
+struct TVulFieldMeta<TSoftObjectPtr<T>>
+{
+	static bool Describe(FVulFieldSerializationContext& Ctx, TSharedPtr<FVulFieldDescription>& Description)
+	{
+		Description->String();
+		Description->Nullable();
 		return true;
 	}
 };

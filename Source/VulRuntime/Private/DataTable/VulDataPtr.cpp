@@ -2,6 +2,13 @@
 #include "DataTable/VulDataRepository.h"
 #include "Field/VulFieldSet.h"
 
+FVulDataPtr::FVulDataPtr(
+	UVulDataRepository* InRepository,
+	const FName& InTableName,
+	const FName& InRowName,
+	const void* Data
+) : Repository(InRepository), TableName(InTableName), RowName(InRowName), Ptr(Data) {}
+
 bool FVulDataPtr::IsSet() const
 {
 	return !RowName.IsNone();
@@ -25,7 +32,7 @@ FString FVulDataPtr::ToString() const
 		return "";
 	}
 	
-	return FString::Printf(TEXT("%s:%s"), *Repository->GetName(), *RowName.ToString());
+	return FString::Printf(TEXT("%s:%s"), *Repository.ToString(), *RowName.ToString());
 }
 
 const FName& FVulDataPtr::GetRowName() const
@@ -40,8 +47,9 @@ const FName& FVulDataPtr::GetTableName() const
 
 TObjectPtr<UScriptStruct> FVulDataPtr::StructType() const
 {
-	checkf(::IsValid(Repository) && !TableName.IsNone(), TEXT("attempt to resolve struct type for invalid FVulDataPtr"))
-	return Repository->StructType(TableName);
+	const auto ResolvedRepository = Repository.LoadSynchronous();
+	checkf(::IsValid(ResolvedRepository) && !TableName.IsNone(), TEXT("attempt to resolve struct type for invalid FVulDataPtr"))
+	return ResolvedRepository->StructType(TableName);
 }
 
 bool FVulDataPtr::IsPendingInitialization() const
@@ -63,7 +71,10 @@ const void* FVulDataPtr::EnsurePtr() const
 		return Ptr;
 	}
 
-	Ptr = Repository->FindRawChecked<FTableRowBase>(TableName, RowName);
+	const auto ResolvedRepository = Repository.LoadSynchronous();
+	checkf(::IsValid(ResolvedRepository), TEXT("Failed to resolve repository for row: %s"), *RowName.ToString())
+
+	Ptr = ResolvedRepository->FindRawChecked<FTableRowBase>(TableName, RowName);
 	checkf(Ptr != nullptr, TEXT("Failed to load row: %s"), *RowName.ToString())
 
 	return Ptr;
