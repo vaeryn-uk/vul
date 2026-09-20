@@ -1,6 +1,7 @@
 ﻿#include "UserInterface/VulUserInterface.h"
 #include "Blueprint/GameViewportSubsystem.h"
 #include "Blueprint/UserWidget.h"
+#include "Blueprint/WidgetLayoutLibrary.h"
 
 bool VulRuntime::UserInterface::AttachRootUMG(UWidget* Widget, APlayerController* Controller, const int ZOrder)
 {
@@ -50,10 +51,11 @@ TOptional<FVector2D> VulRuntime::UserInterface::CalculateScreenPosition(
 
 	if (ClampToScreen)
 	{
+		const FVector2D SizeInScreenPixels = Widget->GetDesiredSize() * UWidgetLayoutLibrary::GetViewportScale(Widget);
 		Result = FVector2D::Clamp(
 			Result,
-			Widget->GetDesiredSize() / 2,
-			FVector2D(ScreenSize.X, ScreenSize.Y) - (Widget->GetDesiredSize() / 2)
+			SizeInScreenPixels / 2,
+			FVector2D(ScreenSize.X, ScreenSize.Y) - (SizeInScreenPixels / 2)
 		);
 	}
 
@@ -75,13 +77,14 @@ TOptional<FVector2D> VulRuntime::UserInterface::CalculateScreenPosition(
 	}
 
 	auto Result = FVector2D(Position.X * ScreenSize.X, Position.Y * ScreenSize.Y) + AnchorOffset(Widget, Anchor);
-	
+
 	if (ClampToScreen)
 	{
+		const FVector2D SizeInScreenPixels = Widget->GetDesiredSize() * UWidgetLayoutLibrary::GetViewportScale(Widget);
 		Result = FVector2D::Clamp(
 			Result,
-			Widget->GetDesiredSize() / 2,
-			FVector2D(ScreenSize.X, ScreenSize.Y) - (Widget->GetDesiredSize() / 2)
+			SizeInScreenPixels / 2,
+			FVector2D(ScreenSize.X, ScreenSize.Y) - (SizeInScreenPixels / 2)
 		);
 	}
 
@@ -90,5 +93,8 @@ TOptional<FVector2D> VulRuntime::UserInterface::CalculateScreenPosition(
 
 FVector2D VulRuntime::UserInterface::AnchorOffset(UWidget* Widget, const FVector2D& Anchor)
 {
-	return FVector2D(-Widget->GetDesiredSize().X * Anchor.X, -Widget->GetDesiredSize().Y * Anchor.Y);
+	// GetDesiredSize() is in Slate's DPI-independent local units; multiplying by the viewport scale converts it
+	// into raw screen pixels.
+	const FVector2D SizeInScreenPixels = Widget->GetDesiredSize() * UWidgetLayoutLibrary::GetViewportScale(Widget);
+	return FVector2D(-SizeInScreenPixels.X * Anchor.X, -SizeInScreenPixels.Y * Anchor.Y);
 }

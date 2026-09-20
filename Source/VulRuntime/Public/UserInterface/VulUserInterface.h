@@ -13,6 +13,9 @@ namespace VulRuntime::UserInterface
 
 	/**
 	 * Calculates the screen position of the provided widget that places it on top of the provided world location.
+	 * The returned position is in raw screen pixels (the same space as ProjectWorldToScreen/GetViewportSize) --
+	 * it does not account for the viewport's DPI scale, so a caller feeding it into an API that expects
+	 * DPI-scaled/local coordinates (e.g. UUserWidget::SetPositionInViewport) needs to convert it first.
 	 *
 	 * Offset is a value between 0-1 of screen space to adjust the position, e.g. (0, .1) will return
 	 * a position 10% above the actor.
@@ -34,7 +37,8 @@ namespace VulRuntime::UserInterface
 	);
 
 	/**
-	 * Returns an XY pixel position given the provided 0-1 XY position.
+	 * Returns an XY pixel position given the provided 0-1 XY position. As with the other overload, this is in
+	 * raw screen pixels, not adjusted for the viewport's DPI scale.
 	 *
 	 * Anchor can be used to control how the widget is positioned relative to the requested Position.
 	 */
@@ -47,7 +51,9 @@ namespace VulRuntime::UserInterface
 	);
 
 	/**
-	 * Returns a pixel offset to apply to a widget to adjust its position so it respects Anchor.
+	 * Returns an offset to apply to a widget to adjust its position so it respects Anchor. The offset is in raw
+	 * screen-pixel space -- the same space as ProjectWorldToScreen/GetViewportSize -- regardless of the
+	 * viewport's current DPI scale.
 	 *
 	 * Add this to a screen position to have your widget centered (anchor = {0.5, 0.5}), for example.
 	 */
