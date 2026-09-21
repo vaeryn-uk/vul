@@ -19,7 +19,8 @@ public:
 		const FString& Prefix,
 		const TMap<FString, VariantClass>& Variations,
 		const TFunction<void (StyleClass*, const VariantClass&)> Apply,
-		bool RequireTemplate = true
+		bool RequireTemplate = true,
+		const FString& VariationPrefix = TEXT("")
 	) {
 		if (RequireTemplate && !IsValid(Template))
 		{
@@ -33,7 +34,7 @@ public:
 
 		for (const auto& Variation : Variations)
 		{
-			const auto Name = FString::Printf(TEXT("%s_%s"), *Prefix, *Variation.Key);
+			const auto Name = FString::Printf(TEXT("%s_%s%s"), *Prefix, *VariationPrefix, *Variation.Key);
 			const auto Directory = FPaths::GetPath(GetPathNameSafe(Generator));
 			const auto Path = FString::Printf(TEXT("%s/%s.%s"), *Directory, *Name, *Name);
 

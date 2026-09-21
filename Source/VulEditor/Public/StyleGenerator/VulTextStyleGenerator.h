@@ -62,6 +62,12 @@ public:
 	TMap<FString, FVulTextStyleVariation> Variations;
 
 	/**
+	 * Prepended to the variation key when naming generated assets: TextStyle_<VariationPrefix><key>.
+	 */
+	UPROPERTY(EditAnywhere)
+	FString VariationPrefix;
+
+	/**
 	 * Create or update all existing variations. Styles will be generated in the
 	 * folder this generator belongs to.
 	 */

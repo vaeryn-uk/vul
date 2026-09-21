@@ -19,6 +19,8 @@ void UVulTextStyleGenerator::Generate()
 			{
 				Style->Color = Variation.Color;
 			}
-		}
+		},
+		true,
+		VariationPrefix
 	);
 }
