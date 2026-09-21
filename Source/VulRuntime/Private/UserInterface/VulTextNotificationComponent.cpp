@@ -68,6 +68,11 @@ void UVulTextNotificationComponent::BeginPlay()
 
 			VulRuntime::UserInterface::AttachRootUMG(Widget, Controller.Get(), ZOrder);
 
+			// Hidden until the first successful UpdateFn position -- CalculateScreenPosition returns unset
+			// while GetDesiredSize() is still zero (immediately after creation, before a Slate layout pass),
+			// so without this the widget would flash at its default (0,0) slot for that first frame.
+			Widget->SetVisibility(ESlateVisibility::Hidden);
+
 			return Widget;
 		},
 		[this](const FVulTextNotification& Data, UVulRichTextBlock* Widget, float X)
@@ -98,6 +103,8 @@ void UVulTextNotificationComponent::BeginPlay()
 				);
 
 				New.ZOrder = ZOrder;
+
+				Widget->SetVisibility(ESlateVisibility::HitTestInvisible);
 
 				Widget->SetText(Data.Text);
 
