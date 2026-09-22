@@ -46,7 +46,7 @@ public:
 	int ZOrder = 0;
 
 	/**
-	 * The style applied to notifications.
+	 * The default style applied to notifications.
 	 */
 	UPROPERTY(EditAnywhere)
 	TSoftClassPtr<UCommonTextStyle> TextStyle;

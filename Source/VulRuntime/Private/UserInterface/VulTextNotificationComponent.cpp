@@ -108,6 +108,17 @@ void UVulTextNotificationComponent::BeginPlay()
 
 				Widget->SetText(Data.Text);
 
+				// Notifications without their own StyleOverride fall back to the component's TextStyle,
+				// re-applied here (not just at allocation) so a recycled widget -- matched by Ref -- always
+				// reflects the current notification's style rather than whatever it last had.
+				const auto& EffectiveStyle = !Data.StyleOverride.IsNull() ? Data.StyleOverride : TextStyle;
+				if (!EffectiveStyle.IsNull())
+				{
+					FTextBlockStyle Style;
+					EffectiveStyle.LoadSynchronous()->GetDefaultObject<UVulTextStyle>()->ToTextBlockStyle(Style);
+					Widget->SetDefaultTextStyle(Style);
+				}
+
 				GVS->SetWidgetSlot(Widget, New);
 			}
 		}

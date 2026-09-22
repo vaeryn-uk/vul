@@ -5,7 +5,10 @@
 #include "UObject/Object.h"
 #include "Components/Widget.h"
 #include "Misc/VulTempValue.h"
+#include "UObject/SoftObjectPtr.h"
 #include "VulNotification.generated.h"
+
+class UCommonTextStyle;
 
 /**
  * A UI notification is a generic structure to describe some text (or content) that's displayed
@@ -52,12 +55,26 @@ struct VULRUNTIME_API FVulTextNotification : public FVulUiNotification
 	FVulTextNotification() = default;
 	FVulTextNotification(const FText& InText, const float InRenderTime);
 	FVulTextNotification(const FText& InText, const float InRenderTime, const FString& InRef);
+	FVulTextNotification(
+		const FText& InText,
+		const float InRenderTime,
+		const TSoftClassPtr<UCommonTextStyle>& InStyleOverride,
+		const FString& InRef = FString()
+	);
 
 	/**
 	 * Text content of the notification.
 	 */
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	FText Text;
+
+	/**
+	 * When set, overrides the owning component's TextStyle for this notification only. Lets callers that
+	 * share a single UVulTextNotificationComponent (e.g. combat text) vary style per-notification -- e.g.
+	 * damage taken vs. dealt -- without needing separate components.
+	 */
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	TSoftClassPtr<UCommonTextStyle> StyleOverride;
 
 	bool operator==(const FVulTextNotification& Other) const;
 };

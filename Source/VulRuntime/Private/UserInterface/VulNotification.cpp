@@ -7,7 +7,9 @@ bool FVulUiNotification::operator==(const FVulUiNotification& Other) const
 
 bool FVulTextNotification::operator==(const FVulTextNotification& Other) const
 {
-	return FVulUiNotification(*this) == FVulUiNotification(Other) && Other.Text.EqualTo(Text, ETextComparisonLevel::Quinary);
+	return FVulUiNotification(*this) == FVulUiNotification(Other)
+		&& Other.Text.EqualTo(Text, ETextComparisonLevel::Quinary)
+		&& Other.StyleOverride == StyleOverride;
 }
 
 FVulTextNotification::FVulTextNotification(const FText& InText, const float InRenderTime)
@@ -22,4 +24,17 @@ FVulTextNotification::FVulTextNotification(const FText& InText, const float InRe
 	Text = InText;
 	Ref = InRef;
 	RenderTime = InRenderTime;
+}
+
+FVulTextNotification::FVulTextNotification(
+	const FText& InText,
+	const float InRenderTime,
+	const TSoftClassPtr<UCommonTextStyle>& InStyleOverride,
+	const FString& InRef
+)
+{
+	Text = InText;
+	Ref = InRef;
+	RenderTime = InRenderTime;
+	StyleOverride = InStyleOverride;
 }
